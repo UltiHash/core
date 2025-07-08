@@ -111,6 +111,7 @@ coro<response> get_object::handle(request& req) {
     res.set("ETag", obj->etag);
     res.set("Content-Type", obj->mime);
     res.set("Last-Modified", imf_fixdate(obj->last_modified));
+    res.set("X-Amz-Version-Id", obj->version);
 
     if (auto range = req.header("Range"); range) {
         res.base().result(status::partial_content);

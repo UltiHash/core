@@ -180,21 +180,35 @@ coro<void> directory::delete_bucket(const std::string& bucket) {
     co_await handle->execv("CALL uh_delete_bucket($1)", bucket);
 }
 
-coro<void> directory::delete_object(const std::string& bucket,
+coro<directory::delete_result> directory::delete_object(const std::string& bucket,
                                     const std::string& object_id,
                                     std::optional<std::string> version) {
 
     try {
         auto handle = co_await m_db.get();
+        std::optional<db::row> row;
         if (version) {
-            co_await handle->execv("CALL uh_delete_object_version($1, $2, $3)", bucket,
-                                object_id, *version);
+            if (*version == "null") {
+                row = co_await handle->execv("SELECT delete_marker, version FROM uh_delete_object_null_version($1, $2)",
+                        bucket, object_id);
+            } else {
+                row = co_await handle->execv("SELECT delete_marker, version FROM uh_delete_object_version($1, $2, $3)", bucket,
+                                    object_id, *version);
+            }
         } else {
-            co_await handle->execv("CALL uh_delete_object($1, $2)", bucket,
+            row = co_await handle->execv("SELECT delete_marker, version FROM uh_delete_object($1, $2)", bucket,
                                 object_id);
         }
+
+        co_return directory::delete_result {
+            row ? row->string(0).value_or("f") == "t" : false,
+            row ? row->string(1) : std::nullopt
+        };
     } catch (const std::exception& e) {
+        LOG_WARN() << "error deleting object: " << e.what();
     }
+
+    co_return directory::delete_result { false, std::nullopt };
 }
 
 coro<std::vector<std::string>> directory::list_buckets() {
@@ -326,7 +340,8 @@ directory::list_object_versions(const std::string& bucket,
                                .addr = std::nullopt,
                                .etag = row->string(4),
                                .mime = row->string(5),
-                               .version = row->string(6) });
+                               .version = row->string(6),
+                               .state = to_object_state(*row->string(7))});
     }
 
     co_return rv;

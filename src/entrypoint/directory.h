@@ -48,7 +48,11 @@ public:
 
     coro<void> delete_bucket(const std::string& bucket);
 
-    coro<void> delete_object(const std::string& bucket,
+    struct delete_result {
+        bool is_delete_marker;
+        std::optional<std::string> version;
+    };
+    coro<delete_result> delete_object(const std::string& bucket,
                              const std::string& object_id,
                              std::optional<std::string> version = std::nullopt);
 

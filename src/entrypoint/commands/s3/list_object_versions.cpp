@@ -11,7 +11,10 @@ namespace uh::cluster {
 
 namespace {
 
-std::string ident(const std::string& s) noexcept { return s; }
+std::optional<std::string> ident(std::optional<std::string> s) noexcept { return s; }
+std::optional<std::string> opt_url_encode(std::optional<std::string> s) noexcept {
+    return s ? url_encode(*s) : s;
+}
 
 auto get_encoder(std::optional<std::string> encoding_type) {
     if (!encoding_type) {
@@ -23,7 +26,7 @@ auto get_encoder(std::optional<std::string> encoding_type) {
                                 "Encountered unexpected query parameter.");
     }
 
-    return url_encode;
+    return opt_url_encode;
 }
 
 } // namespace
@@ -54,15 +57,16 @@ coro<ep::http::response> list_object_versions::handle(ep::http::request& req) {
     put(result_node, "<xmlattr>.xmlns",
         "http://s3.amazonaws.com/doc/2006-03-01/");
     put(result_node, "IsTruncated", objects.size() > max_keys);
-    put(result_node, "KeyMarker", key_marker);
+    put(result_node, "KeyMarker", encode(key_marker));
     put(result_node, "VersionMarker", version_id_marker);
     put(result_node, "Name", req.bucket());
-    put(result_node, "Prefix", prefix);
-    put(result_node, "Delimiter", delimiter);
+    put(result_node, "Prefix", encode(prefix));
+    put(result_node, "Delimiter", encode(delimiter));
     put(result_node, "MaxKeys", max_keys);
+    put(result_node, "EncodingType", encoding_type);
 
     if (objects.size() > max_keys) {
-        put(result_node, "NextKeyMarker", objects.back().name);
+        put(result_node, "NextKeyMarker", encode(objects.back().name));
         put(result_node, "NextVersionMarker", objects.back().version);
     }
 
@@ -105,13 +109,15 @@ coro<ep::http::response> list_object_versions::handle(ep::http::request& req) {
         }
     }
 
-    boost::property_tree::ptree prefixes_node;
-    for (const auto& pfx : prefixes) {
-        boost::property_tree::ptree node(pfx);
-        prefixes_node.add_child("Prefix", node);
-    }
+    if (!prefixes.empty()) {
+        boost::property_tree::ptree prefixes_node;
+        for (const auto& pfx : prefixes) {
+            boost::property_tree::ptree node(*encode(pfx));
+            prefixes_node.add_child("Prefix", node);
+        }
 
-    result_node.add_child("CommonPrefixes", prefixes_node);
+        result_node.add_child("CommonPrefixes", prefixes_node);
+    }
 
     boost::property_tree::ptree pt;
     pt.add_child("ListVersionsResult", result_node);

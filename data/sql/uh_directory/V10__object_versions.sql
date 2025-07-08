@@ -185,7 +185,9 @@ $$;
 --
 -- Re-define uh_delete_object()
 --
-CREATE OR REPLACE PROCEDURE uh_delete_object(bucket TEXT, object TEXT)
+DROP PROCEDURE IF EXISTS uh_delete_object;
+CREATE OR REPLACE FUNCTION uh_delete_object(bucket TEXT, object TEXT)
+    RETURNS TABLE (delete_marker BOOLEAN, version UUID)
     LANGUAGE plpgsql AS $$
 DECLARE
     b_versioning versioning_type;
@@ -204,6 +206,8 @@ BEGIN
         SELECT id FROM uh_put_object(bucket, object, '', 0, NULL, NULL) INTO obj_id;
         UPDATE objects SET status = 'Deleted', sticky = True WHERE id = obj_id;
 
+        RETURN QUERY SELECT True, o.version FROM objects o WHERE id = obj_id;
+
     ELSEIF b_versioning = 'Suspended' THEN
 
         IF obj_sticky THEN
@@ -212,9 +216,12 @@ BEGIN
 
         UPDATE objects SET status = 'Deleted', sticky = True WHERE id = obj_id;
 
+        RETURN QUERY SELECT True, o.version FROM objects o WHERE id = obj_id;
+
     ELSE
 
         UPDATE objects SET status = 'Deleted' WHERE id = obj_id;
+        RETURN QUERY SELECT True, NULL::UUID FROM objects WHERE id = obj_id;
 
     END IF;
 END;
@@ -223,19 +230,42 @@ $$;
 --
 -- Re-define uh_delete_object_version()
 --
-CREATE OR REPLACE PROCEDURE uh_delete_object_version(bucket TEXT, object TEXT, version UUID)
+CREATE OR REPLACE FUNCTION uh_delete_object_version(bucket TEXT, object TEXT, version_id UUID)
+    RETURNS TABLE (delete_marker BOOLEAN, version UUID)
     LANGUAGE plpgsql AS $$
 DECLARE
     obj_id BIGINT;
     obj_sticky BOOLEAN;
+    obj_status object_status;
 BEGIN
-    SELECT id, sticky FROM uh_get_object_by_version(bucket, object, version) INTO obj_id, obj_sticky;
+    SELECT id, sticky, status FROM uh_get_object_by_version(bucket, object, version_id) INTO obj_id, obj_sticky, obj_status;
 
     IF obj_id IS NULL THEN
         RAISE EXCEPTION 'Cannot delete object "%" in bucket "%", as it does not appear to exist.', object, bucket;
     END IF;
 
     UPDATE objects SET status = 'Deleted', sticky = False WHERE id = obj_id;
+    RETURN QUERY SELECT obj_status = 'Deleted', NULL::UUID;
+END;
+$$;
+
+--
+-- Re-define uh_delete_object_null_version()
+--
+CREATE OR REPLACE FUNCTION uh_delete_object_null_version(bucket TEXT, object TEXT)
+    RETURNS TABLE (delete_marker BOOLEAN, version UUID)
+    LANGUAGE plpgsql AS $$
+DECLARE
+    obj_id BIGINT;
+BEGIN
+    SELECT id FROM objects WHERE NOT sticky AND status = 'Normal' AND name = object AND bucket_id = uh_get_bucket_id(bucket) INTO obj_id;
+
+    IF obj_id IS NULL THEN
+        RAISE EXCEPTION 'Cannot delete object "%" in bucket "%", as it does not appear to exist.', object, bucket;
+    END IF;
+
+    UPDATE objects SET status = 'Deleted' WHERE id = obj_id;
+    RETURN QUERY SELECT False, NULL::UUID;
 END;
 $$;
 
@@ -256,15 +286,28 @@ DROP FUNCTION uh_get_object(bucket TEXT, object TEXT);
 CREATE OR REPLACE FUNCTION uh_get_object(bucket TEXT, object TEXT)
     RETURNS TABLE (id BIGINT, address BYTEA, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT, version UUID, status object_status, sticky BOOLEAN)
     LANGUAGE plpgsql AS $$
+DECLARE
+    b_id BIGINT;
+    b_ver versioning_type;
 BEGIN
-    RETURN QUERY
-        SELECT o.id, o.address, o.size, o.last_modified, o.etag, o.mime, o.version, o.status, o.sticky FROM objects o
-          JOIN (
-            SELECT o2.name, o2.bucket_id, max(o2.id) AS max_id FROM objects o2 GROUP BY o2.name, o2.bucket_id
-          ) temp ON o.id = temp.max_id
-          WHERE o.bucket_id = uh_get_bucket_id(bucket) AND o.name = object AND o.status = 'Normal'
-          ORDER BY id DESC
-          LIMIT 1;
+    SELECT uh_get_bucket_info.id, versioning FROM uh_get_bucket_info(bucket) INTO b_id, b_ver;
+
+    IF b_ver = 'Disabled' THEN
+
+        RETURN QUERY
+            SELECT o.id, o.address, o.size, o.last_modified, o.etag, o.mime, NULL::UUID, o.status, o.sticky FROM objects o
+            JOIN (
+                SELECT max(o2.id) AS max_id FROM objects o2 WHERE o2.status = 'Normal' AND o2.bucket_id = uh_get_bucket_id(bucket) AND o2.name = object
+            ) temp ON o.id = temp.max_id;
+
+    ELSE
+
+        RETURN QUERY
+            SELECT o.id, o.address, o.size, o.last_modified, o.etag, o.mime, o.version, o.status, o.sticky FROM objects o
+            JOIN (
+                SELECT max(o2.id) AS max_id FROM objects o2 WHERE o2.status = 'Normal' AND o2.bucket_id = uh_get_bucket_id(bucket) AND o2.name = object
+            ) temp ON o.id = temp.max_id;
+    END IF;
 END;
 $$;
 
@@ -397,7 +440,7 @@ BEGIN
         END IF;
 
         RETURN QUERY INSERT INTO objects (bucket_id, name, address, size, last_modified, etag, mime)
-            VALUES (b_id, object, address, size, ceiled_now(), etag, mime) RETURNING objects.id, NULL;
+            VALUES (b_id, object, address, size, ceiled_now(), etag, mime) RETURNING objects.id, NULL::UUID;
 
     ELSEIF b_ver = 'Enabled' THEN
 
@@ -413,7 +456,7 @@ BEGIN
         END IF;
 
         RETURN QUERY INSERT INTO objects (bucket_id, name, address, size, last_modified, etag, mime)
-            VALUES (b_id, object, address, size, ceiled_now(), etag, mime) RETURNING objects.id, NULL;
+            VALUES (b_id, object, address, size, ceiled_now(), etag, mime) RETURNING objects.id, NULL::UUID;
 
     END IF;
 END
@@ -440,7 +483,7 @@ BEGIN
     END IF;
 
     RETURN QUERY EXECUTE format('SELECT o.id, o.name, o.size, o.last_modified, o.etag, o.mime, o.version, o.status FROM objects o, buckets b WHERE '
-        || ' o.bucket_id = b.id AND b.name = %L AND (o.status = ''Normal'' OR o.sticky) %s ORDER BY o.id DESC LIMIT %L' , bucket, condition, max_keys);
+        || ' o.bucket_id = b.id AND b.name = %L AND (o.status = ''Normal'' OR o.sticky) %s ORDER BY o.name ASC, o.id DESC LIMIT %L' , bucket, condition, max_keys);
 END
 $$;
 
