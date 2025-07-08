@@ -1,8 +1,6 @@
 #pragma once
 
 #include <common/db/db.h>
-#include <common/network/messenger_core.h>
-#include <common/types/common_types.h>
 #include <common/utils/scope_guard.h>
 #include <storage/global/data_view.h>
 
