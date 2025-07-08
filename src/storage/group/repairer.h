@@ -114,7 +114,7 @@ private:
                 shards.push_back(shard);
             }
             for (auto i = 0ul; i < num_stripes; ++i) {
-                LOG_DEBUG() << "start repairing for stripe " << i;
+                LOG_DEBUG() << "start repairing data for stripe " << i;
                 (void)m_chunk_size;
                 address addr;
                 addr.emplace_back(i * m_chunk_size, m_chunk_size);
@@ -169,6 +169,31 @@ private:
                 LOG_DEBUG() << "[read_address] call recover";
                 m_rs.recover(shards, stats);
 
+                LOG_DEBUG() << "recovering reference count data";
+                auto stripe_refcounts =
+                    co_await run_for_all<std::size_t,
+                                         std::shared_ptr<storage_interface>>(
+                        m_ioc,
+                        [&](std::size_t id,
+                            const std::shared_ptr<storage_interface>& storage)
+                            -> coro<std::size_t> {
+                            if (m_storage_states[id] == storage_state::NEW) {
+                                co_return 0;
+                            }
+                            auto refcounts =
+                                co_await storage->get_refcounts({i});
+                            co_return refcounts.front().count;
+                        },
+                        m_storages);
+
+                refcount_t max_stripe_refcount = {
+                    .stripe_id = i,
+                    .count = std::accumulate(
+                        stripe_refcounts.begin(), stripe_refcounts.end(), 0ull,
+                        [](std::size_t acc, std::size_t count) {
+                            return std::max(acc, count);
+                        })};
+
                 {
                     auto alloc = allocation_t{i * m_chunk_size, m_chunk_size};
                     auto v_succeeded = co_await run_for_all<
@@ -186,8 +211,7 @@ private:
                                 }
                                 LOG_DEBUG() << "write to storage " << id;
                                 co_await storage->write(alloc, {shards[id]},
-                                                        {});
-                                // TODO: Call link / adjust write call!
+                                                        {max_stripe_refcount});
                                 LOG_DEBUG()
                                     << "write to storage " << id << " done";
                                 co_return true;
