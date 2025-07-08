@@ -1,14 +1,18 @@
 #pragma once
 
-#include "common/db/db.h"
-#include "common/network/messenger_core.h"
-#include "common/types/common_types.h"
-#include "common/utils/scope_guard.h"
-#include "storage/global/data_view.h"
+#include <common/db/db.h>
+#include <common/network/messenger_core.h>
+#include <common/types/common_types.h>
+#include <common/utils/scope_guard.h>
+#include <storage/global/data_view.h>
+
+#include "object.h"
 
 #include <functional>
 
 namespace uh::cluster {
+
+using ep::object;
 
 enum class bucket_versioning {
     disabled,

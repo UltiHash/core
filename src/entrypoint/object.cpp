@@ -1,6 +1,7 @@
-#include "common_types.h"
+#include "object.h"
 
-namespace uh::cluster {
+
+namespace uh::cluster::ep {
 
 object_state to_object_state(const std::string& s) {
     if (s == "Normal") {
@@ -28,5 +29,4 @@ std::string to_string(object_state os) {
     throw std::runtime_error("unsupport object state");
 }
 
-
-} // end namespace uh::cluster
+} // namespace uh::cluster::ep

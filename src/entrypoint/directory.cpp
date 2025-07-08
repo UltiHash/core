@@ -341,7 +341,7 @@ directory::list_object_versions(const std::string& bucket,
                                .etag = row->string(4),
                                .mime = row->string(5),
                                .version = row->string(6),
-                               .state = to_object_state(*row->string(7))});
+                               .state = ep::to_object_state(*row->string(7))});
     }
 
     co_return rv;

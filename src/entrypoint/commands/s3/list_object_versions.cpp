@@ -86,7 +86,7 @@ coro<ep::http::response> list_object_versions::handle(ep::http::request& req) {
 
         auto latest = key_seen.insert(obj.name).second;
 
-        if (obj.state == object_state::normal) {
+        if (obj.state == ep::object_state::normal) {
             boost::property_tree::ptree node;
 
             put(node, "ETag", obj.etag);
