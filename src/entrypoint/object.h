@@ -21,19 +21,6 @@ struct object {
     std::optional<std::string> version;
 
     object_state state = object_state::normal;
-
-    constexpr static auto serialize(auto& archive, auto& self) {
-        std::size_t count = 0;
-        auto res = archive(self.name, count, self.size);
-
-        self.last_modified = utc_time(utc_time::duration(count));
-        return res;
-    }
-
-    constexpr static auto serialize(auto& archive, const auto& self) {
-        std::size_t count = self.last_modified.time_since_epoch().count();
-        return archive(self.name, count, self.size);
-    }
 };
 
 object_state to_object_state(const std::string& s);
