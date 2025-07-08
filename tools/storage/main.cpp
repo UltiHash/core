@@ -132,7 +132,10 @@ uh::cluster::coro<void> write_file(uh::cluster::storage_interface& svc,
         refcounts.emplace_back(stripe_id, 1);
     }
 
-    auto addr = co_await svc.write(alloc, {buffer}, refcounts);
+    co_await svc.write(alloc, {buffer}, refcounts);
+    address addr;
+    addr.push({alloc.offset, buffer.size()});
+
     auto time = t.passed();
 
     auto mb = buffer.size() / MEBI_BYTE;
