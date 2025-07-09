@@ -54,12 +54,6 @@ int main(int argc, char** argv) {
             return 0;
         }
 
-        LOG_DEBUG() << "etcd url: " << config->service.etcd_config.url;
-        LOG_DEBUG() << "etcd username: "
-                    << serialize(config->service.etcd_config.username);
-        LOG_DEBUG() << "etcd password: "
-                    << serialize(config->service.etcd_config.password);
-
         global_service_role = config->role;
 
         log::init(config->log);
