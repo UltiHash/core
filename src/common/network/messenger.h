@@ -21,7 +21,7 @@ class messenger : public messenger_core {
 public:
     using messenger_core::messenger_core;
 
-    coro<address> recv_address(const header& message_header);
+    coro<storage_address> recv_address(const header& message_header);
 
     coro<fragment> recv_fragment(const header& message_header);
 
@@ -55,7 +55,8 @@ public:
 
     coro<write_request_store> recv_write(const header& message_header);
 
-    coro<void> send_address(const message_type type, const address& addr);
+    coro<void> send_address(const message_type type,
+                            const storage_address& addr);
 
     coro<void> send_fragment(const message_type type, const fragment frag);
 

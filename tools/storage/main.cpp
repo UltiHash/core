@@ -71,8 +71,7 @@ std::optional<::config> read_config(int argc, char** argv) {
 }
 
 uh::cluster::coro<void> read_addr(uh::cluster::storage_interface& svc,
-                                  uh::cluster::uint128_t ptr,
-                                  std::size_t length,
+                                  uint128_t ptr, std::size_t length,
                                   std::optional<std::string> outfile,
                                   bool no_output) {
     timer t;
@@ -164,11 +163,11 @@ int main(int argc, char** argv) {
 
         switch (cfg->cmd) {
         case ::config::command::read:
-            boost::asio::co_spawn(
-                executor,
-                read_addr(storage, uh::cluster::uint128_t(cfg->offset),
-                          cfg->length, cfg->output_file, cfg->no_output),
-                handler);
+            boost::asio::co_spawn(executor,
+                                  read_addr(storage, uint128_t(cfg->offset),
+                                            cfg->length, cfg->output_file,
+                                            cfg->no_output),
+                                  handler);
             break;
         case ::config::command::write:
             boost::asio::co_spawn(executor, write_file(storage, cfg->file),

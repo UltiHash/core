@@ -1,7 +1,8 @@
 #include "mock_data_store.h"
-#include "common/telemetry/log.h"
-#include "common/utils/pointer_traits.h"
+
 #include <algorithm>
+#include <common/telemetry/log.h>
+#include <common/types/address.h>
 #include <fstream>
 #include <iostream>
 #include <unordered_set>

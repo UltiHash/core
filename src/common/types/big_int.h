@@ -8,11 +8,7 @@
 #include <iosfwd>
 #include <string>
 
-namespace uh::cluster {
-
 using uint128_t = __uint128_t;
-
-} // end namespace uh::cluster
 
 inline std::ostream& operator<<(std::ostream& os, const __uint128_t& value) {
     constexpr int num_blocks = 8;
