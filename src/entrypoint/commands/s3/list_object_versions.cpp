@@ -9,28 +9,6 @@ using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
 
-namespace {
-
-std::optional<std::string> ident(std::optional<std::string> s) noexcept { return s; }
-std::optional<std::string> opt_url_encode(std::optional<std::string> s) noexcept {
-    return s ? url_encode(*s) : s;
-}
-
-auto get_encoder(std::optional<std::string> encoding_type) {
-    if (!encoding_type) {
-        return ident;
-    }
-
-    if (*encoding_type != "url") {
-        throw command_exception(status::bad_request, "InvalidArgument",
-                                "Encountered unexpected query parameter.");
-    }
-
-    return opt_url_encode;
-}
-
-} // namespace
-
 list_object_versions::list_object_versions(directory& dir)
     : m_dir(dir) {}
 
@@ -42,7 +20,7 @@ bool list_object_versions::can_handle(const ep::http::request& req) {
 
 coro<ep::http::response> list_object_versions::handle(ep::http::request& req) {
     auto encoding_type = req.query("encoding-type");
-    auto encode = get_encoder(encoding_type);
+    auto encode = encoder(encoding_type);
 
     auto delimiter = req.query("delimiter");
     auto max_keys = query<std::size_t>(req, "max-keys").value_or(1000);

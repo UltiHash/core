@@ -24,4 +24,7 @@ struct retrieval {
              std::optional<std::string> prefix);
 };
 
+using encoder_function = std::optional<std::string> (*)(std::optional<std::string>);
+encoder_function encoder(std::optional<std::string> encoding_type);
+
 } // namespace uh::cluster
