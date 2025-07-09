@@ -284,7 +284,7 @@ $$;
 --
 DROP FUNCTION uh_get_object(bucket TEXT, object TEXT);
 CREATE OR REPLACE FUNCTION uh_get_object(bucket TEXT, object TEXT)
-    RETURNS TABLE (id BIGINT, address BYTEA, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT, version UUID, status object_status, sticky BOOLEAN)
+    RETURNS TABLE (id BIGINT, name TEXT, address BYTEA, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT, version UUID, status object_status, sticky BOOLEAN)
     LANGUAGE plpgsql AS $$
 DECLARE
     b_id BIGINT;
@@ -295,7 +295,7 @@ BEGIN
     IF b_ver = 'Disabled' THEN
 
         RETURN QUERY
-            SELECT o.id, o.address, o.size, o.last_modified, o.etag, o.mime, NULL::UUID, o.status, o.sticky FROM objects o
+            SELECT o.id, o.name, o.address, o.size, o.last_modified, o.etag, o.mime, NULL::UUID, o.status, o.sticky FROM objects o
             JOIN (
                 SELECT max(o2.id) AS max_id FROM objects o2 WHERE o2.status = 'Normal' AND o2.bucket_id = uh_get_bucket_id(bucket) AND o2.name = object
             ) temp ON o.id = temp.max_id;
@@ -303,7 +303,7 @@ BEGIN
     ELSE
 
         RETURN QUERY
-            SELECT o.id, o.address, o.size, o.last_modified, o.etag, o.mime, o.version, o.status, o.sticky FROM objects o
+            SELECT o.id, o.name, o.address, o.size, o.last_modified, o.etag, o.mime, o.version, o.status, o.sticky FROM objects o
             JOIN (
                 SELECT max(o2.id) AS max_id FROM objects o2 WHERE o2.status = 'Normal' AND o2.bucket_id = uh_get_bucket_id(bucket) AND o2.name = object
             ) temp ON o.id = temp.max_id;
@@ -315,11 +315,11 @@ $$;
 -- define uh_get_object_by_version()
 --
 CREATE OR REPLACE FUNCTION uh_get_object_by_version(bucket TEXT, object TEXT, ver UUID)
-    RETURNS TABLE (id BIGINT, address BYTEA, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT, version UUID, status object_status, sticky BOOLEAN)
+    RETURNS TABLE (id BIGINT, name TEXT, address BYTEA, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT, version UUID, status object_status, sticky BOOLEAN)
     LANGUAGE plpgsql AS $$
 BEGIN
     RETURN QUERY
-        SELECT o.id, o.address, o.size, o.last_modified, o.etag, o.mime, o.version, o.status, o.sticky
+        SELECT o.id, o.name, o.address, o.size, o.last_modified, o.etag, o.mime, o.version, o.status, o.sticky
          FROM objects o
          WHERE bucket_id = uh_get_bucket_id(bucket) AND name = object AND o.version = ver
         ORDER BY id DESC
