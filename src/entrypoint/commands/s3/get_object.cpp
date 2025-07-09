@@ -2,7 +2,7 @@
 
 #include <common/utils/time_utils.h>
 
-#include <entrypoint/formats.h>
+#include <entrypoint/utils.h>
 #include <entrypoint/http/command_exception.h>
 #include <entrypoint/http/range.h>
 
@@ -107,11 +107,7 @@ coro<response> get_object::handle(request& req) {
     response res;
 
     auto obj = co_await m_dir.get_object(req.bucket(), req.object_key(), req.query("versionId"));
-
-    res.set("ETag", obj->etag);
-    res.set("Content-Type", obj->mime);
-    res.set("Last-Modified", imf_fixdate(obj->last_modified));
-    res.set("X-Amz-Version-Id", obj->version);
+    set_default_headers(res, *obj);
 
     if (auto range = req.header("Range"); range) {
         res.base().result(status::partial_content);

@@ -1,7 +1,11 @@
 #include "utils.h"
-#include "entrypoint/http/command_exception.h"
+
+#include <common/utils/strings.h>
+#include <entrypoint/http/command_exception.h>
+#include <entrypoint/formats.h>
 
 using namespace uh::cluster::ep::http;
+using uh::cluster::ep::object;
 
 namespace uh::cluster {
 
@@ -57,6 +61,13 @@ encoder_function encoder(std::optional<std::string> encoding_type) {
     }
 
     return opt_url_encode;
+}
+
+void set_default_headers(response& res, const object& obj) {
+    res.set("ETag", obj.etag);
+    res.set("Content-Type", obj.mime);
+    res.set("Last-Modified", imf_fixdate(obj.last_modified));
+    res.set("X-Amz-Version-Id", obj.version);
 }
 
 } // namespace uh::cluster
