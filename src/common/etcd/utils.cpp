@@ -2,7 +2,6 @@
 
 #include "namespace.h"
 #include <common/telemetry/log.h>
-#include <common/utils/strings.h>
 #include <format>
 #include <stdexcept>
 
@@ -26,10 +25,6 @@ etcd_manager::etcd_manager(const etcd_config& cfg, int lease_timeout)
  */
 namespace {
 std::shared_ptr<etcd::SyncClient> create_client(const etcd_config& cfg) {
-    LOG_DEBUG() << "etcd url: " << cfg.url;
-    LOG_DEBUG() << "etcd username: " << serialize(cfg.username);
-    LOG_DEBUG() << "etcd password: " << serialize(cfg.password);
-
     while (true) {
         try {
             std::shared_ptr<etcd::SyncClient> client;
