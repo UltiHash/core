@@ -11,9 +11,10 @@ enum class object_state {
 };
 
 struct object {
+    uint64_t id;
     std::string name;
-    utc_time last_modified;
     std::size_t size{};
+    utc_time last_modified;
 
     std::optional<address> addr;
     std::optional<std::string> etag;

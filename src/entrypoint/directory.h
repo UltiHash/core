@@ -42,7 +42,8 @@ public:
                                  std::optional<std::string> version = std::nullopt);
 
     coro<object> head_object(const std::string& bucket,
-                             const std::string& object_id);
+                             const std::string& object_id,
+                             std::optional<std::string> version = std::nullopt);
 
     coro<void> put_bucket(const std::string& bucket);
 

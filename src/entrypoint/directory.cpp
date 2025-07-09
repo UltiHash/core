@@ -6,6 +6,25 @@ using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
 
+namespace {
+
+const std::string GET_OBJECT_FIELD_SELECTOR = "id, name, size, last_modified, etag, mime, version, status";
+
+object row_to_object(db::row& r) {
+    return {
+        .id = *r.size_type(0),
+        .name = *r.string(1),
+        .size = *r.size_type(2),
+        .last_modified = *r.date(3),
+        .etag = r.string(4),
+        .mime = r.string(5),
+        .version = r.string(6),
+        .state = ep::to_object_state(*r.string(7))
+    };
+}
+
+}
+
 std::string to_string(bucket_versioning versioning) {
     switch (versioning) {
         case bucket_versioning::disabled: return "Disabled";
@@ -79,18 +98,18 @@ directory::get_object(const std::string& bucket,
     std::optional<db::row> metadata;
 
     if (version) {
-        metadata = co_await handle->execv("SELECT size, last_modified, etag, mime, id, version "
-                               "FROM uh_get_object_by_version($1, $2, $3)",
+        metadata = co_await handle->execv("SELECT " + GET_OBJECT_FIELD_SELECTOR +
+                               " FROM uh_get_object_by_version($1, $2, $3)",
                                bucket, object_id, *version);
     } else {
-        metadata = co_await handle->execv("SELECT size, last_modified, etag, mime, id, version "
-                               "FROM uh_get_object($1, $2)",
-                               bucket, object_id);
+        metadata = co_await handle->execv("SELECT " + GET_OBJECT_FIELD_SELECTOR +
+                               " FROM uh_get_object($1, $2)", bucket, object_id);
     }
 
-    std::size_t id = *metadata->number(4);
+    auto obj = row_to_object(*metadata);
+    obj.addr = std::move(addr),
 
-    co_await handle->execv("CALL uh_inc_reference($1)", id);
+    co_await handle->execv("CALL uh_inc_reference($1)", obj.id);
 
     auto executor = co_await boost::asio::this_coro::executor;
     promise<void> p;
@@ -98,43 +117,40 @@ directory::get_object(const std::string& bucket,
 
     boost::asio::co_spawn(
         executor,
-        [f = std::move(f), this, id]() mutable -> coro<void> {
+        [f = std::move(f), this, id=obj.id]() mutable -> coro<void> {
             co_await f.get();
             auto h = co_await m_db.get();
             co_await h->execv("CALL uh_dec_reference($1)", id);
         },
         boost::asio::detached);
 
-    co_return object_lock(object{.name = object_id,
-                                 .last_modified = *metadata->date(1),
-                                 .size = *metadata->size_type(0),
-                                 .addr = std::move(addr),
-                                 .etag = metadata->string(2),
-                                 .mime = metadata->string(3),
-                                 .version = metadata->string(5)},
-                          unref{std::move(p)});
+    co_return object_lock(std::move(obj), unref{std::move(p)});
 }
 
 void directory::unref::operator()() { p.set_value(); }
 
 coro<object> directory::head_object(const std::string& bucket,
-                                    const std::string& object_id) {
+                                    const std::string& object_id,
+                                    std::optional<std::string> version) {
     auto handle = co_await m_db.get();
-    auto metadata = co_await handle->execv(
-        "SELECT size, last_modified, etag, mime FROM uh_get_object($1, $2)",
-        bucket, object_id);
+    std::optional<db::row> metadata;
+
+    if (version) {
+        metadata = co_await handle->execv(
+            "SELECT " + GET_OBJECT_FIELD_SELECTOR + " FROM uh_get_object_by_version($1, $2, $3)",
+            bucket, object_id, *version);
+    } else {
+        metadata = co_await handle->execv(
+            "SELECT " + GET_OBJECT_FIELD_SELECTOR + " FROM uh_get_object($1, $2)",
+            bucket, object_id);
+    }
 
     if (!metadata) {
         throw command_exception(status::not_found, "NoSuchKey",
                                 "The specified key does not exist.");
     }
 
-    co_return object{.name = object_id,
-                     .last_modified = *metadata->date(1),
-                     .size = *metadata->size_type(0),
-                     .addr = std::nullopt,
-                     .etag = metadata->string(2),
-                     .mime = metadata->string(3)};
+    co_return row_to_object(*metadata);
 }
 
 coro<void> directory::put_bucket(const std::string& bucket) {
@@ -301,17 +317,11 @@ directory::list_objects(const std::string& bucket,
 
     auto handle = co_await m_db.get();
     auto row = co_await handle->execv(
-        "SELECT id, name, size, last_modified, "
-        "etag, mime FROM uh_list_objects($1, $2, $3)",
+        "SELECT " + GET_OBJECT_FIELD_SELECTOR + " FROM uh_list_objects($1, $2, $3)",
         bucket, prefix.value_or(""), lower_bound.value_or(""));
-    for (; row; row = co_await handle->next()) {
 
-        rv.emplace_back(object{.name = *row->string(1),
-                               .last_modified = *row->date(3),
-                               .size = *row->size_type(2),
-                               .addr = std::nullopt,
-                               .etag = row->string(4),
-                               .mime = row->string(5)});
+    for (; row; row = co_await handle->next()) {
+        rv.emplace_back(row_to_object(*row));
     }
 
     co_return rv;
@@ -329,19 +339,11 @@ directory::list_object_versions(const std::string& bucket,
 
     auto handle = co_await m_db.get();
     auto row = co_await handle->execv(
-        "SELECT id, name, size, last_modified, etag, mime, version, status FROM uh_list_object_versions($1, $2, $3, $4, $5)",
+        "SELECT " + GET_OBJECT_FIELD_SELECTOR + " FROM uh_list_object_versions($1, $2, $3, $4, $5)",
         bucket, prefix, key_marker, version_marker, limit);
 
     for (; row; row = co_await handle->next()) {
-
-        rv.emplace_back(object{.name = *row->string(1),
-                               .last_modified = *row->date(3),
-                               .size = *row->size_type(2),
-                               .addr = std::nullopt,
-                               .etag = row->string(4),
-                               .mime = row->string(5),
-                               .version = row->string(6),
-                               .state = ep::to_object_state(*row->string(7))});
+        rv.emplace_back(row_to_object(*row));
     }
 
     co_return rv;
