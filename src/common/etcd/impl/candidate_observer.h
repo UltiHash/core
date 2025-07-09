@@ -2,8 +2,6 @@
 
 #include "subscriber_observer.h"
 
-#include <common/utils/strings.h>
-
 #include <atomic>
 
 namespace uh::cluster {

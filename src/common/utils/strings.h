@@ -195,17 +195,14 @@ concept HasCreate = requires(const std::string& str) {
 };
 
 template <typename T>
-concept Serializable = HasToString<T> && HasCreate<T>;
-
-template <typename T>
-requires Serializable<T>
+requires HasToString<T>
 std::ostream& operator<<(std::ostream& os, const T& value) {
     os << value.to_string();
     return os;
 }
 
 template <typename T>
-requires Serializable<T>
+requires HasCreate<T>
 std::istream& operator>>(std::istream& is, T& value) {
     std::string input;
     is >> input;
