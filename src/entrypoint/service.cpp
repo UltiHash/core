@@ -56,7 +56,7 @@ make_deduplicator(const entrypoint_config& config,
 service::service(boost::asio::io_context& ioc, const service_config& sc,
                  entrypoint_config config)
     : m_config(std::move(config)),
-
+      m_etcd{sc.etcd_config},
       m_service_id(get_service_id(
           m_etcd, get_service_string(ENTRYPOINT_SERVICE), sc.working_dir)),
       m_gdv{ioc, m_etcd, config.global_data_view},
