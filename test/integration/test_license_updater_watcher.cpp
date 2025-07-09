@@ -47,8 +47,12 @@ BOOST_FIXTURE_TEST_SUITE(a_license_watcher, fixture)
 BOOST_AUTO_TEST_CASE(returns_updated_license_through_getter) {
     std::promise<void> promise;
     std::future<void> future = promise.get_future();
-    auto sut =
-        license_watcher{etcd, [&](std::string_view) { promise.set_value(); }};
+    auto sut = license_watcher{etcd, [&](auto& val) {
+                                   promise.set_value();
+                                   LOG_DEBUG()
+                                       << "License watcher callback called";
+                                   LOG_DEBUG() << val.customer_id;
+                               }};
 
     auto updater =
         license_updater(ioc, etcd, pseudo_backend_client(test_license_string));
