@@ -88,6 +88,11 @@ command_exception::command_exception(const error::type& e) {
         m_code = "SlowDown";
         m_reason = "Please reduce your request rate.";
         break;
+    case error::service_unavailable:
+        m_status = status::service_unavailable;
+        m_code = "ServiceUnavailable";
+        m_reason = "Service is unable to handle request.";
+        break;
     default:
         m_status = status::internal_server_error;
         m_code = "UnknownError";
