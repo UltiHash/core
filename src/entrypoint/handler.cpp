@@ -34,7 +34,17 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 metric<success>::increase(1);
 
             } catch (const boost::system::system_error& e) {
-                throw;
+                if (e.code() == boost::asio::error::operation_aborted) {
+                    resp = make_response(
+                        command_exception(error::service_unavailable));
+                    boost::asio::co_spawn(s.get_executor(),
+                                          write(s, std::move(resp), id),
+                                          boost::asio::use_future)
+                        .wait_for(3s);
+                    break;
+                } else {
+                    throw;
+                }
             } catch (const downstream_exception& e) {
                 if (e.code() == boost::asio::error::operation_aborted or
                     e.code() == boost::beast::error::timeout) {
