@@ -228,7 +228,7 @@ END;
 $$;
 
 --
--- Re-define uh_delete_object_version()
+-- Define uh_delete_object_version()
 --
 CREATE OR REPLACE FUNCTION uh_delete_object_version(bucket TEXT, object TEXT, version_id UUID)
     RETURNS TABLE (delete_marker BOOLEAN, version UUID)
@@ -250,7 +250,7 @@ END;
 $$;
 
 --
--- Re-define uh_delete_object_null_version()
+-- Define uh_delete_object_null_version()
 --
 CREATE OR REPLACE FUNCTION uh_delete_object_null_version(bucket TEXT, object TEXT)
     RETURNS TABLE (delete_marker BOOLEAN, version UUID)
