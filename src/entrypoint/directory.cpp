@@ -8,9 +8,12 @@ namespace uh::cluster {
 
 std::string to_string(bucket_versioning versioning) {
     switch (versioning) {
-        case bucket_versioning::disabled: return "Disabled";
-        case bucket_versioning::enabled: return "Enabled";
-        case bucket_versioning::suspended: return "Suspended";
+    case bucket_versioning::disabled:
+        return "Disabled";
+    case bucket_versioning::enabled:
+        return "Enabled";
+    case bucket_versioning::suspended:
+        return "Suspended";
     }
 
     throw std::runtime_error("unsupported versioning type");
@@ -38,7 +41,7 @@ coro<void> directory::put_object(const std::string& bucket, const object& obj) {
     auto data = to_buffer(*obj.addr);
     auto span = std::span<char>(data);
 
-    auto handle = co_await m_db.get();
+    auto handle = co_await m_db->get();
     try {
         co_await handle->execv("CALL uh_put_object($1, $2, $3, $4, $5, $6)",
                                bucket, obj.name, span, obj.addr->data_size(),
@@ -51,7 +54,7 @@ coro<void> directory::put_object(const std::string& bucket, const object& obj) {
 
 coro<directory::object_lock>
 directory::get_object(const std::string& bucket, const std::string& object_id) {
-    auto handle = co_await m_db.get();
+    auto handle = co_await m_db->get();
     auto row = co_await handle->execb(
         "SELECT address::BYTEA FROM uh_get_object($1, $2)", bucket, object_id);
 
@@ -82,9 +85,9 @@ directory::get_object(const std::string& bucket, const std::string& object_id) {
 
     boost::asio::co_spawn(
         executor,
-        [f = std::move(f), this, id]() mutable -> coro<void> {
+        [f = std::move(f), db = m_db, id]() mutable -> coro<void> {
             co_await f.get();
-            auto h = co_await m_db.get();
+            auto h = co_await db->get();
             co_await h->execv("CALL uh_dec_reference($1)", id);
         },
         boost::asio::detached);
@@ -102,7 +105,7 @@ void directory::unref::operator()() { p.set_value(); }
 
 coro<object> directory::head_object(const std::string& bucket,
                                     const std::string& object_id) {
-    auto handle = co_await m_db.get();
+    auto handle = co_await m_db->get();
     auto metadata = co_await handle->execv(
         "SELECT size, last_modified, etag, mime FROM uh_get_object($1, $2)",
         bucket, object_id);
@@ -125,7 +128,7 @@ coro<void> directory::put_bucket(const std::string& bucket) {
     validate_bucket_name(bucket);
 
     try {
-        auto handle = co_await m_db.get();
+        auto handle = co_await m_db->get();
         co_await handle->execv("CALL uh_create_bucket($1)", bucket);
     } catch (const std::exception&) {
         throw command_exception(
@@ -139,7 +142,7 @@ coro<void> directory::put_bucket(const std::string& bucket) {
 coro<void> directory::bucket_exists(const std::string& bucket) {
 
     try {
-        auto handle = co_await m_db.get();
+        auto handle = co_await m_db->get();
         co_await handle->execv("SELECT uh_bucket_exists($1)", bucket);
     } catch (const std::exception&) {
         throw command_exception(status::not_found, "NoSuchBucket",
@@ -150,7 +153,7 @@ coro<void> directory::bucket_exists(const std::string& bucket) {
 coro<void> directory::delete_bucket(const std::string& bucket) {
     co_await bucket_exists(bucket);
 
-    auto handle = co_await m_db.get();
+    auto handle = co_await m_db->get();
     auto row = co_await handle->execv(
         "SELECT count(*) FROM uh_list_objects($1)", bucket);
 
@@ -167,7 +170,7 @@ coro<void> directory::delete_object(const std::string& bucket,
                                     const std::string& object_id) {
 
     try {
-        auto handle = co_await m_db.get();
+        auto handle = co_await m_db->get();
         co_await handle->execv("CALL uh_delete_object($1, $2)", bucket,
                                object_id);
     } catch (const std::exception& e) {
@@ -177,7 +180,7 @@ coro<void> directory::delete_object(const std::string& bucket,
 coro<std::vector<std::string>> directory::list_buckets() {
     std::vector<std::string> rv;
 
-    auto handle = co_await m_db.get();
+    auto handle = co_await m_db->get();
     for (auto row = co_await handle->exec("SELECT name FROM uh_list_buckets()");
          row; row = co_await handle->next()) {
         rv.emplace_back(*row->string(0));
@@ -190,7 +193,7 @@ coro<std::optional<std::string>>
 directory::get_bucket_policy(const std::string& bucket) {
 
     try {
-        auto handle = co_await m_db.get();
+        auto handle = co_await m_db->get();
         auto row = co_await handle->execv(
             "SELECT policy FROM uh_bucket_policy($1)", bucket);
         co_return row->string(0);
@@ -206,7 +209,7 @@ coro<void> directory::set_bucket_policy(const std::string& bucket,
                                         std::optional<std::string> policy) {
     co_await bucket_exists(bucket);
 
-    auto handle = co_await m_db.get();
+    auto handle = co_await m_db->get();
     co_await handle->execv("CALL uh_bucket_set_policy($1, $2)", bucket, policy);
 }
 
@@ -214,7 +217,7 @@ coro<std::optional<std::string>>
 directory::get_bucket_cors(const std::string& bucket) {
 
     try {
-        auto handle = co_await m_db.get();
+        auto handle = co_await m_db->get();
         auto row = co_await handle->execv("SELECT cors FROM uh_bucket_cors($1)",
                                           bucket);
         co_return row->string(0);
@@ -230,14 +233,16 @@ coro<void> directory::set_bucket_cors(const std::string& bucket,
                                       std::optional<std::string> cors) {
     co_await bucket_exists(bucket);
 
-    auto handle = co_await m_db.get();
+    auto handle = co_await m_db->get();
     co_await handle->execv("CALL uh_bucket_set_cors($1, $2)", bucket, cors);
 }
 
-coro<bucket_versioning> directory::get_bucket_versioning(const std::string& bucket) {
+coro<bucket_versioning>
+directory::get_bucket_versioning(const std::string& bucket) {
     try {
-        auto handle = co_await m_db.get();
-        auto row = co_await handle->execv("SELECT status FROM uh_bucket_versioning($1)", bucket);
+        auto handle = co_await m_db->get();
+        auto row = co_await handle->execv(
+            "SELECT status FROM uh_bucket_versioning($1)", bucket);
 
         co_return to_versioning(*row->string(0));
     } catch (const std::exception& e) {
@@ -247,11 +252,12 @@ coro<bucket_versioning> directory::get_bucket_versioning(const std::string& buck
 }
 
 coro<void> directory::set_bucket_versioning(const std::string& bucket,
-        bucket_versioning versioning) {
+                                            bucket_versioning versioning) {
     co_await bucket_exists(bucket);
 
-    auto handle = co_await m_db.get();
-    co_await handle->execv("CALL uh_bucket_set_versioning($1, $2)", bucket, to_string(versioning));
+    auto handle = co_await m_db->get();
+    co_await handle->execv("CALL uh_bucket_set_versioning($1, $2)", bucket,
+                           to_string(versioning));
 }
 
 coro<std::vector<object>>
@@ -262,7 +268,7 @@ directory::list_objects(const std::string& bucket,
 
     std::vector<object> rv;
 
-    auto handle = co_await m_db.get();
+    auto handle = co_await m_db->get();
     auto row = co_await handle->execv(
         "SELECT id, name, size, last_modified, "
         "etag, mime FROM uh_list_objects($1, $2, $3)",
@@ -281,7 +287,7 @@ directory::list_objects(const std::string& bucket,
 }
 
 coro<std::optional<directory::to_delete>> directory::next_deleted() {
-    auto handle = co_await m_db.get();
+    auto handle = co_await m_db->get();
 
     auto row = co_await handle->execb(
         "SELECT id, address FROM uh_next_deleted() LIMIT 1");
@@ -297,18 +303,18 @@ coro<std::optional<directory::to_delete>> directory::next_deleted() {
 }
 
 coro<void> directory::clear_buckets() {
-    auto handle = co_await m_db.get();
+    auto handle = co_await m_db->get();
     co_await handle->exec("CALL uh_clear_deleted_buckets();");
 }
 
 coro<void> directory::remove_object(std::size_t id) {
-    auto handle = co_await m_db.get();
+    auto handle = co_await m_db->get();
 
     co_await handle->execv("CALL uh_delete_object_by_id($1)", id);
 }
 
 coro<std::size_t> directory::data_size() {
-    auto handle = co_await m_db.get();
+    auto handle = co_await m_db->get();
     auto row = co_await handle->execv("SELECT uh_data_size()");
     co_return row->number(0).value_or(0);
 }
