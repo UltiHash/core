@@ -305,7 +305,7 @@ BEGIN
         RETURN QUERY
             SELECT o.id, o.name, o.address, o.size, o.last_modified, o.etag, o.mime, o.version, o.status, o.sticky FROM objects o
             JOIN (
-                SELECT max(o2.id) AS max_id FROM objects o2 WHERE o2.status = 'Normal' AND o2.bucket_id = uh_get_bucket_id(bucket) AND o2.name = object
+                SELECT max(o2.id) AS max_id FROM objects o2 WHERE NOT (o2.status = 'Deleted' and NOT o2.sticky) AND o2.bucket_id = uh_get_bucket_id(bucket) AND o2.name = object
             ) temp ON o.id = temp.max_id;
     END IF;
 END;
@@ -321,7 +321,7 @@ BEGIN
     RETURN QUERY
         SELECT o.id, o.name, o.address, o.size, o.last_modified, o.etag, o.mime, o.version, o.status, o.sticky
          FROM objects o
-         WHERE bucket_id = uh_get_bucket_id(bucket) AND name = object AND o.version = ver
+         WHERE bucket_id = uh_get_bucket_id(bucket) AND o.name = object AND o.version = ver
         ORDER BY id DESC
         LIMIT 1;
 END;
