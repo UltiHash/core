@@ -10,11 +10,7 @@
 
 namespace uh::cluster {
 
-enum class bucket_versioning {
-    disabled,
-    enabled,
-    suspended
-};
+enum class bucket_versioning { disabled, enabled, suspended };
 
 std::string to_string(bucket_versioning versioning);
 bucket_versioning to_versioning(std::string s);
@@ -22,8 +18,9 @@ bucket_versioning to_versioning(std::string s);
 class directory {
 public:
     directory(boost::asio::io_context& ioc, const db::config& cfg)
-        : m_db(ioc, connection_factory(ioc, cfg, cfg.directory),
-               cfg.directory.count) {}
+        : m_db{std::make_shared<pool<db::connection>>(
+              ioc, connection_factory(ioc, cfg, cfg.directory),
+              cfg.directory.count)} {}
 
     struct unref {
         promise<void> p;
@@ -65,7 +62,7 @@ public:
 
     coro<bucket_versioning> get_bucket_versioning(const std::string& bucket);
     coro<void> set_bucket_versioning(const std::string& bucket,
-            bucket_versioning versioning);
+                                     bucket_versioning versioning);
 
     coro<std::vector<object>>
     list_objects(const std::string& bucket,
@@ -88,7 +85,7 @@ public:
     coro<std::size_t> data_size();
 
 private:
-    pool<db::connection> m_db;
+    std::shared_ptr<pool<db::connection>> m_db;
 
     static void validate_bucket_name(const std::string& bucket_name);
 };
