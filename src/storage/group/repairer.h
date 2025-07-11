@@ -116,7 +116,7 @@ private:
             for (auto i = 0ul; i < num_stripes; ++i) {
                 LOG_DEBUG() << "start repairing data for stripe " << i;
                 (void)m_chunk_size;
-                address addr;
+                storage_address addr;
                 addr.emplace_back(i * m_chunk_size, m_chunk_size);
                 {
                     auto v_succeeded = co_await run_for_all<

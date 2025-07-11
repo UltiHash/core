@@ -25,14 +25,15 @@ struct local_storage : public storage_interface {
         co_return;
     }
 
-    coro<shared_buffer<>> read(const uint128_t& pointer, size_t size) override {
+    coro<shared_buffer<>> read(const storage_pointer& pointer,
+                               size_t size) override {
         shared_buffer<> buf(size);
         auto read_size = m_data_store->read(pointer, buf.span());
         buf.resize(read_size);
         co_return buf;
     }
 
-    coro<void> read_address(const address& addr, std::span<char> buffer,
+    coro<void> read_address(const storage_address& addr, std::span<char> buffer,
                             const std::vector<size_t>& offsets) override {
         LOG_DEBUG() << "read addr start";
 

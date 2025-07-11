@@ -4,8 +4,9 @@
 
 namespace uh::cluster {
 
-coro<address> messenger::recv_address(const header& message_header) {
-    address addr(address::allocated_elements(message_header.size));
+coro<storage_address> messenger::recv_address(const header& message_header) {
+    storage_address addr(
+        storage_address::allocated_elements(message_header.size));
     LOG_DEBUG() << "messenge_header.size: "
                 << std::to_string(message_header.size);
     register_read_buffer(addr.fragments);
@@ -110,7 +111,7 @@ coro<write_request_store> messenger::recv_write(const header& message_header) {
 }
 
 coro<void> messenger::send_address(const message_type type,
-                                   const address& addr) {
+                                   const storage_address& addr) {
     register_write_buffer(addr.fragments);
     co_await send_buffers(type);
 }
