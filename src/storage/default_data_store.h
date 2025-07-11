@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <list>
 #include <shared_mutex>
+#include <tbb/concurrent_vector.h>
 
 namespace uh::cluster {
 
@@ -111,7 +112,7 @@ public:
 
 private:
     struct location {
-        data_file& file;
+        std::size_t index;
         std::size_t offset;
     };
 
@@ -121,7 +122,7 @@ private:
         std::size_t local;
     };
 
-    void sync();
+    void sync(std::unordered_set<std::size_t>& dirty_file_indices);
 
     void allocate_files(std::size_t offset, std::size_t size);
 
@@ -140,12 +141,11 @@ private:
     data_store_config m_conf;
     const std::size_t m_filesize;
 
-    std::vector<data_file> m_files;
-    std::size_t m_file_count;
+    tbb::concurrent_vector<data_file> m_files;
+    std::atomic<std::size_t> m_file_count;
 
     int m_meta_fd;
 
-    mutable std::mutex m_file_mutex;
     std::atomic<std::size_t> m_used_space{};
     std::atomic<std::size_t> m_write_offset{};
 
