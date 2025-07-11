@@ -105,9 +105,8 @@ inline auto make_logging_completion_notifier(
 
 class coro_task {
 public:
-    template <typename Awaitable>
-    coro_task(std::string name, boost::asio::io_context& ioc,
-              Awaitable&& awaitable,
+    template <typename Executor, typename Awaitable>
+    coro_task(std::string name, Executor& ioc, Awaitable&& awaitable,
               std::function<void(std::exception_ptr)> on_finish = nullptr)
         : m_name(std::move(name)),
           m_promise{},
