@@ -6,6 +6,8 @@
 #include <common/utils/io.h>
 #include <common/utils/pointer_traits.h>
 
+#include <tbb/concurrent_vector.h>
+
 #include <mutex>
 #include <set>
 
@@ -25,8 +27,8 @@ std::string base_name(std::size_t number) {
     return s.str();
 }
 
-std::vector<data_file> load_files(const std::filesystem::path& root,
-                                  std::size_t filesize) {
+tbb::concurrent_vector<data_file> load_files(const std::filesystem::path& root,
+                                             std::size_t filesize) {
 
     if (!std::filesystem::exists(root)) {
         if (!std::filesystem::create_directories(root)) {
@@ -45,7 +47,7 @@ std::vector<data_file> load_files(const std::filesystem::path& root,
         files.insert(path.replace_extension());
     }
 
-    std::vector<data_file> rv;
+    tbb::concurrent_vector<data_file> rv;
     for (const auto& root : files) {
         rv.emplace_back(root);
     }
@@ -90,7 +92,7 @@ std::size_t default_data_store::read(std::size_t local_pointer,
 
     while (rv < buffer.size()) {
         auto loc = file_location(local_pointer);
-        auto count = loc.file.read(loc.offset, buffer.subspan(rv));
+        auto count = m_files[loc.index].read(loc.offset, buffer.subspan(rv));
         if (count == 0) {
             break;
         }
@@ -102,11 +104,11 @@ std::size_t default_data_store::read(std::size_t local_pointer,
     return rv;
 }
 
-void default_data_store::sync() {
-    // TODO:
-    // https://linear.app/ultihash/issue/ENG-1123/sync-workflow-in-data-store-is-broken
-    std::unique_lock lock(m_file_mutex);
-    m_files.back().sync();
+void default_data_store::sync(
+    std::unordered_set<std::size_t>& dirty_file_indices) {
+    for (auto index : dirty_file_indices) {
+        m_files[index].sync();
+    }
 
     write_metadata();
     int md_rv = fsync(m_meta_fd);
@@ -117,7 +119,6 @@ void default_data_store::sync() {
 }
 
 std::size_t default_data_store::fetch_used_space() const {
-    std::unique_lock lock(m_file_mutex);
     return std::accumulate(
         m_files.begin(), m_files.end(), 0ull,
         [](auto acc, const auto& it) { return acc + it.used_space(); });
@@ -138,15 +139,18 @@ void default_data_store::write(
                                  std::to_string(allocation.size));
     }
 
+    std::unordered_set<std::size_t> dirty_file_indices;
     for (const auto& data : buffers) {
         std::size_t written = 0ull;
         while (written < data.size()) {
             auto loc = file_location(local_pointer);
             std::size_t file_offset = local_pointer % m_filesize;
-            auto count = loc.file.write(file_offset, data.subspan(written));
+            auto count =
+                m_files[loc.index].write(file_offset, data.subspan(written));
             if (count == 0) {
                 break;
             }
+            dirty_file_indices.insert(loc.index);
 
             local_pointer += count;
             written += count;
@@ -163,7 +167,7 @@ void default_data_store::write(
            !m_write_offset.compare_exchange_weak(expected, desired)) {
         desired = std::max(desired, expected);
     }
-    sync();
+    sync(dirty_file_indices);
 
     m_refcounter.increment(refcounts, false);
 }
@@ -201,7 +205,6 @@ void default_data_store::allocate_files(std::size_t offset, std::size_t size) {
         return;
     }
 
-    std::unique_lock lock(m_file_mutex);
     while (m_file_count < required_file_count) {
         m_files.emplace_back(
             data_file::create(m_root / base_name(m_files.size()), m_filesize));
@@ -218,7 +221,7 @@ default_data_store::location default_data_store::file_location(size_t pointer) {
         throw std::out_of_range("pointer out of range");
     }
 
-    return location{.file = m_files[index], .offset = offset};
+    return location{.index = index, .offset = offset};
 }
 
 std::size_t default_data_store::get_used_space() const noexcept {
@@ -296,8 +299,8 @@ std::size_t default_data_store::internal_delete(std::size_t offset,
     while (bytes_released < adjusted_size) {
         // it seems pointer of of range is coming from here
         auto loc = file_location(offset + bytes_released);
-        auto count =
-            loc.file.release(loc.offset, adjusted_size - bytes_released);
+        auto count = m_files[loc.index].release(loc.offset,
+                                                adjusted_size - bytes_released);
         if (count == 0) {
             break;
         }
