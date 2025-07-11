@@ -20,7 +20,7 @@ struct data_store {
                        const std::vector<std::span<const char>>& buffers,
                        const std::vector<refcount_t>& refcounts = {}) = 0;
 
-    virtual std::size_t read(const std::size_t local_pointer,
+    virtual std::size_t read(const storage_pointer local_pointer,
                              std::span<char> buffer) = 0;
 
     virtual std::vector<refcount_t>

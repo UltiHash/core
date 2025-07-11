@@ -2,6 +2,7 @@
 
 dedup=1
 storage_cfg='[{"id":0,"type":"ROUND_ROBIN","storages":1}]'
+# storage_cfg='[{"id":0,"type":"ERASURE_CODING","storages":3,"data_shards":2,"parity_shards":1,"stripe_size_kib":64}]'
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
