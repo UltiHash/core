@@ -134,9 +134,13 @@ public:
         m_signal.emit(boost::asio::cancellation_type::all);
     }
 
-    void wait() {
+    void wait(std::optional<std::chrono::steady_clock::duration> timeout =
+                  std::nullopt) {
         try {
-            m_future.get();
+            if (timeout.has_value())
+                m_future.wait_for(*timeout);
+            else
+                m_future.get();
         } catch (const std::future_error& e) {
             LOG_ERROR() << "[" << m_name
                         << "] future_error in wait(): " << e.what();
