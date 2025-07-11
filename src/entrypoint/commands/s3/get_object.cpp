@@ -2,6 +2,7 @@
 
 #include <common/utils/time_utils.h>
 
+#include <entrypoint/formats.h>
 #include <entrypoint/utils.h>
 #include <entrypoint/http/command_exception.h>
 #include <entrypoint/http/range.h>
@@ -106,7 +107,22 @@ coro<response> get_object::handle(request& req) {
 
     response res;
 
-    auto obj = co_await m_dir.get_object(req.bucket(), req.object_key(), req.query("versionId"));
+    auto version = req.query("versionId");
+    auto obj = co_await m_dir.get_object(req.bucket(), req.object_key(), version);
+
+    if (version && (obj.empty() || obj->state == ep::object_state::deleted)) {
+        res = error_response(
+            status::method_not_allowed,
+            "MethodNotAllowed",
+            "The specified method is not allowed against this resource.");
+
+        res.set("X-Amz-Delete-Marker", "true");
+        if (!obj.empty()) {
+            res.set("Last-Modified", imf_fixdate(obj->last_modified));
+        }
+        co_return res;
+    }
+
     set_default_headers(res, *obj);
 
     if (auto range = req.header("Range"); range) {

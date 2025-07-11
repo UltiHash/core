@@ -79,6 +79,9 @@ directory::get_object(const std::string& bucket,
 
     if (version) {
         row = co_await handle->execb("SELECT address::BYTEA FROM uh_get_object_by_version($1, $2, $3)", bucket, object_id, *version);
+        if (!row) {
+            co_return object_lock{};
+        }
     } else {
         row = co_await handle->execb("SELECT address::BYTEA FROM uh_get_object($1, $2)", bucket, object_id);
     }
