@@ -37,8 +37,9 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             } catch (const boost::system::system_error& e) {
                 throw;
             } catch (const downstream_exception& e) {
-                if (e.code() == boost::asio::error::operation_aborted or
-                    e.code() == boost::beast::error::timeout) {
+                if (e.code() == boost::asio::error::operation_aborted) {
+                    throw e.original_exception();
+                } else if (e.code() == boost::beast::error::timeout) {
                     err = error(error::busy, e.what());
                 } else {
                     err = error(error::internal_network_error, e.what());
@@ -56,7 +57,9 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             }
 
         } catch (const boost::system::system_error& e) {
-            if (e.code() == boost::asio::error::eof) {
+            if (e.code() == boost::asio::error::operation_aborted) {
+                break;
+            } else if (e.code() == boost::asio::error::eof) {
                 LOG_INFO() << s.remote_endpoint() << " disconnected";
                 break;
             }

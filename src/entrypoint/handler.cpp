@@ -34,20 +34,11 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 metric<success>::increase(1);
 
             } catch (const boost::system::system_error& e) {
-                if (e.code() == boost::asio::error::operation_aborted) {
-                    resp = make_response(
-                        command_exception(error::service_unavailable));
-                    boost::asio::co_spawn(s.get_executor(),
-                                          write(s, std::move(resp), id),
-                                          boost::asio::use_future)
-                        .wait_for(3s);
-                    break;
-                } else {
-                    throw;
-                }
+                throw;
             } catch (const downstream_exception& e) {
-                if (e.code() == boost::asio::error::operation_aborted or
-                    e.code() == boost::beast::error::timeout) {
+                if (e.code() == boost::asio::error::operation_aborted) {
+                    throw e.original_exception();
+                } else if (e.code() == boost::beast::error::timeout) {
                     resp = make_response(command_exception(error::busy));
                 } else {
                     resp = make_response(
@@ -65,8 +56,10 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             co_await write(s, std::move(resp), id);
 
         } catch (const boost::system::system_error& e) {
-            if (e.code() == boost::beast::http::error::end_of_stream or
-                e.code() == boost::asio::error::eof) {
+            if (e.code() == boost::asio::error::operation_aborted) {
+                break;
+            } else if (e.code() == boost::beast::http::error::end_of_stream or
+                       e.code() == boost::asio::error::eof) {
                 LOG_INFO() << s.remote_endpoint() << " disconnected";
                 break;
             }

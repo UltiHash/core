@@ -26,7 +26,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 std::tie(hdr, context) = co_await m.recv_header_with_context();
                 LOG_DEBUG() << remote.str() << " received "
                             << magic_enum::enum_name(hdr.type);
-                
+
                 boost::asio::context::set_pointer(context, "peer", &peer);
 
                 co_await handle_dedupe(hdr, m).continue_trace(
@@ -35,8 +35,9 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             } catch (const boost::system::system_error& e) {
                 throw;
             } catch (const downstream_exception& e) {
-                if (e.code() == boost::asio::error::operation_aborted or
-                    e.code() == boost::beast::error::timeout) {
+                if (e.code() == boost::asio::error::operation_aborted) {
+                    throw e.original_exception();
+                } else if (e.code() == boost::beast::error::timeout) {
                     err = error(error::busy, e.what());
                 } else {
                     err = error(error::internal_network_error, e.what());
@@ -54,7 +55,9 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             }
 
         } catch (const boost::system::system_error& e) {
-            if (e.code() == boost::asio::error::eof) {
+            if (e.code() == boost::asio::error::operation_aborted) {
+                break;
+            } else if (e.code() == boost::asio::error::eof) {
                 LOG_INFO() << s.remote_endpoint() << " disconnected";
                 break;
             }
