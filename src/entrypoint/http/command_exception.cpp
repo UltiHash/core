@@ -24,11 +24,6 @@ const char* command_exception::what() const noexcept {
 }
 
 response make_response(const command_exception& e) noexcept {
-    if (static_cast<unsigned>(e.get_status()) >= 500) {
-        LOG_WARN() << e.what();
-    } else {
-        LOG_INFO() << e.what();
-    }
     return error_response(e.m_status, e.m_code, e.m_reason);
 }
 
