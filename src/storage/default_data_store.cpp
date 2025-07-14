@@ -156,12 +156,12 @@ void default_data_store::write(
         }
     }
 
-    m_used_space.fetch_add(allocation.size);
-    std::size_t current = m_write_offset.load();
+    m_used_space += allocation.size;
+    std::size_t expected = m_write_offset.load();
     std::size_t desired = allocation.offset + allocation.size;
-    while (desired > current &&
-           !m_write_offset.compare_exchange_weak(current, desired)) {
-        desired = std::max(desired, current);
+    while (desired > expected &&
+           !m_write_offset.compare_exchange_weak(expected, desired)) {
+        desired = std::max(desired, expected);
     }
     sync(dirty_files);
 
@@ -214,7 +214,7 @@ default_data_store::location default_data_store::file_location(size_t pointer) {
     auto index = pointer / m_filesize;
     auto offset = pointer % m_filesize;
 
-    if (index >= m_files.size()) {
+    if (index >= m_file_count) {
         throw std::out_of_range("pointer out of range");
     }
 
