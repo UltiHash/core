@@ -6,6 +6,8 @@
 #include <common/utils/io.h>
 #include <common/utils/pointer_traits.h>
 
+#include <set>
+
 namespace uh::cluster {
 
 namespace {
