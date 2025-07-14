@@ -1,6 +1,5 @@
 ## [Unreleased]
 - Fixes an issue when operating erasure-coded storage groups with disabled deduplication
-- Improves scalability of storage services by removing conventional locking in data store component
 - Fixes an issue where storage service instances might wrongfully acknowledge write operations of data that has not been flushed to persistent storage yet
 
 - ## [1.5.0] 2025-07-08
