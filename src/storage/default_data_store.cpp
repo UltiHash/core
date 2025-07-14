@@ -66,6 +66,7 @@ default_data_store::default_data_store(data_store_config conf,
       m_conf(conf),
       m_filesize(m_conf.max_file_size),
       m_files(load_files(m_root, m_filesize)),
+      m_file_count(m_files.size()),
       m_meta_fd(open_metadata(working_dir / std::string("ds.meta"))),
       m_used_space(fetch_used_space()),
       m_refcounter(
