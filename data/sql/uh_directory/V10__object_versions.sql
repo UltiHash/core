@@ -204,7 +204,7 @@ BEGIN
     IF b_versioning = 'Enabled' THEN
 
         SELECT id FROM uh_put_object(bucket, object, '', 0, NULL, NULL) INTO obj_id;
-        UPDATE objects SET status = 'Deleted', sticky = True WHERE id = obj_id;
+        UPDATE objects SET status = 'Deleted', deleted_at = now(), sticky = True WHERE id = obj_id;
 
         RETURN QUERY SELECT True, o.version FROM objects o WHERE id = obj_id;
 
@@ -214,13 +214,13 @@ BEGIN
             SELECT id FROM uh_put_object(bucket, object, '', 0, NULL, NULL) INTO obj_id;
         END IF;
 
-        UPDATE objects SET status = 'Deleted', sticky = True WHERE id = obj_id;
+        UPDATE objects SET status = 'Deleted', deleted_at = now(), sticky = True WHERE id = obj_id;
 
         RETURN QUERY SELECT True, o.version FROM objects o WHERE id = obj_id;
 
     ELSE
 
-        UPDATE objects SET status = 'Deleted' WHERE id = obj_id;
+        UPDATE objects SET status = 'Deleted', deleted_at = now() WHERE id = obj_id;
         RETURN QUERY SELECT True, NULL::UUID FROM objects WHERE id = obj_id;
 
     END IF;
@@ -244,7 +244,7 @@ BEGIN
         RAISE EXCEPTION 'Cannot delete object "%" in bucket "%", as it does not appear to exist.', object, bucket;
     END IF;
 
-    UPDATE objects SET status = 'Deleted', sticky = False WHERE id = obj_id;
+    UPDATE objects SET status = 'Deleted', deleted_at = now(), sticky = False WHERE id = obj_id;
     RETURN QUERY SELECT obj_status = 'Deleted', NULL::UUID;
 END;
 $$;
@@ -264,7 +264,7 @@ BEGIN
         RAISE EXCEPTION 'Cannot delete object "%" in bucket "%", as it does not appear to exist.', object, bucket;
     END IF;
 
-    UPDATE objects SET status = 'Deleted' WHERE id = obj_id;
+    UPDATE objects SET status = 'Deleted', deleted_at = now() WHERE id = obj_id;
     RETURN QUERY SELECT False, NULL::UUID;
 END;
 $$;
@@ -436,7 +436,7 @@ BEGIN
         SELECT uh_get_object.id FROM uh_get_object(bucket, object) INTO o_id;
 
         IF o_id IS NOT NULL THEN
-            UPDATE objects SET status = 'Deleted' WHERE objects.id = o_id;
+            UPDATE objects SET status = 'Deleted', deleted_at = now() WHERE objects.id = o_id;
         END IF;
 
         RETURN QUERY INSERT INTO objects (bucket_id, name, address, size, last_modified, etag, mime)
@@ -452,7 +452,7 @@ BEGIN
         SELECT uh_get_object.id, sticky FROM uh_get_object(bucket, object) INTO o_id, o_sticky;
 
         IF o_id IS NOT NULL AND NOT o_sticky THEN
-            UPDATE objects SET status = 'Deleted' WHERE objects.id = o_id;
+            UPDATE objects SET status = 'Deleted', deleted_at = now() WHERE objects.id = o_id;
         END IF;
 
         RETURN QUERY INSERT INTO objects (bucket_id, name, address, size, last_modified, etag, mime)
