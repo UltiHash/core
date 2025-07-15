@@ -133,12 +133,12 @@ private:
                     co_await m_handler->handle(std::move(stream));
                 });
 
+            add_session(session);
             session->run(name, m_ioc, std::move(stream),
                          [this](std::shared_ptr<session_runner> session) {
                              remove_session(session);
                              m_sessions_cv.notify_all();
                          });
-            add_session(session);
         }
     }
 
