@@ -13,10 +13,11 @@ struct storage_interface {
                              const std::vector<std::span<const char>>& buffers,
                              const std::vector<refcount_t>& refcounts) = 0;
 
-    virtual coro<shared_buffer<>> read(const uint128_t& pointer,
+    virtual coro<shared_buffer<>> read(const storage_pointer& pointer,
                                        size_t size) = 0;
 
-    virtual coro<void> read_address(const address& addr, std::span<char> buffer,
+    virtual coro<void> read_address(const storage_address& addr,
+                                    std::span<char> buffer,
                                     const std::vector<size_t>& offsets) = 0;
 
     virtual coro<std::vector<refcount_t>>

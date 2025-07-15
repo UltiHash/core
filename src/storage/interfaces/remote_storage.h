@@ -25,7 +25,8 @@ struct remote_storage : public storage_interface {
         co_await m->recv_header(time_settings::instance().storage_timeout);
     }
 
-    coro<shared_buffer<>> read(const uint128_t& pointer, size_t size) override {
+    coro<shared_buffer<>> read(const storage_pointer& pointer,
+                               size_t size) override {
         auto m = co_await m_storage_service.acquire_messenger();
         co_await m->send_fragment(STORAGE_READ_REQ, {pointer, size});
         const auto h =
@@ -36,7 +37,7 @@ struct remote_storage : public storage_interface {
         co_return buffer;
     }
 
-    coro<void> read_address(const address& addr, std::span<char> buffer,
+    coro<void> read_address(const storage_address& addr, std::span<char> buffer,
                             const std::vector<size_t>& offsets) override {
         auto m = co_await m_storage_service.acquire_messenger();
 

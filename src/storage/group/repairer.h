@@ -115,7 +115,7 @@ private:
                  state.cancelled() == boost::asio::cancellation_type::none;
                  ++i) {
                 LOG_DEBUG() << "start repairing data for stripe " << i;
-                address addr;
+                storage_address addr;
                 addr.emplace_back(i * m_chunk_size, m_chunk_size);
                 {
                     auto v_succeeded = co_await run_for_all<

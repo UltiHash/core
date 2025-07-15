@@ -175,13 +175,14 @@ coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
 }
 
 coro<std::unordered_map<std::size_t, bool>> ec_data_view::read_from_storages(
-    std::unordered_map<std::size_t, address_info> addr_info_map,
+    std::unordered_map<std::size_t, storage_address_info> addr_info_map,
     std::span<char> buffer) {
     co_return co_await run_for_all<bool>(
         m_ioc,
         // NOTE: doesn't check storage_states, since unassigned storages will
         // throw exception
-        [this, buffer](std::size_t id, const address_info& info) -> coro<bool> {
+        [this, buffer](std::size_t id,
+                       const storage_address_info& info) -> coro<bool> {
             try {
                 auto storage = m_externals.get_storage_service(id);
                 auto state = m_externals.get_storage_states().at(id);
@@ -217,7 +218,7 @@ coro<std::unordered_map<std::size_t, bool>> ec_data_view::read_from_storages(
 
 std::unordered_map<uint64_t, std::vector<std::pair<fragment, std::size_t>>>
 ec_data_view::get_stripe_ids(
-    std::unordered_map<std::size_t, address_info> addr_info_map,
+    std::unordered_map<std::size_t, storage_address_info> addr_info_map,
     std::unordered_map<std::size_t, bool> success_map) {
     std::unordered_map<uint64_t, std::vector<std::pair<fragment, std::size_t>>>
         rv;
@@ -303,7 +304,7 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
     }
 
     for (auto& [stripe_id, frags_and_offsets] : stripe_map) {
-        address _addr;
+        storage_address _addr;
         _addr.emplace_back(m_chunk_size * stripe_id, m_chunk_size);
 
         LOG_DEBUG() << "[read_address] call run_for_all for a stripe "
