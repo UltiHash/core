@@ -293,26 +293,45 @@ while true; do
     fi
 done
 
-echo "Killing all spawned processes."
-kill "$pid_entrypoint"
-wait "$pid_entrypoint"
+kill_in_order=true
 
-for pid in "${pid_deduplicators[@]}"; do
-    kill $pid
-done
-for pid in "${pid_deduplicators[@]}"; do
-    wait $pid
-done
+if $kill_in_order; then
+    echo "Killing all spawned processes."
+    kill "$pid_entrypoint"
+    wait "$pid_entrypoint"
 
-for pid in "${storage_pids[@]}"; do
-    kill "$pid"
-done
-for pid in "${storage_pids[@]}"; do
-    wait "$pid"
-done
+    for pid in "${pid_deduplicators[@]}"; do
+        kill $pid
+    done
+    for pid in "${pid_deduplicators[@]}"; do
+        wait $pid
+    done
 
-kill "$pid_coordinator"
-wait "$pid_coordinator"
+    for pid in "${storage_pids[@]}"; do
+        kill "$pid"
+    done
+    for pid in "${storage_pids[@]}"; do
+        wait $pid
+    done
+
+    kill "$pid_coordinator"
+    wait "$pid_coordinator"
+else
+    pkill uh-cluster
+    sleep 0.3
+fi
+
+
+timeout=7
+interval=0.2
+
+for ((i=0; i<$(echo "$timeout/$interval" | bc); i++)); do
+  if ! pgrep "uh-cluster" > /dev/null; then
+    echo "All process successfully destroyed"
+    exit 0
+  fi
+  sleep $interval
+done
 
 if pgrep -x "uh-cluster" > /dev/null; then
     echo
