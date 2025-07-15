@@ -65,7 +65,7 @@ coro<std::size_t> rr_data_view::read_address(const address& addr,
     co_await perform_for_address<void>(
         m_ioc, addr, pointer_traits::rr::get_storage_pointer,
         [buffer](std::shared_ptr<storage_interface> svc,
-                 const address_info& info) -> coro<void> {
+                 const storage_address_info& info) -> coro<void> {
             co_await svc->read_address(info.addr, buffer, info.pointer_offsets);
         },
         m_storage_index.get());

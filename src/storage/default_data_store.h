@@ -54,7 +54,7 @@ public:
      * @throws std::out_of_range invalid pointer and size given
      * @throws std::exception: corrupted storage
      */
-    std::size_t read(std::size_t local_pointer,
+    std::size_t read(storage_pointer local_pointer,
                      std::span<char> buffer) override;
 
     /**
