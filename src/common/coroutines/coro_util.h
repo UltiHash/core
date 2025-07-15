@@ -93,9 +93,8 @@ inline auto make_logging_completion_notifier(
             } catch (...) {
                 LOG_WARN() << "[" << name << "] Unknown non-std exception";
             }
-        } else {
-            LOG_INFO() << "[" << name << "] Task finished";
         }
+
         if (on_finish)
             on_finish(e);
         if (p)
@@ -130,7 +129,6 @@ public:
     }
 
     void cancel() { //
-        LOG_INFO() << "[" << m_name << "] Cancellation signal emitted";
         m_signal.emit(boost::asio::cancellation_type::all);
     }
 
