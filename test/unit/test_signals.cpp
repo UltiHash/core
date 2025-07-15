@@ -1,7 +1,14 @@
 #define BOOST_TEST_MODULE "signals tests"
 
 #include <boost/asio.hpp>
-#include <boost/process.hpp>
+
+#define BOOST_PROCESS_VERSION 1
+
+#include <boost/process/v1/args.hpp>
+#include <boost/process/v1/child.hpp>
+#include <boost/process/v1/env.hpp>
+#include <boost/process/v1/environment.hpp>
+
 #include <signal.h>
 
 #include "test_config.h"
