@@ -17,6 +17,7 @@ handler::handler(command_factory&& comm_factory, request_factory&& factory,
       m_cors(std::move(cors)) {}
 
 coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
+    std::optional<std::string> failed_request_id{std::nullopt};
     for (;;) {
 
         /*
@@ -57,6 +58,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
         } catch (const boost::system::system_error& e) {
             if (e.code() == boost::asio::error::operation_aborted) {
+                failed_request_id = id;
                 break;
             } else if (e.code() == boost::beast::http::error::end_of_stream or
                        e.code() == boost::asio::error::eof) {
@@ -65,6 +67,15 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             }
             throw;
         }
+    }
+
+    if (failed_request_id) {
+        co_await boost::asio::this_coro::reset_cancellation_state(
+            boost::asio::enable_terminal_cancellation());
+
+        auto resp =
+            make_response(command_exception(error::service_unavailable));
+        co_await write(s, std::move(resp), *failed_request_id);
     }
 
     s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
