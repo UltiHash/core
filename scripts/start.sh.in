@@ -294,10 +294,10 @@ while true; do
     fi
 done
 
-kill_in_order=true
+kill_in_order=false
 
 if $kill_in_order; then
-    echo "Killing all spawned processes."
+    echo "Killing all spawned processes in order..."
     kill "$pid_entrypoint"
     wait "$pid_entrypoint"
 
@@ -318,6 +318,7 @@ if $kill_in_order; then
     kill "$pid_coordinator"
     wait "$pid_coordinator"
 else
+    echo "Killing all spawned processes at once..."
     pkill uh-cluster
     sleep 0.3
 fi
