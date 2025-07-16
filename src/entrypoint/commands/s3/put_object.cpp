@@ -83,18 +83,19 @@ coro<response> put_object::handle(request& req) {
 
     auto original_size = resp.addr.data_size();
     object obj{.name = req.object_key(),
-               .size = original_size,
-               .addr = std::move(resp.addr),
-               .etag = tag,
-               .mime = req.header("Content-Type")
-                           .value_or(ep::DEFAULT_OBJECT_CONTENT_TYPE)};
+                .size = original_size,
+                .addr = std::move(resp.addr),
+                .etag = tag,
+                .mime = req.header("Content-Type")
+                            .value_or(ep::DEFAULT_OBJECT_CONTENT_TYPE)};
 
-    { co_await safe_put_object(m_dir, m_gdv, req.bucket(), obj); }
+    auto version = co_await safe_put_object(m_dir, m_gdv, req.bucket(), obj);
 
     metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(
         static_cast<double>(content_length) / MEBI_BYTE);
 
     res.set("ETag", tag);
+    res.set("X-Amz-Version-Id", version);
     res.set_original_size(original_size);
     res.set_effective_size(resp.effective_size);
 

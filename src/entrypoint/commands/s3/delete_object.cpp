@@ -20,9 +20,14 @@ coro<response> delete_object::handle(request& req) {
     metric<entrypoint_delete_object_req>::increase(1);
 
     co_await m_dir.bucket_exists(req.bucket());
-    co_await m_dir.delete_object(req.bucket(), req.object_key());
+    auto result = co_await m_dir.delete_object(req.bucket(), req.object_key(), req.query("versionId"));
 
-    co_return response{};
+    response res;
+
+    res.set("X-Amz-Delete-Marker", result.is_delete_marker ? "true" : "false");
+    res.set("X-Amz-Version-Id", result.version);
+
+    co_return res;
 }
 
 std::string delete_object::action_id() const { return "s3:DeleteObject"; }

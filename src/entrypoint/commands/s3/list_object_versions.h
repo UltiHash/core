@@ -5,9 +5,9 @@
 
 namespace uh::cluster {
 
-class head_object : public command {
+class list_object_versions : public command {
 public:
-    explicit head_object(directory&);
+    list_object_versions(directory&);
 
     static bool can_handle(const ep::http::request& req);
 

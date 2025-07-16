@@ -36,32 +36,7 @@ struct refcount_t {
 
 using utc_time = std::chrono::time_point<std::chrono::system_clock>;
 
-struct object {
-    std::string name;
-    utc_time last_modified;
-    std::size_t size{};
-
-    std::optional<address> addr;
-    std::optional<std::string> etag;
-    std::optional<std::string> mime;
-
-    constexpr static auto serialize(auto& archive, auto& self) {
-        std::size_t count = 0;
-        auto res = archive(self.name, count, self.size);
-
-        self.last_modified = utc_time(utc_time::duration(count));
-        return res;
-    }
-
-    constexpr static auto serialize(auto& archive, const auto& self) {
-        std::size_t count = self.last_modified.time_since_epoch().count();
-        return archive(self.name, count, self.size);
-    }
-};
-
 template <typename T> using coro = boost::asio::traced_awaitable<T>;
-
-template <typename T> using optref = std::optional<std::reference_wrapper<T>>;
 
 inline thread_local opentelemetry::context::Context THREAD_LOCAL_CONTEXT;
 
