@@ -42,15 +42,17 @@ template <typename fini> guard<fini> scope_guard(fini f) {
  */
 template <typename value, typename fini> class value_guard {
 public:
+    value_guard()
+        : m_wrapper()
+    {}
+
     value_guard(value v, fini f)
-        : m_value(std::move(v)),
-          m_f(std::move(f)) {}
+        : m_wrapper(std::in_place, std::move(v), std::move(f)) {}
 
     value_guard(value_guard&& vg)
-        : m_active(vg.m_active),
-          m_value(std::move(vg.m_value)),
-          m_f(std::move(vg.m_f)) {
-        vg.m_active = false;
+        : m_wrapper(std::move(vg.m_wrapper))
+    {
+        vg.m_wrapper.reset();
     }
 
     ~value_guard() {
@@ -61,19 +63,24 @@ public:
     }
 
     void release() {
-        if (m_active) {
-            m_active = false;
-            m_f();
+        if (m_wrapper) {
+            m_wrapper->f();
+            m_wrapper.reset();
         }
     }
 
-    value& operator*() { return m_value; }
-    value* operator->() { return &m_value; }
+    bool empty() const { return !m_wrapper.has_value(); }
+
+    value& operator*() { return m_wrapper->v; }
+    value* operator->() { return &m_wrapper->v; }
 
 private:
-    bool m_active = true;
-    value m_value;
-    fini m_f;
+    struct wrapper {
+        value v;
+        fini f;
+    };
+
+    std::optional<wrapper> m_wrapper;
 };
 
 template <typename value, typename fini>

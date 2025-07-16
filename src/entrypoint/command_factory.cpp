@@ -18,6 +18,7 @@
 #include <entrypoint/commands/s3/init_multipart.h>
 #include <entrypoint/commands/s3/list_buckets.h>
 #include <entrypoint/commands/s3/list_multipart.h>
+#include <entrypoint/commands/s3/list_object_versions.h>
 #include <entrypoint/commands/s3/list_objects.h>
 #include <entrypoint/commands/s3/list_objects_v2.h>
 #include <entrypoint/commands/s3/multipart.h>
@@ -118,6 +119,9 @@ coro<std::unique_ptr<command>> command_factory::create(ep::http::request& req) {
     if (complete_multipart::can_handle(req)) {
         co_return std::make_unique<complete_multipart>(m_directory, m_gdv,
                                                        m_uploads, m_limits);
+    }
+    if (list_object_versions::can_handle(req)) {
+        co_return std::make_unique<list_object_versions>(m_directory);
     }
     if (list_objects_v2::can_handle(req)) {
         co_return std::make_unique<list_objects_v2>(m_directory);
