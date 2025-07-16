@@ -88,14 +88,9 @@ public:
     void teardown() {
         m_gdv.reset();
 
-        for (auto& node : m_storage_instances) {
-            if (node != nullptr)
-                node.reset();
-        }
+        m_storage_instances.clear();
 
         m_ioc.stop();
-
-        m_storage_instances.clear();
 
         m_work_guard.reset();
 
