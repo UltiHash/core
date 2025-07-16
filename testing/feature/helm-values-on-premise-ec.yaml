@@ -27,6 +27,7 @@ global:
 featureTests:
   nodeSelector:
     kubernetes.io/hostname: $KUBERNETES_NODE
+  image: ghcr.io/ultihash/core-feature-tests:compute-usage-test
 
 etcd:
   replicaCount: 1

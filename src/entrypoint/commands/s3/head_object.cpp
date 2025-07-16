@@ -1,7 +1,7 @@
 #include "head_object.h"
 
-#include "entrypoint/formats.h"
-#include "entrypoint/http/command_exception.h"
+#include <entrypoint/utils.h>
+#include <entrypoint/http/command_exception.h>
 
 using namespace uh::cluster::ep::http;
 
@@ -20,13 +20,11 @@ coro<response> head_object::handle(request& req) {
     metric<entrypoint_head_object_req>::increase(1);
 
     try {
-        auto obj = co_await m_dir.head_object(req.bucket(), req.object_key());
+        auto obj = co_await m_dir.head_object(req.bucket(), req.object_key(), req.query("versionId"));
 
         response res;
+        set_default_headers(res, obj);
         res.set("Content-Length", std::to_string(obj.size));
-        res.set("Last-Modified", imf_fixdate(obj.last_modified));
-        res.set("ETag", obj.etag);
-        res.set("Content-Type", obj.mime);
 
         co_return res;
     } catch (const std::exception& e) {

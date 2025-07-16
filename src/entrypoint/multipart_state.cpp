@@ -63,7 +63,7 @@ coro<upload_info> multipart_state::instance::details(const std::string& id) {
 
         if (!row) {
             throw command_exception(
-                status::not_found, "InvalidPart",
+                status::not_found, "NoSuchUpload",
                 "The specified multipart upload does not exist. The upload ID "
                 "might not be valid, or the multipart upload might have been "
                 "aborted or completed.");

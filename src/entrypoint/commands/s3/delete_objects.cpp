@@ -89,7 +89,12 @@ coro<response> delete_objects::handle(request& req) {
             LOG_DEBUG() << req.peer() << ": delete_objects::handle(): deleting "
                         << *key;
 
-            co_await m_dir.delete_object(req.bucket(), *key);
+            std::optional<std::string> ver;
+            auto boostver = obj.get().get_optional<std::string>("VersionId");
+            if (boostver) {
+                ver = *boostver;
+            }
+            co_await m_dir.delete_object(req.bucket(), *key, ver);
             success.emplace_back(*key);
 
         } catch (const std::exception& e) {
