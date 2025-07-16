@@ -193,11 +193,12 @@ DECLARE
     b_versioning versioning_type;
     obj_id BIGINT;
     obj_sticky BOOLEAN;
+    obj_status object_status;
 BEGIN
     SELECT versioning FROM uh_get_bucket_info(bucket) INTO b_versioning;
-    SELECT id, sticky FROM uh_get_object(bucket, object) INTO obj_id, obj_sticky;
+    SELECT id, sticky, status FROM uh_get_object(bucket, object) INTO obj_id, obj_sticky, obj_status;
 
-    IF obj_id IS NULL THEN
+    IF obj_id IS NULL OR obj_status = 'Deleted' THEN
         RAISE EXCEPTION 'Cannot delete object "%" in bucket "%", as it does not appear to exist.', object, bucket;
     END IF;
 
