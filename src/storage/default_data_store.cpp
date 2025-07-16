@@ -6,7 +6,6 @@
 #include <common/utils/io.h>
 #include <common/utils/pointer_traits.h>
 
-#include <mutex>
 #include <set>
 
 namespace uh::cluster {
@@ -102,11 +101,11 @@ std::size_t default_data_store::read(std::size_t local_pointer,
     return rv;
 }
 
-void default_data_store::sync() {
-    // TODO:
-    // https://linear.app/ultihash/issue/ENG-1123/sync-workflow-in-data-store-is-broken
-    std::unique_lock lock(m_file_mutex);
-    m_files.back().sync();
+void default_data_store::sync(
+    std::vector<std::reference_wrapper<data_file>> dirty_files) {
+    for (auto file : dirty_files) {
+        file.get().sync();
+    }
 
     write_metadata();
     int md_rv = fsync(m_meta_fd);
@@ -138,6 +137,7 @@ void default_data_store::write(
                                  std::to_string(allocation.size));
     }
 
+    std::vector<std::reference_wrapper<data_file>> dirty_files;
     for (const auto& data : buffers) {
         std::size_t written = 0ull;
         while (written < data.size()) {
@@ -147,6 +147,7 @@ void default_data_store::write(
             if (count == 0) {
                 break;
             }
+            dirty_files.emplace_back(loc.file);
 
             local_pointer += count;
             written += count;
@@ -163,7 +164,7 @@ void default_data_store::write(
            !m_write_offset.compare_exchange_weak(expected, desired)) {
         desired = std::max(desired, expected);
     }
-    sync();
+    sync(dirty_files);
 
     m_refcounter.increment(refcounts, false);
 }

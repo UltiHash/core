@@ -7,7 +7,7 @@
 
 #include <filesystem>
 #include <list>
-#include <shared_mutex>
+#include <mutex>
 
 namespace uh::cluster {
 
@@ -121,7 +121,7 @@ private:
         std::size_t local;
     };
 
-    void sync();
+    void sync(std::vector<std::reference_wrapper<data_file>> dirty_files);
 
     void allocate_files(std::size_t offset, std::size_t size);
 
@@ -140,12 +140,12 @@ private:
     data_store_config m_conf;
     const std::size_t m_filesize;
 
+    mutable std::mutex m_file_mutex;
     std::vector<data_file> m_files;
-    std::size_t m_file_count;
+    std::atomic<std::size_t> m_file_count;
 
     int m_meta_fd;
 
-    mutable std::mutex m_file_mutex;
     std::atomic<std::size_t> m_used_space{};
     std::atomic<std::size_t> m_write_offset{};
 

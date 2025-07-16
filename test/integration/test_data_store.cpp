@@ -222,8 +222,7 @@ BOOST_AUTO_TEST_CASE(test_sync) {
 }
 
 BOOST_AUTO_TEST_CASE(stress_test) {
-    size_t thread_count = 100;
-    int thread_io_count = test_data.size() / thread_count;
+    size_t thread_count = test_data.size();
     std::vector<std::thread> threads;
     threads.reserve(thread_count);
     std::atomic<size_t> failures = 0;
@@ -231,37 +230,30 @@ BOOST_AUTO_TEST_CASE(stress_test) {
     for (size_t i = 0; i < thread_count; ++i) {
         threads.emplace_back([&, thread_id = i]() {
             try {
-                std::vector<address> addresses;
-                addresses.reserve(test_data.size());
-                auto limit = std::min((thread_id + 1) * thread_io_count,
-                                      test_data.size());
-                for (size_t k = thread_id * thread_io_count; k < limit; ++k) {
-                    auto alloc = ds->allocate(test_data[k].size());
-                    ds->write(alloc, {test_data[k].string_view()},
-                              make_default_refcounts(alloc));
-                    address addr;
-                    addr.emplace_back(alloc.offset, test_data[k].size());
-                    addresses.emplace_back(addr);
-                }
-                char buf[MAX_FILE_SIZE_BYTES];
-                for (size_t j = 0; j < addresses.size(); ++j) {
-                    size_t read_size = 0ull;
-                    for (unsigned id = 0; id < addresses[j].size(); ++id) {
-                        auto f = addresses[j].get(id);
-                        read_size +=
-                            ds->read(f.pointer, {buf + read_size, f.size});
-                    }
+                auto alloc = ds->allocate(test_data[thread_id].size());
+                ds->write(alloc, {test_data[thread_id].string_view()},
+                          make_default_refcounts(alloc));
+                address addr;
+                addr.emplace_back(alloc.offset, test_data[thread_id].size());
+                char read_buf[MAX_FILE_SIZE_BYTES];
 
-                    if ((read_size !=
-                         test_data[thread_id * thread_io_count + j].size())) {
-                        failures++;
-                    }
-                    if (std::memcmp(
-                            buf,
-                            test_data[thread_id * thread_io_count + j].data(),
-                            read_size) != 0) {
-                        failures++;
-                    }
+                size_t read_size = 0ull;
+                for (unsigned id = 0; id < addr.size(); ++id) {
+                    auto f = addr.get(id);
+                    read_size +=
+                        ds->read(f.pointer, {read_buf + read_size, f.size});
+                }
+
+                if ((read_size != test_data[thread_id].size())) {
+                    LOG_DEBUG()
+                        << "Read size mismatch: expected "
+                        << test_data[thread_id].size() << ", got " << read_size;
+                    failures++;
+                }
+                if (std::memcmp(read_buf, test_data[thread_id].data(),
+                                read_size) != 0) {
+                    LOG_DEBUG() << "Data mismatch for thread " << thread_id;
+                    failures++;
                 }
             } catch (const std::exception& e) {
                 eptr = std::current_exception();

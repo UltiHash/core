@@ -85,7 +85,7 @@ find_package(Threads REQUIRED)
 
 set(Boost_USE_STATIC_LIBS ON)
 find_package(
-    Boost 1.87
+    Boost 1.88
     COMPONENTS thread log url unit_test_framework
     REQUIRED)
 

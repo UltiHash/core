@@ -1,5 +1,6 @@
 ## [Unreleased]
 - Fixes an issue when operating erasure-coded storage groups with disabled deduplication
+- Fixes an issue where storage service instances might wrongfully acknowledge write operations of data that has not been flushed to persistent storage yet
 
 - ## [1.5.0] 2025-07-08
 - Fix issue with get-object which lead to stale downloads with high CPU utilization
