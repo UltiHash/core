@@ -76,7 +76,7 @@ directory::put_object(const std::string& bucket, const object& obj) {
 coro<directory::object_lock>
 directory::get_object(const std::string& bucket, const std::string& object_id,
                       std::optional<std::string> version) {
-    auto handle = co_await m_db.get();
+    auto handle = co_await m_db->get();
     std::optional<db::row> row;
 
     if (version) {
@@ -144,7 +144,7 @@ void directory::unref::operator()() { p.set_value(); }
 coro<object> directory::head_object(const std::string& bucket,
                                     const std::string& object_id,
                                     std::optional<std::string> version) {
-    auto handle = co_await m_db.get();
+    auto handle = co_await m_db->get();
     std::optional<db::row> metadata;
 
     if (version) {
@@ -216,7 +216,7 @@ directory::delete_object(const std::string& bucket,
                          std::optional<std::string> version) {
 
     try {
-        auto handle = co_await m_db.get();
+        auto handle = co_await m_db->get();
         std::optional<db::row> row;
         if (version) {
             if (*version == "null") {
@@ -358,7 +358,7 @@ coro<std::vector<object>> directory::list_object_versions(
 
     std::vector<object> rv;
 
-    auto handle = co_await m_db.get();
+    auto handle = co_await m_db->get();
     auto row = co_await handle->execv(
         "SELECT " + GET_OBJECT_FIELD_SELECTOR +
             " FROM uh_list_object_versions($1, $2, $3, $4, $5)",
