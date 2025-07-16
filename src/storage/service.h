@@ -11,7 +11,6 @@
 #include <common/etcd/utils.h>
 #include <common/license/license_watcher.h>
 #include <common/network/server.h>
-#include <common/utils/scope_guard.h>
 #include <common/utils/strings.h>
 #include <storage/global/config.h>
 #include <storage/group/ec_maintainer.h>
@@ -84,15 +83,13 @@ public:
                         {"service_id", std::to_string(m_storage_id)});
                     return label;
                 });
+    }
 
-        auto g1 = scope_guard([]() {
-            metric<storage_available_space_gauge, byte,
-                   int64_t>::remove_gauge_callback();
-        });
-        auto g2 = scope_guard([]() {
-            metric<storage_used_space_gauge, byte,
-                   int64_t>::remove_gauge_callback();
-        });
+    ~service() {
+        metric<storage_available_space_gauge, byte,
+               int64_t>::remove_gauge_callback();
+        metric<storage_used_space_gauge, byte,
+               int64_t>::remove_gauge_callback();
     }
 
 private:
