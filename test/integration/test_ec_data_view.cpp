@@ -26,7 +26,14 @@ struct fixture : public global_data_view_fixture {
               .data_shards = 4,
               .parity_shards = 2,
               .stripe_size_kib = 4 * 2,
-          }) {}
+          }) {
+
+        auto log_config = log::config{
+            .sinks = {log::sink_config{.type = log::sink_type::cout,
+                                       .level = boost::log::trivial::warning,
+                                       .service_role = DEDUPLICATOR_SERVICE}}};
+        log::init(log_config);
+    }
 };
 
 BOOST_FIXTURE_TEST_SUITE(a_ec_data_view, fixture)
