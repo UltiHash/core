@@ -2,7 +2,6 @@
 #include "handler.h"
 
 #include <common/telemetry/metrics.h>
-#include <common/utils/scope_guard.h>
 #include <deduplicator/interfaces/dedupe_array.h>
 #include <deduplicator/interfaces/noop_deduplicator.h>
 #include <format>
@@ -95,11 +94,11 @@ service::service(boost::asio::io_context& ioc, const service_config& sc,
                 label.push_back({"service_id", std::to_string(m_service_id)});
                 return label;
             });
+}
 
-    auto g = scope_guard([]() {
-        metric<entrypoint_original_data_volume_gauge, byte,
-               int64_t>::remove_gauge_callback();
-    });
+service::~service() {
+    metric<entrypoint_original_data_volume_gauge, byte,
+           int64_t>::remove_gauge_callback();
 }
 
 } // namespace uh::cluster::ep

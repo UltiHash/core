@@ -22,6 +22,7 @@ class service {
 public:
     service(boost::asio::io_context& ioc, const service_config& sc,
             entrypoint_config config);
+    ~service();
 
 private:
     entrypoint_config m_config;
