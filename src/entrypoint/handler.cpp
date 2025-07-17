@@ -18,11 +18,10 @@ handler::handler(command_factory&& comm_factory, request_factory&& factory,
 
 coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     std::optional<std::string> failed_request_id{std::nullopt};
-    for (;;) {
 
-        /*
-         * Note: lifetime of response must not exceed lifetime of request.
-         */
+    auto state = co_await boost::asio::this_coro::cancellation_state;
+    while (state.cancelled() == boost::asio::cancellation_type::none) {
+        // Note: lifetime of response must not exceed lifetime of request.
         std::string id = generate_unique_id();
 
         raw_request rawreq;
@@ -71,7 +70,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
     if (failed_request_id) {
         co_await boost::asio::this_coro::reset_cancellation_state(
-            boost::asio::enable_terminal_cancellation());
+            boost::asio::disable_cancellation());
 
         auto resp =
             make_response(command_exception(error::service_unavailable));
