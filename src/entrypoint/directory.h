@@ -20,9 +20,8 @@ bucket_versioning to_versioning(std::string s);
 class directory {
 public:
     directory(boost::asio::io_context& ioc, const db::config& cfg)
-        : m_db{std::make_shared<pool<db::connection>>(
-              ioc, connection_factory(ioc, cfg, cfg.directory),
-              cfg.directory.count)} {}
+        : m_db{ioc, connection_factory(ioc, cfg, cfg.directory),
+               cfg.directory.count} {}
 
     struct unref {
         promise<void> p;
@@ -100,7 +99,7 @@ public:
     coro<std::size_t> data_size();
 
 private:
-    std::shared_ptr<pool<db::connection>> m_db;
+    pool<db::connection> m_db;
 
     static void validate_bucket_name(const std::string& bucket_name);
 };
