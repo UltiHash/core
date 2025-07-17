@@ -108,12 +108,6 @@ coro<void> write(asio::ip::tcp::socket& out, response&& res,
         res.set("Content-Length", body.length());
     }
 
-    if (static_cast<unsigned>(res.result()) >= 500) {
-        LOG_WARN() << out.remote_endpoint() << ", sending response: " << res;
-    } else {
-        LOG_DEBUG() << out.remote_endpoint() << ", sending response: " << res;
-    }
-
     beast::http::response_serializer<beast::http::empty_body> sr(res.base());
     beast::http::write_header(out, sr);
 
@@ -145,6 +139,12 @@ coro<void> write(asio::ip::tcp::socket& out, response&& res,
     if (fut) {
         co_await fut->get();
         fut.reset();
+    }
+
+    if (static_cast<unsigned>(res.result()) >= 500) {
+        LOG_WARN() << out.remote_endpoint() << ", response sent: " << res;
+    } else {
+        LOG_DEBUG() << out.remote_endpoint() << ", response sent: " << res;
     }
 }
 
