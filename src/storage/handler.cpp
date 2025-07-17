@@ -19,7 +19,8 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
     messenger m(std::move(s), messenger::origin::UPSTREAM);
 
-    for (;;) {
+    auto state = co_await boost::asio::this_coro::cancellation_state;
+    while (state.cancelled() == boost::asio::cancellation_type::none) {
         messenger_core::header hdr;
         opentelemetry::context::Context context;
 
