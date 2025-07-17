@@ -111,7 +111,13 @@ public:
           m_promise{},
           m_future(m_promise.get_future()) {
         boost::asio::co_spawn(
-            ioc, std::forward<Awaitable>(awaitable),
+            ioc,
+            [awaitable = std::move(
+                 awaitable)]() mutable -> boost::asio::awaitable<void> {
+                co_await boost::asio::this_coro::reset_cancellation_state(
+                    boost::asio::enable_terminal_cancellation());
+                co_await std::move(awaitable);
+            },
             boost::asio::bind_cancellation_slot(
                 m_signal.slot(),
                 make_logging_completion_notifier(m_name, &m_promise,
