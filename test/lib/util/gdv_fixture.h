@@ -46,6 +46,18 @@ public:
         m_etcd.clear_all();
         std::this_thread::sleep_for(100ms);
 
+        for (size_t i = 0; i < m_config.storages * 2 + 1; i++) {
+            m_threads.emplace_back([this] {
+                try {
+                    m_ioc.run();
+                } catch (std::exception& e) {
+                    LOG_ERROR()
+                        << "Exception in global data view thread: " << e.what();
+                    m_exception_ptr = std::current_exception();
+                }
+            });
+        }
+
         if (m_config.type == storage::group_config::type_t::ERASURE_CODING) {
             if (m_config.storages !=
                     m_config.data_shards + m_config.parity_shards or
@@ -68,33 +80,33 @@ public:
             LOG_ERROR() << "Failed to create storage instances: " << e.what();
             throw;
         }
-
-        m_thread = std::thread([this] {
-            try {
-                m_ioc.run();
-            } catch (std::exception& e) {
-                LOG_ERROR()
-                    << "Exception in global data view thread: " << e.what();
-                m_exception_ptr = std::current_exception();
-            }
-        });
-
-        m_gdv = std::make_unique<storage::global::global_data_view>(
+        m_gdv = std::make_shared<storage::global::global_data_view>(
             m_ioc, m_etcd, m_gdv_config);
 
         std::this_thread::sleep_for(100ms);
     }
 
     void teardown() {
-        m_gdv.reset();
-
-        m_storage_instances.clear();
-
-        m_ioc.stop();
-
         m_work_guard.reset();
 
-        m_thread.join();
+        m_gdv.reset();
+
+        for (auto& storage : m_storage_instances) {
+            if (storage != nullptr) {
+                try {
+                    storage.reset();
+                } catch (const std::exception& e) {
+                    LOG_ERROR()
+                        << "Failed to reset storage instance: " << e.what();
+                }
+            }
+        }
+
+        for (auto& t : m_threads) {
+            t.join();
+        }
+
+        m_ioc.stop();
 
         if (m_exception_ptr) {
             try {
@@ -157,7 +169,7 @@ private:
     boost::asio::io_context m_ioc;
     boost::asio::executor_work_guard<boost::asio::io_context::executor_type>
         m_work_guard;
-    std::thread m_thread;
+    std::vector<std::thread> m_threads;
 
     std::vector<std::unique_ptr<storage::service>> m_storage_instances;
 
