@@ -1,0 +1,69 @@
+#define BOOST_TEST_MODULE "service tests"
+
+#include <algorithm>
+#include <common/ec/reedsolomon_c.h>
+#include <common/telemetry/log.h>
+#include <common/types/common_types.h>
+#include <common/utils/time_utils.h>
+#include <deduplicator/service.h>
+#include <entrypoint/service.h>
+#include <util/gdv_fixture.h>
+#include <util/random.h>
+
+#include <boost/test/unit_test.hpp>
+
+#include "test_config.h"
+
+// ------------- Tests Suites Follow --------------
+
+namespace uh::cluster {
+
+BOOST_FIXTURE_TEST_SUITE(services, global_data_view_fixture)
+
+BOOST_AUTO_TEST_CASE(supports_repeated_killing_and_reviving) {
+    auto& ioc = get_executor();
+    for (auto k = 0ul; k < 100; ++k) {
+        auto ep = std::make_unique<ep::service>(ioc, service_config{},
+                                                entrypoint_config{});
+        ep.reset();
+    }
+
+    auto config = get_group_config();
+
+    for (auto k = 0ul; k < 100; ++k) {
+        LOG_WARN() << "## iteration " << k;
+        deactivate_storage(config.storages - 1);
+        activate_storage(config.storages - 1);
+    }
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+struct ec_fixture : public global_data_view_fixture {
+
+    ec_fixture()
+        : global_data_view_fixture({
+              .id = 0,
+              .type = storage::group_config::type_t::ERASURE_CODING,
+              .storages = 6,
+              .data_shards = 4,
+              .parity_shards = 2,
+              .stripe_size_kib = 4 * 2,
+          }) {}
+};
+
+BOOST_FIXTURE_TEST_SUITE(ec_storage, ec_fixture)
+
+BOOST_AUTO_TEST_CASE(supports_repeated_killing_and_reviving) {
+    auto config = get_group_config();
+
+    for (auto k = 0ul; k < 100; ++k) {
+        LOG_WARN() << "## iteration " << k;
+        deactivate_storage(config.storages - 1);
+        activate_storage(config.storages - 1);
+    }
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+} // namespace uh::cluster
