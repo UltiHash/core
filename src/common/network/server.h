@@ -25,49 +25,6 @@ struct server_config {
     std::string bind_address;
 };
 
-class session_runner : public std::enable_shared_from_this<session_runner> {
-public:
-    session_runner(
-        std::function<coro<void>(boost::asio::ip::tcp::socket m)> handler)
-        : m_session_handler{handler} {}
-
-    void run(std::string name, boost::asio::io_context& ioc,
-             boost::asio::ip::tcp::socket stream,
-             std::function<void(std::shared_ptr<session_runner>)> on_finish) {
-        auto self = shared_from_this();
-        m_task = std::make_unique<coro_task>(
-            std::move(name), ioc, do_session(std::move(stream)),
-            [self, on_finish = std::move(on_finish)](std::exception_ptr _) {
-                on_finish(self);
-            });
-    }
-
-    void cancel() {
-        if (m_task) {
-            m_task->cancel();
-        }
-    }
-
-    void wait() {
-        if (m_task) {
-            m_task->wait();
-        }
-    }
-
-    coro<void> do_session(boost::asio::ip::tcp::socket stream) {
-        auto ep = stream.remote_endpoint();
-        LOG_INFO() << "connection from: " << ep;
-        counter_guard<active_connections> guard;
-        co_await m_session_handler(std::move(stream));
-        LOG_INFO() << "session ended: " << ep;
-        co_return;
-    }
-
-private:
-    std::function<coro<void>(boost::asio::ip::tcp::socket m)> m_session_handler;
-    std::unique_ptr<coro_task> m_task;
-};
-
 class server {
 
 public:
@@ -76,23 +33,64 @@ public:
         : m_config(std::move(config)),
           m_ioc(ioc),
           m_handler(std::move(handler)),
-          m_task{std::make_unique<coro_task>("do_accept", ioc, do_accept())} {}
+          m_task{std::make_unique<coro_task>("do_accept", ioc)} {
+        m_task->spawn(do_accept());
+    }
 
     [[nodiscard]] const server_config& get_server_config() const {
         return m_config;
     }
 
     ~server() {
+        LOG_INFO() << "stopping server...";
         m_task.reset();
 
+        LOG_INFO() << "canceling sessions...";
         std::unique_lock<std::mutex> lock(m_sessions_mutex);
-        for (auto& session : m_sessions) {
-            session->cancel();
+        for (auto& s : m_sessions) {
+            s.cancel();
         }
-        m_sessions_cv.wait(lock, [&] { return m_sessions.empty(); });
+
+        LOG_INFO() << "waiting sessions to be killed...";
+        m_sessions_cv.wait(lock, [&] {
+            LOG_DEBUG() << "session size: " << m_sessions.size();
+            return m_sessions.empty();
+        });
+        LOG_INFO() << "server destroyed";
     }
 
 private:
+    class session {
+    public:
+        session(std::string name, boost::asio::io_context& ioc,
+                boost::asio::ip::tcp::socket&& socket)
+            : m_task{std::move(name), ioc},
+              m_socket{std::move(socket)} {}
+
+        auto& task() { return m_task; }
+        auto& socket() { return m_socket; }
+        void cancel() {
+            m_task.cancel();
+            m_socket.cancel();
+        }
+
+    private:
+        coro_task m_task;
+        boost::asio::ip::tcp::socket m_socket;
+    };
+
+    auto& emplace(std::string name, boost::asio::io_context& ioc,
+                  boost::asio::ip::tcp::socket&& socket) {
+        std::lock_guard<std::mutex> lock(m_sessions_mutex);
+        return m_sessions.emplace_back(name, ioc, std::move(socket));
+    }
+
+    void erase(std::list<session>::const_iterator it) {
+        std::lock_guard<std::mutex> lock(m_sessions_mutex);
+        if (it != m_sessions.end())
+            m_sessions.erase(it);
+    }
+
     boost::asio::ip::tcp::acceptor
     do_listen(const boost::asio::ip::tcp::endpoint& endpoint) {
         auto acceptor =
@@ -121,37 +119,40 @@ private:
 
         auto state = co_await boost::asio::this_coro::cancellation_state;
         while (state.cancelled() == boost::asio::cancellation_type::none) {
-            boost::asio::ip::tcp::socket stream =
+            boost::asio::ip::tcp::socket s =
                 co_await acceptor.async_accept(boost::asio::use_awaitable);
-            const auto conn_address =
-                stream.remote_endpoint().address().to_string();
-            const auto conn_port = stream.remote_endpoint().port();
-            std::string name =
-                std::format("in session {}:{}", conn_address, conn_port);
-            auto session = std::make_shared<session_runner>(
-                [&](auto stream) -> coro<void> {
-                    co_await m_handler->handle(std::move(stream));
+
+            std::string name = [&s]() {
+                const auto conn_address =
+                    s.remote_endpoint().address().to_string();
+                const auto conn_port = s.remote_endpoint().port();
+
+                return std::format("in session {}:{}", conn_address, conn_port);
+            }();
+
+            auto& session = emplace(name, m_ioc, std::move(s));
+            auto& socket = session.socket();
+            session.task().spawn(
+                [this, &socket]() mutable -> coro<void> {
+                    auto ep = socket.remote_endpoint();
+                    LOG_INFO() << "connection from: " << ep;
+
+                    counter_guard<active_connections> guard;
+
+                    co_await m_handler->handle(socket);
+
+                    LOG_INFO() << "session ended: " << ep;
+                },
+
+                [this, session_it =
+                           std::prev(m_sessions.end())](std::exception_ptr e) {
+                    LOG_DEBUG()
+                        << "session finished: "
+                        << std::distance(m_sessions.begin(), session_it);
+                    erase(session_it);
+                    m_sessions_cv.notify_all();
                 });
-
-            add_session(session);
-            session->run(name, m_ioc, std::move(stream),
-                         [this](std::shared_ptr<session_runner> session) {
-                             remove_session(session);
-                             m_sessions_cv.notify_all();
-                         });
         }
-    }
-
-    void add_session(const std::shared_ptr<session_runner>& session) {
-        std::lock_guard<std::mutex> lock(m_sessions_mutex);
-        m_sessions.push_back(session);
-    }
-
-    void remove_session(const std::shared_ptr<session_runner>& session) {
-        std::lock_guard<std::mutex> lock(m_sessions_mutex);
-        auto it = std::find(m_sessions.begin(), m_sessions.end(), session);
-        if (it != m_sessions.end())
-            m_sessions.erase(it);
     }
 
     const server_config m_config;
@@ -160,7 +161,7 @@ private:
 
     std::mutex m_sessions_mutex;
     std::condition_variable m_sessions_cv;
-    std::list<std::shared_ptr<session_runner>> m_sessions;
+    std::list<session> m_sessions;
     std::unique_ptr<coro_task> m_task;
 };
 

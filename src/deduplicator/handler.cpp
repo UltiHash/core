@@ -9,7 +9,7 @@ namespace uh::cluster::deduplicator {
 handler::handler(local_deduplicator& local_dedupe)
     : m_local_dedupe(local_dedupe) {}
 
-coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
+coro<void> handler::handle(boost::asio::ip::tcp::socket& s) {
     messenger m(std::move(s), messenger::origin::UPSTREAM);
     auto peer = m.peer();
     std::stringstream remote;
