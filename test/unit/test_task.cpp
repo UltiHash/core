@@ -1,4 +1,4 @@
-#define BOOST_TEST_MODULE "cancellation tests"
+#define BOOST_TEST_MODULE "task tests"
 
 #include <boost/asio.hpp>
 #include <common/coroutines/coro_util.h>
@@ -11,14 +11,16 @@ namespace uh::cluster {
 class task_owner {
 public:
     task_owner(boost::asio::io_context& ioc)
-        : m_task{"task", ioc, task().start_trace()} {}
+        : m_task{"task", ioc} {
+        m_task.spawn(job().start_trace());
+    }
 
     ~task_owner() {}
 
 private:
     coro_task m_task;
 
-    coro<void> task() {
+    coro<void> job() {
         auto state = co_await boost::asio::this_coro::cancellation_state;
         while (state.cancelled() == boost::asio::cancellation_type::none) {
             auto executor = co_await boost::asio::this_coro::executor;
@@ -26,7 +28,7 @@ private:
                 boost::asio::steady_timer(executor, std::chrono::hours(1));
             co_await timer.async_wait(boost::asio::use_awaitable);
         }
-        std::cout << "Task finished" << std::endl;
+        std::cout << "Job finished" << std::endl;
     }
 };
 
