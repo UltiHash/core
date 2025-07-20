@@ -82,8 +82,9 @@ service::service(boost::asio::io_context& ioc, const service_config& sc,
                          m_config.server.port),
 
       m_gc(ioc, m_directory, m_gdv),
-      m_task{"update storage metrics", ioc,
-             update_limits(m_directory, m_limits).start_trace()} {
+      m_task{"update storage metrics", ioc} {
+
+    m_task.spawn(update_limits(m_directory, m_limits).start_trace());
 
     metric<entrypoint_original_data_volume_gauge, byte, int64_t>::
         register_gauge_callback(

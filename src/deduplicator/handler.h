@@ -13,7 +13,7 @@ class handler : public protocol_handler {
 public:
     explicit handler(local_deduplicator& local_dedupe);
 
-    coro<void> handle(boost::asio::ip::tcp::socket s) override;
+    coro<void> handle(boost::asio::ip::tcp::socket& s) override;
 
 private:
     coro<void> handle_dedupe(const messenger::header& hdr, messenger& m);

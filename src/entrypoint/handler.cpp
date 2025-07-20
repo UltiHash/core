@@ -16,7 +16,7 @@ handler::handler(command_factory&& comm_factory, request_factory&& factory,
       m_policy(std::move(policy)),
       m_cors(std::move(cors)) {}
 
-coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
+coro<void> handler::handle(boost::asio::ip::tcp::socket& s) {
     std::optional<std::string> failed_request_id{std::nullopt};
 
     auto state = co_await boost::asio::this_coro::cancellation_state;

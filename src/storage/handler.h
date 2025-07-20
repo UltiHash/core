@@ -11,7 +11,7 @@ class handler : public protocol_handler {
 public:
     explicit handler(local_storage& storage);
 
-    coro<void> handle(boost::asio::ip::tcp::socket s) override;
+    coro<void> handle(boost::asio::ip::tcp::socket& s) override;
 
 private:
     coro<void> handle_iteration(const messenger::header& hdr, messenger& m);

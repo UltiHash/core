@@ -13,7 +13,7 @@ namespace uh::cluster::storage {
 handler::handler(local_storage& storage)
     : m_storage(storage) {}
 
-coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
+coro<void> handler::handle(boost::asio::ip::tcp::socket& s) {
     std::stringstream remote;
     remote << s.remote_endpoint();
 
@@ -21,13 +21,14 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
     auto state = co_await boost::asio::this_coro::cancellation_state;
     while (state.cancelled() == boost::asio::cancellation_type::none) {
-        messenger_core::header hdr;
-        opentelemetry::context::Context context;
-
-        std::optional<error> err;
-
         try {
+            messenger_core::header hdr;
+            opentelemetry::context::Context context;
+
+            std::optional<error> err;
+
             try {
+                LOG_DEBUG() << remote.str() << " waiting for request";
                 std::tie(hdr, context) = co_await m.recv_header_with_context();
                 LOG_DEBUG() << remote.str() << " received "
                             << magic_enum::enum_name(hdr.type);

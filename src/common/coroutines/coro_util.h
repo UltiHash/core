@@ -97,6 +97,7 @@ inline auto make_logging_completion_notifier(
 
         if (on_finish)
             on_finish(e);
+
         if (p)
             p->set_value();
     };
@@ -104,26 +105,43 @@ inline auto make_logging_completion_notifier(
 
 class coro_task {
 public:
-    template <typename Executor, typename Awaitable>
-    coro_task(std::string name, Executor& ioc, Awaitable&& awaitable,
-              std::function<void(std::exception_ptr)> on_finish = nullptr)
-        : m_name(std::move(name)),
+    coro_task(std::string name, boost::asio::io_context& ioc)
+        : m_name{std::move(name)},
+          m_strand(boost::asio::make_strand(ioc)),
           m_promise{},
-          m_future(m_promise.get_future()) {
+          m_future(m_promise.get_future()) {}
+
+    template <typename T>
+    void spawn(boost::asio::traced_awaitable<T>&& aw,
+               std::function<void(std::exception_ptr)> on_finish = nullptr) {
         boost::asio::co_spawn(
-            ioc,
-            [awaitable = std::move(
-                 awaitable)]() mutable -> boost::asio::awaitable<void> {
+            m_strand,
+            [aw = std::move(aw)]() mutable -> boost::asio::awaitable<void> {
                 co_await boost::asio::this_coro::reset_cancellation_state(
                     boost::asio::enable_terminal_cancellation());
-                co_await std::move(awaitable);
+                co_await std::move(aw);
             },
             boost::asio::bind_cancellation_slot(
-                m_signal.slot(),
-                make_logging_completion_notifier(m_name, &m_promise,
-                                                 std::move(on_finish))));
+                m_signal.slot(), make_logging_completion_notifier(
+                                     m_name, &m_promise, on_finish)));
     }
 
+    template <typename Function,
+              std::enable_if_t<std::is_invocable_v<Function>, int> = 0>
+    void spawn(Function&& f,
+               std::function<void(std::exception_ptr)> on_finish = nullptr) {
+        boost::asio::co_spawn(
+            m_strand,
+            [f = std::forward<Function>(
+                 f)]() mutable -> boost::asio::awaitable<void> {
+                co_await boost::asio::this_coro::reset_cancellation_state(
+                    boost::asio::enable_terminal_cancellation());
+                co_await f();
+            },
+            boost::asio::bind_cancellation_slot(
+                m_signal.slot(), make_logging_completion_notifier(
+                                     m_name, &m_promise, on_finish)));
+    }
     coro_task(const coro_task&) = delete;
     coro_task& operator=(const coro_task&) = delete;
     coro_task(coro_task&&) = delete;
@@ -134,8 +152,12 @@ public:
         wait();
     }
 
-    void cancel() { //
-        m_signal.emit(boost::asio::cancellation_type::all);
+    void cancel() {
+        LOG_DEBUG() << "[" << m_name << "] post cancelling task";
+        boost::asio::post(m_strand, [this]() {
+            LOG_DEBUG() << "[" << m_name << "] emit signal";
+            m_signal.emit(boost::asio::cancellation_type::all);
+        });
     }
 
     void wait(std::optional<std::chrono::steady_clock::duration> timeout =
@@ -158,6 +180,7 @@ public:
 
 private:
     std::string m_name;
+    boost::asio::strand<boost::asio::io_context::executor_type> m_strand;
     std::promise<void> m_promise;
     std::future<void> m_future;
     boost::asio::cancellation_signal m_signal;

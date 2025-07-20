@@ -69,7 +69,9 @@ public:
 
           m_storages{std::move(storages)},
           m_storage_states{std::move(storage_states)},
-          m_task{"repairing", ioc, repair().start_trace()} {}
+          m_task{"repairing", ioc} {
+        m_task.spawn(repair().start_trace());
+    }
 
     ~repairer() {
         LOG_DEBUG() << "Repairer destroyed for group " << m_config.id;

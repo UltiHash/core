@@ -14,7 +14,7 @@ public:
                      std::unique_ptr<policy::module> policy,
                      std::unique_ptr<cors::module> cors);
 
-    coro<void> handle(boost::asio::ip::tcp::socket s) override;
+    coro<void> handle(boost::asio::ip::tcp::socket& s) override;
 
 private:
     command_factory m_command_factory;
