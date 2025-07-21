@@ -6,12 +6,8 @@
 
 namespace uh::cluster::deduplicator {
 
-handler::handler(local_deduplicator& local_dedupe)
-    : m_local_dedupe(local_dedupe) {}
-
-coro<void> handler::handle(boost::asio::ip::tcp::socket& s) {
-    messenger m(std::move(s), messenger::origin::UPSTREAM);
-    auto peer = m.peer();
+coro<void> handler::run() {
+    auto peer = m_messenger.peer();
     std::stringstream remote;
     remote << peer;
 
@@ -24,14 +20,14 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket& s) {
 
         try {
             try {
-                std::tie(hdr, context) = co_await m.recv_header_with_context();
+                std::tie(hdr, context) =
+                    co_await m_messenger.recv_header_with_context();
                 LOG_DEBUG() << remote.str() << " received "
                             << magic_enum::enum_name(hdr.type);
 
                 boost::asio::context::set_pointer(context, "peer", &peer);
 
-                co_await handle_dedupe(hdr, m).continue_trace(
-                    std::move(context));
+                co_await handle_request(hdr).continue_trace(std::move(context));
 
             } catch (const boost::system::system_error& e) {
                 throw;
@@ -52,14 +48,14 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket& s) {
             if (err) {
                 LOG_WARN() << hdr.peer
                            << " error handling request: " << err->message();
-                co_await m.send_error(*err);
+                co_await m_messenger.send_error(*err);
             }
 
         } catch (const boost::system::system_error& e) {
             if (e.code() == boost::asio::error::operation_aborted) {
                 break;
             } else if (e.code() == boost::asio::error::eof) {
-                LOG_INFO() << s.remote_endpoint() << " disconnected";
+                LOG_INFO() << m_messenger.peer() << " disconnected";
                 break;
             }
             throw;
@@ -67,18 +63,17 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket& s) {
     }
 }
 
-coro<void> handler::handle_dedupe(const messenger::header& hdr, messenger& m) {
+coro<void> handler::handle_request(const messenger::header& hdr) {
     std::optional<error> err;
     switch (hdr.type) {
     case DEDUPLICATOR_REQ: {
         unique_buffer<char> data(hdr.size);
-        m.register_read_buffer(data);
-        co_await m.recv_buffers(hdr);
+        m_messenger.register_read_buffer(data);
+        co_await m_messenger.recv_buffers(hdr);
 
         LOG_DEBUG() << hdr.peer << ": deduplicate: size=" << data.size();
-        auto dedupe_resp =
-            co_await m_local_dedupe.deduplicate(data.string_view());
-        co_await m.send_dedupe_response(dedupe_resp);
+        auto dedupe_resp = co_await m_dedup.deduplicate(data.string_view());
+        co_await m_messenger.send_dedupe_response(dedupe_resp);
         break;
     }
     default:

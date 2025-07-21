@@ -36,6 +36,7 @@ public:
 #endif
         : m_config{config},
           m_etcd(),
+          m_gdv_config{.storage_service_connection_count = 1},
           m_work_guard(boost::asio::make_work_guard(m_ioc)) {
     }
 
