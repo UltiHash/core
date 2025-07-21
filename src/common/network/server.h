@@ -28,11 +28,12 @@ struct server_config {
 class server {
 
 public:
-    server(server_config config, std::unique_ptr<protocol_handler> handler,
+    server(server_config config,
+           std::unique_ptr<protocol_handler_factory> handler_factory,
            boost::asio::io_context& ioc)
         : m_config(std::move(config)),
           m_ioc(ioc),
-          m_handler(std::move(handler)),
+          m_handler_factory(std::move(handler_factory)),
           m_task{std::make_unique<coro_task>("do_accept", ioc)} {
         m_task->spawn(do_accept());
     }
@@ -45,6 +46,7 @@ public:
         LOG_INFO() << "stopping server...";
         m_task.reset();
 
+        std::this_thread::sleep_for(std::chrono::seconds(1));
         LOG_INFO() << "canceling sessions...";
         std::unique_lock<std::mutex> lock(m_sessions_mutex);
         for (auto& s : m_sessions) {
@@ -60,35 +62,48 @@ public:
     }
 
 private:
-    class session {
+    class session_task {
     public:
-        session(std::string name, boost::asio::io_context& ioc,
-                boost::asio::ip::tcp::socket&& socket)
-            : m_task{std::move(name), ioc},
-              m_socket{std::move(socket)} {}
+        session_task(std::string name, boost::asio::io_context& ioc,
+                     std::unique_ptr<protocol_handler> handler)
+            : m_handler{std::move(handler)},
+              m_task{std::make_unique<coro_task>(std::move(name), ioc)} {}
 
-        auto& task() { return m_task; }
-        auto& socket() { return m_socket; }
+        void run(std::function<void(std::exception_ptr)> on_finish = nullptr) {
+            m_task->spawn(
+                [this]() mutable -> coro<void> {
+                    counter_guard<active_connections> guard;
+                    co_await m_handler->run();
+                },
+                std::move(on_finish));
+        }
         void cancel() {
-            m_task.cancel();
-            m_socket.cancel();
+            // m_task->cancel();
+            m_handler->cancel();
         }
 
     private:
-        coro_task m_task;
-        boost::asio::ip::tcp::socket m_socket;
+        std::unique_ptr<protocol_handler> m_handler;
+        std::unique_ptr<coro_task> m_task;
     };
 
-    auto& emplace(std::string name, boost::asio::io_context& ioc,
-                  boost::asio::ip::tcp::socket&& socket) {
+    auto emplace(std::string name, boost::asio::io_context& ioc,
+                 std::unique_ptr<protocol_handler> handler) {
         std::lock_guard<std::mutex> lock(m_sessions_mutex);
-        return m_sessions.emplace_back(name, ioc, std::move(socket));
+        m_sessions.emplace_back(name, ioc, std::move(handler));
+        return std::prev(m_sessions.end());
     }
 
-    void erase(std::list<session>::const_iterator it) {
+    void erase(std::list<session_task>::const_iterator it) {
         std::lock_guard<std::mutex> lock(m_sessions_mutex);
-        if (it != m_sessions.end())
-            m_sessions.erase(it);
+        try {
+            if (it != m_sessions.end()) {
+                LOG_ERROR() << "erase";
+                m_sessions.erase(it);
+            }
+        } catch (const std::exception& e) {
+            LOG_ERROR() << "failed to erase session: " << e.what();
+        }
     }
 
     boost::asio::ip::tcp::acceptor
@@ -130,38 +145,26 @@ private:
                 return std::format("in session {}:{}", conn_address, conn_port);
             }();
 
-            auto& session = emplace(name, m_ioc, std::move(s));
-            auto& socket = session.socket();
-            session.task().spawn(
-                [this, &socket]() mutable -> coro<void> {
-                    auto ep = socket.remote_endpoint();
-                    LOG_INFO() << "connection from: " << ep;
+            auto it = emplace(name, m_ioc,
+                              m_handler_factory->create_handler(std::move(s)));
 
-                    counter_guard<active_connections> guard;
-
-                    co_await m_handler->handle(socket);
-
-                    LOG_INFO() << "session ended: " << ep;
-                },
-
-                [this, session_it =
-                           std::prev(m_sessions.end())](std::exception_ptr e) {
-                    LOG_DEBUG()
-                        << "session finished: "
-                        << std::distance(m_sessions.begin(), session_it);
-                    erase(session_it);
-                    m_sessions_cv.notify_all();
-                });
+            it->run([this, it](std::exception_ptr e) {
+                LOG_DEBUG() << "num of sessions: " << m_sessions.size();
+                erase(it);
+                LOG_DEBUG()
+                    << "num of sessions after erase: " << m_sessions.size();
+                m_sessions_cv.notify_all();
+            });
         }
     }
 
     const server_config m_config;
     boost::asio::io_context& m_ioc;
-    std::unique_ptr<protocol_handler> m_handler;
+    std::unique_ptr<protocol_handler_factory> m_handler_factory;
 
     std::mutex m_sessions_mutex;
     std::condition_variable m_sessions_cv;
-    std::list<session> m_sessions;
+    std::list<session_task> m_sessions;
     std::unique_ptr<coro_task> m_task;
 };
 
