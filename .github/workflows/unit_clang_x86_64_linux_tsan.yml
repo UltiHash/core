@@ -14,7 +14,7 @@ jobs:
     strategy:
       matrix:
         build: [RelWithDebInfo]
-    runs-on: heavyweight-core-x86-64-jobs
+    runs-on: heavyweight-core-aarch64-jobs
 
     steps:
       - uses: actions/checkout@v4

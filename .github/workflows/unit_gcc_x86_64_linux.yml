@@ -14,7 +14,7 @@ jobs:
     uses: ./.github/workflows/unit_testing_workflow.yml
     with: 
        target: ${{ matrix.target }}
-       runs_on: heavyweight-core-x86-64-jobs
+       runs_on: heavyweight-core-aarch64-jobs
        cmake_env: >
         {
           "CC": "/usr/bin/gcc",
