@@ -9,7 +9,7 @@ on:
         type: choice
         description: Choose the test to execute
         options: 
-          - feature-test-aarch64
+          - feature-test
           - pyspark-test-x86-64
           - s3a-test-x86-64
           - stability-test-x86-64
@@ -45,20 +45,20 @@ jobs:
     secrets:
       ghcr_token: ${{ secrets.PAT }}
 
-  feature-test-aarch64-rr:
+  feature-test-rr:
     needs: 
       - build-core
       - build-database-init
     if: |
       github.event_name == 'schedule' || 
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'feature-test-aarch64') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'feature-test') ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
-    uses: ./.github/workflows/feature_testing_on_aws.yml
+    uses: ./.github/workflows/feature_testing_nightly.yml
     with:
-      env_name: feature-testing-aarch64-rr
+      env_name: feature-testing-rr
       docker_image_tag: nightly-build
       docker_registry: ${{ vars.DOCKER_REGISTRY }}
-      helm_values: testing/feature/helm-values-aws-rr.yaml
+      helm_values: testing/feature/helm-values-rr.yaml
     secrets:
       ghcr_token: ${{ secrets.PAT }}
       docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
@@ -69,21 +69,21 @@ jobs:
       uh_license: ${{ secrets.UH_LICENSE_JSON }}
       monitoring_token: ${{ secrets.MONITORING_TOKEN_AWS }}
 
-  feature-test-aarch64-ec:
+  feature-test-ec:
     needs: 
       - build-core
       - build-database-init
-      - feature-test-aarch64-rr
+      - feature-test-rr
     if: |
       github.event_name == 'schedule' || 
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'feature-test-aarch64') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'feature-test') ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
-    uses: ./.github/workflows/feature_testing_on_aws.yml
+    uses: ./.github/workflows/feature_testing_nightly.yml
     with:
-      env_name: feature-testing-aarch64-ec
+      env_name: feature-testing-ec
       docker_image_tag: nightly-build
       docker_registry: ${{ vars.DOCKER_REGISTRY }}
-      helm_values: testing/feature/helm-values-aws-ec.yaml
+      helm_values: testing/feature/helm-values-ec.yaml
     secrets:
       ghcr_token: ${{ secrets.PAT }}
       docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
