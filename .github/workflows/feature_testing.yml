@@ -1,9 +1,10 @@
-name: Feature Testing On Premise
+name: Feature Testing
 
 on:
   pull_request:
     branches:
     - "*"
+  workflow_dispatch:
 
 jobs:
 
@@ -15,22 +16,26 @@ jobs:
       docker_build_args: |
         BuildType=RelWithDebInfo
         DebugTools=True
-      docker_images: ghcr.io/ultihash/cluster
+      docker_images: registry.ultihash.io/dev/core
       docker_tags: "pr-${{ github.event.pull_request.number }}"
-      platforms: linux/amd64
+      platforms: linux/arm64
     secrets:
       ghcr_token: ${{ secrets.PAT }}
+      registry_token: ${{ secrets.REGISTRY_USER }}
+      ssh-key: ${{ secrets.DEPLOY_KEY }}
+
         
   build-database-init:
     uses: ./.github/workflows/docker_build_template.yml
     with:
       docker_context: .
       dockerfile_path: tools/database-init/Dockerfile
-      docker_images: ghcr.io/ultihash/database-init
+      docker_images: registry.ultihash.io/dev/database-init
       docker_tags: "pr-${{ github.event.pull_request.number }}"
-      platforms: linux/amd64
+      platforms: linux/arm64
     secrets:
       ghcr_token: ${{ secrets.PAT }}
+      ssh-key: ${{ secrets.DEPLOY_KEY }}
 
   deploy-and-test:
     runs-on: lightweight-generic-jobs
@@ -53,8 +58,22 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.PAT }}
-          submodules: recursive
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          sparse-checkout: |
+            .github
+            testing
+
+      - name: Install AWS CLI
+        uses: unfor19/install-aws-cli-action@v1
+        with:
+          version: 2
+          arch: arm64
+
+      - name: Setup the AWS credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.aws_access_key_id }}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.aws_secret_access_key }}" >> $GITHUB_ENV
+          echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
 
       - uses: azure/setup-kubectl@v3
         with:
@@ -63,20 +82,17 @@ jobs:
       - name: Download Kubeconfig
         run: |
           mkdir ~/.kube
-          echo '${{ secrets.KUBECONFIG }}' > ~/.kube/config
+          aws eks update-kubeconfig --name aws-core
 
       - uses: azure/setup-helm@v4.0.0
         with:
          version: v3.14.0
 
-      - name: Select the Kuberentes node for deployment
-        run: echo "KUBERNETES_NODE=$(shuf -e -n 1 opm-k8s-worker-01 opm-k8s-worker-02)" >> $GITHUB_ENV
-
       - name: Generate Helm values
         uses: danielr1996/envsubst-action@1.0.0
         env:
-          CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.DOCKER_TAG }}
-          DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ env.DOCKER_TAG }}
+          CORE_IMAGE: registry.ultihash.io/dev/core:${{ env.DOCKER_TAG }}
+          DATABASE_INIT_IMAGE: registry.ultihash.io/dev/database-init:${{ env.DOCKER_TAG }}
         with:
           input: ${{ matrix.test.helm_values }}
           output: helm-values.yaml
@@ -84,6 +100,7 @@ jobs:
       - name: Delete the testing environment if exists
         run: |
           helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait
+          kubectl delete pods -n ${{ env.ENVIRONMENT_NAME }} --all --force
           kubectl delete pvc -n ${{ env.ENVIRONMENT_NAME }} --all --force
           kubectl delete secrets -n ${{ env.ENVIRONMENT_NAME }} --all --force
           kubectl delete ns ${{ env.ENVIRONMENT_NAME }}
@@ -100,3 +117,43 @@ jobs:
       - name: Run feature tests
         run: |
           helm test ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --filter name=${{ env.ENVIRONMENT_NAME }}-feature-tests --logs --timeout 20m
+
+  cleanup:
+    runs-on: lightweight-generic-jobs
+    needs: deploy-and-test
+    if: ${{ always() }}
+    steps:
+
+      - name: Install AWS CLI
+        uses: unfor19/install-aws-cli-action@v1
+        with:
+          version: 2
+          arch: arm64
+
+      - name: Setup the AWS credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.aws_access_key_id }}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.aws_secret_access_key }}" >> $GITHUB_ENV
+          echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
+
+      - uses: azure/setup-kubectl@v3
+        with:
+          version: v1.28.7
+
+      - name: Download Kubeconfig
+        run: |
+          mkdir ~/.kube
+          aws eks update-kubeconfig --name aws-core
+
+      - uses: azure/setup-helm@v4.0.0
+        with:
+          version: v3.14.0
+
+      - name: Environment cleanup
+        run: |
+          helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait
+          kubectl delete pods -n ${{ env.ENVIRONMENT_NAME }} --all --force
+          kubectl delete pvc -n ${{ env.ENVIRONMENT_NAME }} --all --force
+          kubectl delete secrets -n ${{ env.ENVIRONMENT_NAME }} --all --force
+          kubectl delete ns ${{ env.ENVIRONMENT_NAME }}
+        continue-on-error: true
