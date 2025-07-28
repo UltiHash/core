@@ -57,9 +57,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.PAT }}
-          sparse-checkout: |
-            .github
-            testing
+          submodules: recursive
 
       - name: Install AWS CLI
         uses: unfor19/install-aws-cli-action@v1

@@ -25,7 +25,7 @@ on:
       ghcr_token:
         required: true
       registry_token:
-        required: false
+        required: true
 
 jobs:
 
