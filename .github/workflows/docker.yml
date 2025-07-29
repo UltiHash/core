@@ -14,7 +14,6 @@ jobs:
       dockerfile_path: tools/database-init/Dockerfile
       docker_images: |
           registry.ultihash.io/stable/database-init
-          ghcr.io/ultihash/database-init
       docker_tags: |
           type=raw,value=latest
           type=semver,pattern={{version}}
@@ -30,7 +29,6 @@ jobs:
       dockerfile_path: Dockerfile
       docker_images: |
           registry.ultihash.io/stable/core
-          ghcr.io/ultihash/cluster
       docker_tags: |
           type=raw,value=latest
           type=semver,pattern={{version}}
@@ -45,7 +43,7 @@ jobs:
       docker_context: .
       dockerfile_path: Dockerfile
       docker_images: |
-          ghcr.io/ultihash/cluster
+          registry.ultihash.io/dev/core
       docker_tags: |
           type=raw,value=latest
           type=semver,suffix=-debug,pattern={{version}}
@@ -55,3 +53,4 @@ jobs:
       platforms: linux/amd64,linux/arm64
     secrets:
       ghcr_token: ${{ secrets.PAT }}
+      registry_token: ${{ secrets.REGISTRY_USER }}

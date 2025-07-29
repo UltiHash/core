@@ -10,9 +10,9 @@ on:
         description: Choose the test to execute
         options: 
           - feature-test
-          - pyspark-test-x86-64
-          - s3a-test-x86-64
-          - stability-test-x86-64
+          - pyspark-test
+          - s3a-test
+          - stability-test
           - small-performance-test
           - vulnerability-scanning
           - all
@@ -28,22 +28,24 @@ jobs:
       docker_build_args: |
         BuildType=RelWithDebInfo
         DebugTools=True
-      docker_images: ghcr.io/ultihash/cluster
+      docker_images: registry.ultihash.io/dev/core
       docker_tags: nightly-build
-      platforms: linux/amd64,linux/arm64
+      platforms: linux/arm64
     secrets:
       ghcr_token: ${{ secrets.PAT }}
+      registry_token: ${{ secrets.REGISTRY_USER }}
     
   build-database-init:
     uses: ./.github/workflows/docker_build_template.yml 
     with:
       docker_context: .
       dockerfile_path: tools/database-init/Dockerfile
-      docker_images: ghcr.io/ultihash/database-init
+      docker_images: registry.ultihash.io/dev/database-init
       docker_tags: nightly-build
-      platforms: linux/amd64,linux/arm64
+      platforms: linux/arm64
     secrets:
       ghcr_token: ${{ secrets.PAT }}
+      registry_token: ${{ secrets.REGISTRY_USER }}
 
   feature-test-rr:
     needs: 
@@ -94,7 +96,7 @@ jobs:
       uh_license: ${{ secrets.UH_LICENSE_JSON }}
       monitoring_token: ${{ secrets.MONITORING_TOKEN_AWS }}
 
-  pyspark-test-x86-64:
+  pyspark-test:
     needs: 
       - build-core
       - build-database-init
@@ -102,16 +104,16 @@ jobs:
       matrix:
         test: 
           - name: simple-rr
-            helm_values: testing/pyspark/helm-values-on-premise-rr.yaml
+            helm_values: testing/pyspark/helm-values-rr.yaml
           - name: simple-ec
-            helm_values: testing/pyspark/helm-values-on-premise-ec.yaml
+            helm_values: testing/pyspark/helm-values-ec.yaml
     if: |
       github.event_name == 'schedule' || 
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'pyspark-test-x86-64') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'pyspark-test') ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
-    uses: ./.github/workflows/pyspark_testing_on_premise.yml
+    uses: ./.github/workflows/pyspark_testing.yml
     with:
-      env_name: pyspark-testing-x86-64-${{ matrix.test.name }}
+      env_name: pyspark-testing-${{ matrix.test.name }}
       docker_image_tag: nightly-build
       docker_registry: ${{ vars.DOCKER_REGISTRY }}
       helm_values: ${{ matrix.test.helm_values }}
@@ -124,7 +126,7 @@ jobs:
       uh_license: ${{ secrets.UH_LICENSE_JSON }}
       monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
 
-  s3a-test-x86-64:
+  s3a-test:
     needs: 
       - build-core
       - build-database-init
@@ -132,16 +134,16 @@ jobs:
       matrix:
         test: 
           - name: simple-rr
-            helm_values: testing/s3a/helm-values-on-premise-rr.yaml
+            helm_values: testing/s3a/helm-values-rr.yaml
           - name: simple-ec
-            helm_values: testing/s3a/helm-values-on-premise-ec.yaml
+            helm_values: testing/s3a/helm-values-ec.yaml
     if: |
       github.event_name == 'schedule' || 
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 's3a-test-x86-64') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 's3a-test') ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
-    uses: ./.github/workflows/s3a_testing_on_premise.yml
+    uses: ./.github/workflows/s3a_testing.yml
     with:
-      env_name: s3a-testing-x86-64-${{ matrix.test.name }}
+      env_name: s3a-testing-${{ matrix.test.name }}
       docker_image_tag: nightly-build
       docker_registry: ${{ vars.DOCKER_REGISTRY }}
       helm_values: ${{ matrix.test.helm_values }}
@@ -154,20 +156,20 @@ jobs:
       uh_license: ${{ secrets.UH_LICENSE_JSON }}
       monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
 
-  stability-test-x86-64-rr:
+  stability-test-rr:
     needs: 
       - build-core
       - build-database-init
     if: |
       github.event_name == 'schedule' || 
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'stability-test-x86-64') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'stability-test') ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
-    uses: ./.github/workflows/stability_testing_on_premise.yml
+    uses: ./.github/workflows/stability_testing.yml
     with:
-      env_name: stability-testing-x86-64-rr
+      env_name: stability-testing-rr
       docker_image_tag: nightly-build
       docker_registry: ${{ vars.DOCKER_REGISTRY }}
-      helm_values: testing/stability/helm-values-on-premise-rr.yaml
+      helm_values: testing/stability/helm-values-rr.yaml
     secrets:
       ghcr_token: ${{ secrets.PAT }}
       docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
@@ -177,21 +179,21 @@ jobs:
       uh_license: ${{ secrets.UH_LICENSE_JSON }}
       monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
 
-  stability-test-x86-64-ec:
+  stability-test-ec:
     needs: 
       - build-core
       - build-database-init
-      - stability-test-x86-64-rr
+      - stability-test-rr
     if: |
       github.event_name == 'schedule' || 
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'stability-test-x86-64') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'stability-test') ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
-    uses: ./.github/workflows/stability_testing_on_premise.yml
+    uses: ./.github/workflows/stability_testing.yml
     with:
-      env_name: stability-testing-x86-64-ec
+      env_name: stability-testing-ec
       docker_image_tag: nightly-build
       docker_registry: ${{ vars.DOCKER_REGISTRY }}
-      helm_values: testing/stability/helm-values-on-premise-ec.yaml
+      helm_values: testing/stability/helm-values-ec.yaml
     secrets:
       ghcr_token: ${{ secrets.PAT }}
       docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
@@ -211,7 +213,7 @@ jobs:
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
     uses: ./.github/workflows/performance_testing_small_aws.yml
     with:
-      env_name: performance-testing-small-aarch64-rr
+      env_name: performance-testing-small-rr
       docker_image_tag: nightly-build
       docker_registry: ${{ vars.DOCKER_REGISTRY }}
       helm_values: testing/performance/small/ultihash-helm-values-rr.yaml
@@ -237,7 +239,7 @@ jobs:
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
     uses: ./.github/workflows/performance_testing_small_aws.yml
     with:
-      env_name: performance-testing-small-aarch64-ec
+      env_name: performance-testing-small-ec
       docker_image_tag: nightly-build
       docker_registry: ${{ vars.DOCKER_REGISTRY }}
       helm_values: testing/performance/small/ultihash-helm-values-ec.yaml
@@ -264,4 +266,5 @@ jobs:
       docker_image_tag: nightly-build
     secrets:
       ghcr_token: ${{ secrets.PAT }}
+      registry_token: ${{ secrets.REGISTRY_USER }}
   

@@ -1,4 +1,4 @@
-name: S3A Testing On Premise
+name: S3A Testing
 
 on:
   workflow_call:
@@ -40,6 +40,18 @@ jobs:
         with:
           token: ${{ secrets.ghcr_token }}
 
+      - name: Install AWS CLI
+        uses: unfor19/install-aws-cli-action@v1
+        with:
+          version: 2
+          arch: arm64
+
+      - name: Setup the AWS credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.aws_access_key_id }}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.aws_secret_access_key }}" >> $GITHUB_ENV
+          echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
+
       - uses: azure/setup-kubectl@v3
         with:
           version: v1.28.7
@@ -47,7 +59,7 @@ jobs:
       - name: Download Kubeconfig
         run: |
           mkdir ~/.kube
-          echo '${{ secrets.kubeconfig }}' > ~/.kube/config
+          aws eks update-kubeconfig --name aws-core
 
       - uses: azure/setup-helm@v4.0.0
         with:
@@ -56,8 +68,8 @@ jobs:
       - name: Generate Helm values
         uses: danielr1996/envsubst-action@1.0.0
         env:
-          CORE_IMAGE: ghcr.io/ultihash/cluster:${{ inputs.docker_image_tag }}
-          DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ inputs.docker_image_tag }}
+          CORE_IMAGE: registry.ultihash.io/dev/core:${{ inputs.docker_image_tag }}
+          DATABASE_INIT_IMAGE: registry.ultihash.io/dev/database-init:${{ inputs.docker_image_tag }}
           GITHUB_PAT: ${{ secrets.ghcr_token }}
         with:
           input: ${{ inputs.helm_values }}
@@ -88,6 +100,17 @@ jobs:
     needs: deploy-and-test
     if: ${{ always() }}
     steps:
+      - name: Install AWS CLI
+        uses: unfor19/install-aws-cli-action@v1
+        with:
+          version: 2
+          arch: arm64
+
+      - name: Setup the AWS credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.aws_access_key_id }}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.aws_secret_access_key }}" >> $GITHUB_ENV
+          echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
 
       - uses: azure/setup-kubectl@v3
         with:
@@ -96,7 +119,8 @@ jobs:
       - name: Download Kubeconfig
         run: |
           mkdir ~/.kube
-          echo '${{ secrets.kubeconfig }}' > ~/.kube/config
+          aws eks update-kubeconfig --name aws-core
+
     
       - uses: azure/setup-helm@v4.0.0
         with:

@@ -107,8 +107,8 @@ jobs:
       - name: Generate Helm values for UltiHash
         uses: danielr1996/envsubst-action@1.0.0
         env:
-          CORE_IMAGE: ghcr.io/ultihash/cluster:${{ inputs.docker_image_tag }}
-          DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ inputs.docker_image_tag }}
+          CORE_IMAGE: registry.ultihash.io/dev/core:${{ inputs.docker_image_tag }}
+          DATABASE_INIT_IMAGE: registry.ultihash.io/dev/database-init:${{ inputs.docker_image_tag }}
         with:
           input: ${{ inputs.helm_values }}
           output: ultihash-helm-values.yaml

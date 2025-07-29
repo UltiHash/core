@@ -1,18 +1,18 @@
-name: Stability Testing On Premise
+name: Stability Testing AWS
 
 on:
   workflow_call:
     inputs:
-      env_name:         
+      env_name:
         required: true
         type: string
-      docker_image_tag: 
+      docker_image_tag:
         required: true
         type: string
       docker_registry:
         required: true
         type: string
-      helm_values: 
+      helm_values:
         required: true
         type: string
     secrets:
@@ -32,7 +32,6 @@ on:
         required: true
 
 jobs:
-
   deploy-and-test:
     runs-on: lightweight-generic-jobs
     steps:
@@ -40,6 +39,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.ghcr_token }}
+      
+      - name: Install AWS CLI
+        uses: unfor19/install-aws-cli-action@v1
+        with:
+          version: 2
+          arch: arm64
+
+      - name: Setup the AWS credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.aws_access_key_id}}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.aws_secret_access_key}}" >> $GITHUB_ENV
+          echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
 
       - uses: azure/setup-kubectl@v3
         with:
@@ -48,7 +59,7 @@ jobs:
       - name: Download Kubeconfig
         run: |
           mkdir ~/.kube
-          echo '${{ secrets.kubeconfig }}' > ~/.kube/config
+          aws eks update-kubeconfig --name aws-core
     
       - uses: azure/setup-helm@v4.0.0
         with:
@@ -57,8 +68,8 @@ jobs:
       - name: Generate Helm values
         uses: danielr1996/envsubst-action@1.0.0
         env:
-          CORE_IMAGE: ghcr.io/ultihash/cluster:${{ inputs.docker_image_tag }}
-          DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ inputs.docker_image_tag }}
+          CORE_IMAGE: registry.ultihash.io/dev/core:${{ inputs.docker_image_tag }}
+          DATABASE_INIT_IMAGE: registry.ultihash.io/dev/database-init:${{ inputs.docker_image_tag }}
         with:
           input: ${{ inputs.helm_values }}
           output: helm-values.yaml
@@ -68,6 +79,7 @@ jobs:
           helm uninstall ${{ inputs.env_name }} -n ${{ inputs.env_name }} --wait
           kubectl delete pods -n ${{ inputs.env_name }} --all --force
           kubectl delete pvc -n ${{ inputs.env_name }} --all
+          kubectl delete pv stability-test-input --force
           kubectl delete secrets -n ${{ inputs.env_name }} --all --force
           kubectl delete ns ${{ inputs.env_name }}
         continue-on-error: true
@@ -82,17 +94,50 @@ jobs:
 
       - name: Provision persistent volumes for testing
         run: |
-          kubectl apply -f testing/stability/persistent-volumes-on-premise.yaml -n ${{ inputs.env_name }}
+          kubectl apply -f testing/stability/persistent-volumes.yaml -n ${{ inputs.env_name }}
 
       - name: Run stability test
         run: |
           helm test ${{ inputs.env_name }} -n ${{ inputs.env_name }} --filter name=${{ inputs.env_name }}-stability-test --logs --timeout 3h
+
+  cleanup:
+    runs-on: lightweight-generic-jobs
+    needs: deploy-and-test
+    if: ${{ always() }}
+    steps:
+
+      - name: Install AWS CLI
+        uses: unfor19/install-aws-cli-action@v1
+        with:
+          version: 2
+          arch: arm64
+
+      - name: Setup the AWS credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.aws_access_key_id}}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.aws_secret_access_key}}" >> $GITHUB_ENV
+          echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
+
+      - uses: azure/setup-kubectl@v3
+        with:
+          version: v1.28.7
+
+      - name: Download Kubeconfig
+        run: |
+          mkdir ~/.kube
+          aws eks update-kubeconfig --name aws-core
+    
+      - uses: azure/setup-helm@v4.0.0
+        with:
+         version: v3.14.0
 
       - name: Environment cleanup
         run: |
           helm uninstall ${{ inputs.env_name }} -n ${{ inputs.env_name }} --wait
           kubectl delete pods -n ${{ inputs.env_name }} --all --force
           kubectl delete pvc -n ${{ inputs.env_name }} --all
+          kubectl delete pv stability-test-input --force
           kubectl delete secrets -n ${{ inputs.env_name }} --all --force
           kubectl delete ns ${{ inputs.env_name }}
+        continue-on-error: true
       

@@ -13,7 +13,7 @@ jobs:
     with:
       docker_context: .
       dockerfile_path: Dockerfile
-      docker_images: ghcr.io/ultihash/cluster
+      docker_images: registry.ultihash.io/dev/core
       docker_tags: performance-testing-large-amd64
       platforms: linux/amd64
     secrets:
@@ -24,7 +24,7 @@ jobs:
     with:
       docker_context: .
       dockerfile_path: tools/database-init/Dockerfile
-      docker_images: ghcr.io/ultihash/database-init
+      docker_images: registry.ultihash.io/dev/database-init
       docker_tags: performance-testing-large-amd64
       platforms: linux/amd64
     secrets:
@@ -103,8 +103,8 @@ jobs:
       - name: Generate Helm values for UltiHash
         uses: danielr1996/envsubst-action@1.0.0
         env:
-          CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
-          DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
+          CORE_IMAGE: registry.ultihash.io/dev/core:${{ env.ENVIRONMENT_NAME }}
+          DATABASE_INIT_IMAGE: registry.ultihash.io/dev/database-init:${{ env.ENVIRONMENT_NAME }}
         with:
           input: testing/performance/large/ultihash-helm-values.yaml
           output: ultihash-helm-values.yaml

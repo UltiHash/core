@@ -15,6 +15,18 @@ jobs:
       - name: Define testing environment name
         run: echo "ENVIRONMENT_NAME=pr-${{ github.event.pull_request.number }}-${{ matrix.test_names }}" >> $GITHUB_ENV
 
+      - name: Install AWS CLI
+        uses: unfor19/install-aws-cli-action@v1
+        with:
+          version: 2
+          arch: arm64
+
+      - name: Setup the AWS credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.aws_access_key_id }}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.aws_secret_access_key }}" >> $GITHUB_ENV
+          echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
+
       - uses: azure/setup-kubectl@v3
         with:
           version: v1.28.7
@@ -22,7 +34,7 @@ jobs:
       - name: Download Kubeconfig
         run: |
           mkdir ~/.kube
-          echo '${{ secrets.KUBECONFIG }}' > ~/.kube/config
+          aws eks update-kubeconfig --name aws-core
     
       - uses: azure/setup-helm@v4.0.0
         with:
