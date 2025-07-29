@@ -27,7 +27,7 @@ global:
 
 featureTests:
   nodeSelector:
-    purpose: feature-testing
+    purpose: ci
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -36,7 +36,7 @@ featureTests:
 
 coordinator:
   nodeSelector:
-    purpose: feature-testing
+    purpose: ci
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -49,7 +49,7 @@ coordinator:
 etcd:
   replicaCount: 1
   nodeSelector:
-    purpose: feature-testing
+    purpose: ci
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -62,7 +62,7 @@ etcd:
 entrypoint:
   replicas: 1
   nodeSelector:
-    purpose: feature-testing
+    purpose: ci
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -77,7 +77,7 @@ deduplicator:
   storageClass: local-path
   storageSize: 2Gi
   nodeSelector:
-    purpose: feature-testing
+    purpose: ci
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -87,7 +87,7 @@ deduplicator:
 database:
   primary:
     nodeSelector:
-      purpose: feature-testing
+      purpose: ci
     tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -101,7 +101,7 @@ database:
 databaseInit:
   image: $DATABASE_INIT_IMAGE
   nodeSelector:
-    purpose: feature-testing
+    purpose: ci
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -120,7 +120,7 @@ storage:
       size: 5Gi
       mountPath: /var/lib/uh/storage
       nodeSelector:
-        purpose: feature-testing
+        purpose: ci
       tolerations:
         - key: "purpose"
           operator: "Equal"
@@ -157,7 +157,7 @@ collector:
         name: ultihash
         key: token
   nodeSelector:
-    purpose: feature-testing
+    purpose: ci
   tolerations:
     - key: "purpose"
       operator: "Equal"
