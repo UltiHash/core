@@ -44,9 +44,9 @@ jobs:
       matrix:
         test: 
           - name: simple-rr
-            helm_values: testing/feature/helm-values-on-premise-rr.yaml
+            helm_values: testing/feature/helm-values-rr.yaml
           - name: simple-ec
-            helm_values: testing/feature/helm-values-on-premise-ec.yaml
+            helm_values: testing/feature/helm-values-ec.yaml
     steps:
 
       - name: Define testing environment name
