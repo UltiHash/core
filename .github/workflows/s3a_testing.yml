@@ -24,7 +24,9 @@ on:
         required: true
       registry_token:
         required: true
-      kubeconfig:
+      aws_access_key_id:
+        required: true
+      aws_secret_access_key:
         required: true
       uh_license:
         required: true
