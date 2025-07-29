@@ -58,18 +58,14 @@ jobs:
           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.aws_secret_access_key }}" >> $GITHUB_ENV
           echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
 
-      - uses: azure/setup-kubectl@v3
-        with:
-          version: v1.28.7
+      - uses: azure/setup-kubectl@v4
 
       - name: Download Kubeconfig
         run: |
           mkdir ~/.kube
           aws eks update-kubeconfig --name aws-core
     
-      - uses: azure/setup-helm@v4.0.0
-        with:
-         version: v3.14.0
+      - uses: azure/setup-helm@v4.3.0
 
       - name: Delete the testing environment if exists
         run: |
@@ -87,7 +83,7 @@ jobs:
           kubectl create secret generic ultihash -n ${{ inputs.env_name }} --from-literal=license='${{ secrets.uh_license }}' --from-literal=token='${{ secrets.monitoring_token }}'
 
       - name: Generate the performance tester manifest for UltiHash
-        uses: danielr1996/envsubst-action@1.0.0
+        uses: danielr1996/envsubst-action@1.1.0
         env:
           TEST_NAME: "small_performance_test_ultihash"
           AMOUNT_GiB: "100"
@@ -105,7 +101,7 @@ jobs:
           output: performance-tester-ultihash.yaml
 
       - name: Generate Helm values for UltiHash
-        uses: danielr1996/envsubst-action@1.0.0
+        uses: danielr1996/envsubst-action@1.1.0
         env:
           CORE_IMAGE: registry.ultihash.io/dev/core:${{ inputs.docker_image_tag }}
           DATABASE_INIT_IMAGE: registry.ultihash.io/dev/database-init:${{ inputs.docker_image_tag }}
@@ -140,18 +136,14 @@ jobs:
           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.aws_secret_access_key }}" >> $GITHUB_ENV
           echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
 
-      - uses: azure/setup-kubectl@v3
-        with:
-          version: v1.28.7
+      - uses: azure/setup-kubectl@v4
 
       - name: Download Kubeconfig
         run: |
           mkdir ~/.kube
           aws eks update-kubeconfig --name aws-core
     
-      - uses: azure/setup-helm@v4.0.0
-        with:
-         version: v3.14.0
+      - uses: azure/setup-helm@v4.3.0
 
       - name: Environment cleanup
         run: |
