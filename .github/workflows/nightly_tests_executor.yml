@@ -122,7 +122,8 @@ jobs:
       docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
       docker_registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
       registry_token: ${{ secrets.REGISTRY_USER }}
-      kubeconfig: ${{ secrets.KUBECONFIG }}
+      aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY}}
+      aws_secret_access_key: ${{ secrets.AWS_SECRET_KEY}}
       uh_license: ${{ secrets.UH_LICENSE_JSON }}
       monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
 
@@ -152,7 +153,8 @@ jobs:
       docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
       docker_registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
       registry_token: ${{ secrets.REGISTRY_USER }}
-      kubeconfig: ${{ secrets.KUBECONFIG }}
+      aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY}}
+      aws_secret_access_key: ${{ secrets.AWS_SECRET_KEY}}
       uh_license: ${{ secrets.UH_LICENSE_JSON }}
       monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
 
@@ -175,7 +177,8 @@ jobs:
       docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
       docker_registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
       registry_token: ${{ secrets.REGISTRY_USER }}
-      kubeconfig: ${{ secrets.KUBECONFIG }}
+      aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY}}
+      aws_secret_access_key: ${{ secrets.AWS_SECRET_KEY}}
       uh_license: ${{ secrets.UH_LICENSE_JSON }}
       monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
 
@@ -199,7 +202,8 @@ jobs:
       docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
       docker_registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
       registry_token: ${{ secrets.REGISTRY_USER }}
-      kubeconfig: ${{ secrets.KUBECONFIG }}
+      aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY}}
+      aws_secret_access_key: ${{ secrets.AWS_SECRET_KEY}}
       uh_license: ${{ secrets.UH_LICENSE_JSON }}
       monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
   
@@ -265,6 +269,5 @@ jobs:
     with:
       docker_image_tag: nightly-build
     secrets:
-      ghcr_token: ${{ secrets.PAT }}
       registry_token: ${{ secrets.REGISTRY_USER }}
   
