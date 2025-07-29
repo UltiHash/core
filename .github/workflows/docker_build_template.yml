@@ -68,6 +68,13 @@ jobs:
         images: ${{ inputs.docker_images }}
         tags: ${{ inputs.docker_tags }}
 
+    - name: Docker metadata
+      id: meta-cache
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ inputs.docker_images }}
+        tags: buildcache
+
     - name: Build and push the Docker image
       uses: docker/build-push-action@v5
       with:
@@ -77,4 +84,6 @@ jobs:
         tags: ${{ steps.meta-release.outputs.tags }}
         labels: ${{ steps.meta-release.outputs.labels }}
         build-args: ${{ inputs.docker_build_args }}
+        cache-from: type=registry,ref=${{ steps.meta-cache.outputs.tags }}
+        cache-to: type=registry,ref=${{ steps.meta-cache.outputs.tags }},mode=max
         push: true
