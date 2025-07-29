@@ -31,7 +31,7 @@ featureTests:
   tolerations:
     - key: "purpose"
       operator: "Equal"
-      value: "testing"
+      value: "ci"
       effect: "NoSchedule"
 
 coordinator:
@@ -40,7 +40,7 @@ coordinator:
   tolerations:
     - key: "purpose"
       operator: "Equal"
-      value: "testing"
+      value: "ci"
       effect: "NoSchedule"
   extraEnvs:
     - name: OTEL_RESOURCE_ATTRIBUTES
@@ -53,11 +53,11 @@ etcd:
   tolerations:
     - key: "purpose"
       operator: "Equal"
-      value: "testing"
+      value: "ci"
       effect: "NoSchedule"
   persistence:
     size: 5Gi
-    storageClass: ebs-csi-gp3
+    storageClass: local-path
 
 entrypoint:
   replicas: 1
@@ -66,7 +66,7 @@ entrypoint:
   tolerations:
     - key: "purpose"
       operator: "Equal"
-      value: "testing"
+      value: "ci"
       effect: "NoSchedule"
   
   ingress:
@@ -74,14 +74,14 @@ entrypoint:
 
 deduplicator:
   replicas: 1
-  storageClass: ebs-csi-gp3
+  storageClass: local-path
   storageSize: 2Gi
   nodeSelector:
     purpose: feature-testing
   tolerations:
     - key: "purpose"
       operator: "Equal"
-      value: "testing"
+      value: "ci"
       effect: "NoSchedule"
 
 database:
@@ -91,11 +91,11 @@ database:
     tolerations:
     - key: "purpose"
       operator: "Equal"
-      value: "testing"
+      value: "ci"
       effect: "NoSchedule"
 
     persistence:
-      storageClass: ebs-csi-gp3
+      storageClass: local-path
       size: 2Gi
 
 databaseInit:
@@ -105,7 +105,7 @@ databaseInit:
   tolerations:
     - key: "purpose"
       operator: "Equal"
-      value: "testing"
+      value: "ci"
       effect: "NoSchedule"
 
 storage:
@@ -113,7 +113,7 @@ storage:
     - id: 0
       type: ROUND_ROBIN
       storages: 1
-      storageClass: ebs-csi-gp3
+      storageClass: local-path
       size: 5Gi
       mountPath: /var/lib/uh/storage
       nodeSelector:
@@ -121,7 +121,7 @@ storage:
       tolerations:
         - key: "purpose"
           operator: "Equal"
-          value: "testing"
+          value: "ci"
           effect: "NoSchedule"
 
 collector:
@@ -158,7 +158,7 @@ collector:
   tolerations:
     - key: "purpose"
       operator: "Equal"
-      value: "testing"
+      value: "ci"
       effect: "NoSchedule"
   presets:
     kubeletMetrics:

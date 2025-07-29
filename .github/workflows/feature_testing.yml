@@ -57,7 +57,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.PAT }}
-          submodules: recursive
 
       - name: Install AWS CLI
         uses: unfor19/install-aws-cli-action@v1
@@ -116,7 +115,17 @@ jobs:
     runs-on: lightweight-generic-jobs
     needs: deploy-and-test
     if: ${{ always() }}
+    strategy:
+      matrix:
+        test:
+          - name: simple-rr
+          - name: simple-ec
     steps:
+
+      - name: Define testing environment name
+        run: |
+          echo "ENVIRONMENT_NAME=pr-${{ github.event.pull_request.number }}-${{ matrix.test.name }}" >> $GITHUB_ENV
+          echo "DOCKER_TAG=pr-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
 
       - name: Install AWS CLI
         uses: unfor19/install-aws-cli-action@v1
