@@ -64,7 +64,7 @@ coro<void> handler::run() {
             throw;
         }
     };
-    LOG_INFO() << m_messenger.peer() << " expires itself";
+    LOG_INFO() << m_messenger.peer() << " expired";
 }
 
 coro<void> handler::handle_request(const messenger::header& hdr) {
