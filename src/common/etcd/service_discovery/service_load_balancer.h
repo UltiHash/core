@@ -41,7 +41,7 @@ public:
         if (!m_cv.wait_for(lk, time_settings::instance().service_get_timeout,
                            [this] { return !empty(); })) {
             throw std::runtime_error(
-                "timeout waiting for any " +
+                "[load balancer] timeout waiting for any " +
                 get_service_string(service_interface::service_role) +
                 " client");
         }

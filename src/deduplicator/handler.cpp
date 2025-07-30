@@ -13,13 +13,14 @@ coro<void> handler::run() {
 
     auto state = co_await boost::asio::this_coro::cancellation_state;
     while (state.cancelled() == boost::asio::cancellation_type::none) {
-        messenger_core::header hdr;
-        opentelemetry::context::Context context;
-
-        std::optional<error> err;
-
         try {
+            messenger_core::header hdr;
+            opentelemetry::context::Context context;
+
+            std::optional<error> err;
+
             try {
+                LOG_DEBUG() << remote.str() << " waiting for request";
                 std::tie(hdr, context) =
                     co_await m_messenger.recv_header_with_context();
                 LOG_DEBUG() << remote.str() << " received "
@@ -52,7 +53,8 @@ coro<void> handler::run() {
             }
 
         } catch (const boost::system::system_error& e) {
-            if (e.code() == boost::asio::error::operation_aborted) {
+            if (e.code() == boost::asio::error::operation_aborted or
+                e.code() == boost::system::errc::bad_file_descriptor) {
                 break;
             } else if (e.code() == boost::asio::error::eof) {
                 LOG_INFO() << m_messenger.peer() << " disconnected";
@@ -61,6 +63,7 @@ coro<void> handler::run() {
             throw;
         }
     }
+    LOG_INFO() << m_messenger.peer() << " expired";
 }
 
 coro<void> handler::handle_request(const messenger::header& hdr) {
