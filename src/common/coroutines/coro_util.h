@@ -71,10 +71,17 @@ run_for_all(boost::asio::io_context& ioc, Func func,
     }
 }
 
+class coro_task;
+
 inline auto make_logging_completion_notifier(
-    std::string name, std::promise<void>* p = nullptr,
-    std::function<void(std::exception_ptr)> on_finish = nullptr) {
-    return [name, p, on_finish = std::move(on_finish)](std::exception_ptr e) {
+    const std::string& name, std::promise<void>& promise,
+    std::shared_ptr<coro_task> self,
+    std::function<void(std::shared_ptr<coro_task>, std::exception_ptr)>
+        on_finish = nullptr) {
+
+    return [self, &name, &promise,
+            on_finish = std::move(on_finish)](std::exception_ptr e) {
+        LOG_INFO() << "[" << name << "] completion handler";
         if (e) {
             try {
                 std::rethrow_exception(e);
@@ -87,10 +94,10 @@ inline auto make_logging_completion_notifier(
                     LOG_INFO()
                         << "[" << name << "] completion handler: disconnected ";
                 } else {
-                    LOG_WARN()
-                        << "[" << name
-                        << "] completion handler: exception with error code "
-                        << ex.code() << " : " << ex.what();
+                    LOG_WARN() << "[" << name
+                               << "] completion handler: exception with "
+                                  "error code "
+                               << ex.code() << " : " << ex.what();
                 }
             } catch (const std::exception& ex) {
                 LOG_WARN() << "[" << name << "] completion handler: exception, "
@@ -102,26 +109,37 @@ inline auto make_logging_completion_notifier(
         }
 
         if (on_finish)
-            on_finish(e);
+            on_finish(self, e);
 
-        if (p) {
-            LOG_INFO() << "[" << name << "] completion handler: set promise ";
-            p->set_value();
-        }
+        LOG_INFO() << "[" << name << "] completion handler: set promise ";
+        promise.set_value();
     };
 }
 
-class coro_task {
+class coro_task : public std::enable_shared_from_this<coro_task> {
+
 public:
+    static auto create(std::string name, boost::asio::io_context& ioc) {
+        return std::make_shared<coro_task>(std::move(name), ioc);
+    }
+
     coro_task(std::string name, boost::asio::io_context& ioc)
         : m_name{std::move(name)},
           m_strand(boost::asio::make_strand(ioc)),
           m_promise{},
           m_future(m_promise.get_future()) {}
 
+public:
     template <typename T>
-    void spawn(boost::asio::traced_awaitable<T>&& aw,
-               std::function<void(std::exception_ptr)> on_finish = nullptr) {
+    void
+    spawn(boost::asio::traced_awaitable<T>&& aw,
+          std::function<void(std::shared_ptr<coro_task>, std::exception_ptr)>
+              on_finish = nullptr) {
+        LOG_DEBUG() << "[" << m_name
+                    << "] About to call shared_from_this() in spawn()";
+        auto self = shared_from_this();
+        LOG_DEBUG() << "[" << m_name
+                    << "] shared_from_this() succeeded in spawn()";
         boost::asio::co_spawn(
             m_strand,
             [aw = std::move(aw)]() mutable -> boost::asio::awaitable<void> {
@@ -130,14 +148,24 @@ public:
                 co_await std::move(aw);
             },
             boost::asio::bind_cancellation_slot(
-                m_signal.slot(), make_logging_completion_notifier(
-                                     m_name, &m_promise, on_finish)));
+                m_signal.slot(),
+                // [self](std::exception_ptr _) { self->m_promise.set_value();
+                // }));
+                make_logging_completion_notifier(m_name, m_promise, self,
+                                                 on_finish)));
     }
 
     template <typename Function,
               std::enable_if_t<std::is_invocable_v<Function>, int> = 0>
-    void spawn(Function&& f,
-               std::function<void(std::exception_ptr)> on_finish = nullptr) {
+    void
+    spawn(Function&& f,
+          std::function<void(std::shared_ptr<coro_task>, std::exception_ptr)>
+              on_finish = nullptr) {
+        LOG_DEBUG() << "[" << m_name
+                    << "] About to call shared_from_this() in spawn()";
+        auto self = shared_from_this();
+        LOG_DEBUG() << "[" << m_name
+                    << "] shared_from_this() succeeded in spawn()";
         boost::asio::co_spawn(
             m_strand,
             [f = std::forward<Function>(
@@ -147,8 +175,11 @@ public:
                 co_await f();
             },
             boost::asio::bind_cancellation_slot(
-                m_signal.slot(), make_logging_completion_notifier(
-                                     m_name, &m_promise, on_finish)));
+                m_signal.slot(),
+                // [self](std::exception_ptr _) { self->m_promise.set_value();
+                // }));
+                make_logging_completion_notifier(m_name, m_promise, self,
+                                                 on_finish)));
     }
     coro_task(const coro_task&) = delete;
     coro_task& operator=(const coro_task&) = delete;
@@ -161,10 +192,19 @@ public:
     }
 
     void cancel() {
-        LOG_DEBUG() << "[" << m_name << "] post canceling task";
-        boost::asio::post(m_strand, [this]() {
-            LOG_DEBUG() << "[" << m_name << "] emit signal";
-            m_signal.emit(boost::asio::cancellation_type::all);
+        LOG_DEBUG() << "[" << m_name
+                    << "] About to call shared_from_this() in cancel()";
+        std::weak_ptr<coro_task> weak_self = weak_from_this();
+        LOG_DEBUG() << "[" << m_name
+                    << "] shared_from_this() succeeded in cancel()";
+        // Since the posted task can be executed after the object is destroyed,
+        boost::asio::post(m_strand, [weak_self, name = m_name]() {
+            if (auto self = weak_self.lock()) {
+                LOG_DEBUG() << "[" << name << "] emit signal";
+                self->m_signal.emit(boost::asio::cancellation_type::all);
+            } else {
+                LOG_DEBUG() << "[" << name << "] object no longer exists";
+            }
         });
     }
 

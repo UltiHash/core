@@ -15,6 +15,7 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -34,7 +35,7 @@ public:
         : m_config(std::move(config)),
           m_ioc(ioc),
           m_handler_factory(std::move(handler_factory)),
-          m_task{std::make_unique<coro_task>("do_accept", ioc)} {
+          m_task{coro_task::create("do_accept", ioc)} {
         m_task->spawn(do_accept());
     }
 
@@ -48,61 +49,61 @@ public:
 
         std::this_thread::sleep_for(std::chrono::seconds(1));
         LOG_INFO() << "canceling sessions...";
-        std::unique_lock<std::mutex> lock(m_sessions_mutex);
-        for (auto& s : m_sessions) {
-            s.cancel();
+        {
+            std::unique_lock<std::mutex> lock(m_sessions_mutex);
+            for (auto& session : m_sessions) {
+                session->cancel();
+            }
         }
 
         LOG_INFO() << "waiting sessions to be killed...";
+        std::unique_lock<std::mutex> lock(m_sessions_mutex);
         m_sessions_cv.wait(lock, [&] {
             LOG_DEBUG() << "session size: " << m_sessions.size();
             return m_sessions.empty();
         });
+        LOG_INFO() << "clear sessions";
+        m_sessions.clear();
+        LOG_INFO() << "clear handler factory";
+        m_handler_factory.reset();
         LOG_INFO() << "server destroyed";
     }
 
 private:
-    class session_task {
-    public:
-        session_task(std::string name, boost::asio::io_context& ioc,
-                     std::unique_ptr<protocol_handler> handler)
-            : m_handler{std::move(handler)},
-              m_task{std::make_unique<coro_task>(std::move(name), ioc)} {}
-
-        void run(std::function<void(std::exception_ptr)> on_finish = nullptr) {
-            m_task->spawn(
-                [this]() mutable -> coro<void> {
-                    counter_guard<active_connections> guard;
-                    co_await m_handler->run();
-                },
-                std::move(on_finish));
-        }
-        void cancel() {
-            // m_task->cancel();
-            m_handler->cancel();
-        }
-
-    private:
-        std::unique_ptr<protocol_handler> m_handler;
-        std::unique_ptr<coro_task> m_task;
-    };
-
-    auto emplace(std::string name, boost::asio::io_context& ioc,
-                 std::unique_ptr<protocol_handler> handler) {
+    void create_session(std::string name, boost::asio::io_context& ioc,
+                        std::unique_ptr<protocol_handler> handler) {
         std::lock_guard<std::mutex> lock(m_sessions_mutex);
-        m_sessions.emplace_back(name, ioc, std::move(handler));
-        return std::prev(m_sessions.end());
+
+        auto [it, inserted] = m_sessions.emplace(coro_task::create(name, ioc));
+        if (inserted == false) {
+            LOG_ERROR() << "session with name '" << name
+                        << "' already exists, cannot create a new one";
+            return;
+        }
+        (*it)->spawn(
+            [handler = std::move(handler)]() mutable -> coro<void> {
+                counter_guard<active_connections> guard;
+                co_await handler->run();
+            },
+            [this](std::shared_ptr<coro_task> completed_session,
+                   std::exception_ptr _) {
+                remove_session(completed_session);
+            });
     }
 
-    void erase(std::list<session_task>::const_iterator it) {
+    void remove_session(std::shared_ptr<coro_task> session) {
         std::lock_guard<std::mutex> lock(m_sessions_mutex);
         try {
+            LOG_DEBUG() << "removing session";
+            auto it = m_sessions.find(session);
             if (it != m_sessions.end()) {
-                LOG_ERROR() << "erase";
                 m_sessions.erase(it);
+                LOG_DEBUG()
+                    << "session removed, remaining: " << m_sessions.size();
+                m_sessions_cv.notify_all();
             }
         } catch (const std::exception& e) {
-            LOG_ERROR() << "failed to erase session: " << e.what();
+            LOG_ERROR() << "failed to remove session: " << e.what();
         }
     }
 
@@ -145,16 +146,9 @@ private:
                 return std::format("in session {}:{}", conn_address, conn_port);
             }();
 
-            auto it = emplace(name, m_ioc,
-                              m_handler_factory->create_handler(std::move(s)));
-
-            it->run([this, it](std::exception_ptr e) {
-                LOG_DEBUG() << "num of sessions: " << m_sessions.size();
-                erase(it);
-                LOG_DEBUG()
-                    << "num of sessions after erase: " << m_sessions.size();
-                m_sessions_cv.notify_all();
-            });
+            // 새로운 세션 생성 및 시작
+            create_session(name, m_ioc,
+                           m_handler_factory->create_handler(std::move(s)));
         }
     }
 
@@ -164,8 +158,8 @@ private:
 
     std::mutex m_sessions_mutex;
     std::condition_variable m_sessions_cv;
-    std::list<session_task> m_sessions;
-    std::unique_ptr<coro_task> m_task;
+    std::unordered_set<std::shared_ptr<coro_task>> m_sessions;
+    std::shared_ptr<coro_task> m_task;
 };
 
 //------------------------------------------------------------------------------

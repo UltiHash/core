@@ -20,8 +20,8 @@ public:
         : m_ioc{ioc},
           m_etcd{etcd},
           m_backend_client{std::make_unique<T>(std::forward<T>(client))},
-          m_task{"periodic license update", ioc} {
-        m_task.spawn(
+          m_task{coro_task::create("periodic license update", ioc)} {
+        m_task->spawn(
             periodic_update(time_settings::instance().license_fetch_period)
                 .start_trace());
     }
@@ -88,7 +88,7 @@ private:
     etcd_manager& m_etcd;
     std::unique_ptr<backend_client> m_backend_client;
     std::atomic<std::shared_ptr<license>> m_license;
-    coro_task m_task;
+    std::shared_ptr<coro_task> m_task;
 };
 
 } // namespace uh::cluster
