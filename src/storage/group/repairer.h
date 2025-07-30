@@ -69,8 +69,8 @@ public:
 
           m_storages{std::move(storages)},
           m_storage_states{std::move(storage_states)},
-          m_task{coro_task::create("repairing", ioc)} {
-        m_task->spawn(repair().start_trace());
+          m_task{"repairing", ioc} {
+        m_task.spawn(repair().start_trace());
     }
 
     ~repairer() {
@@ -86,7 +86,7 @@ private:
 
     std::vector<std::shared_ptr<storage_interface>> m_storages;
     std::vector<storage_state> m_storage_states;
-    std::shared_ptr<coro_task> m_task;
+    coro_task m_task;
 
     coro<void> repair() {
         LOG_DEBUG() << "Repairing started for group " << m_config.id;

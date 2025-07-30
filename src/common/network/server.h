@@ -35,7 +35,7 @@ public:
         : m_config(std::move(config)),
           m_ioc(ioc),
           m_handler_factory(std::move(handler_factory)),
-          m_task{coro_task::create("do_accept", ioc)} {
+          m_task{std::make_unique<coro_task>("do_accept", ioc)} {
         m_task->spawn(do_accept());
     }
 
@@ -74,7 +74,8 @@ private:
                         std::unique_ptr<protocol_handler> handler) {
         std::lock_guard<std::mutex> lock(m_sessions_mutex);
 
-        auto [it, inserted] = m_sessions.emplace(coro_task::create(name, ioc));
+        auto [it, inserted] =
+            m_sessions.emplace(std::make_shared<coro_task>(name, ioc));
         if (inserted == false) {
             LOG_ERROR() << "session with name '" << name
                         << "' already exists, cannot create a new one";
@@ -85,10 +86,8 @@ private:
                 counter_guard<active_connections> guard;
                 co_await handler->run();
             },
-            [this](std::shared_ptr<coro_task> completed_session,
-                   std::exception_ptr _) {
-                remove_session(completed_session);
-            });
+            // session should alive until the completion handler removes it
+            [this, self = *it](std::exception_ptr _) { remove_session(self); });
     }
 
     void remove_session(std::shared_ptr<coro_task> session) {
@@ -143,10 +142,9 @@ private:
                     s.remote_endpoint().address().to_string();
                 const auto conn_port = s.remote_endpoint().port();
 
-                return std::format("in session {}:{}", conn_address, conn_port);
+                return std::format("session {}:{}", conn_address, conn_port);
             }();
 
-            // 새로운 세션 생성 및 시작
             create_session(name, m_ioc,
                            m_handler_factory->create_handler(std::move(s)));
         }
@@ -159,7 +157,7 @@ private:
     std::mutex m_sessions_mutex;
     std::condition_variable m_sessions_cv;
     std::unordered_set<std::shared_ptr<coro_task>> m_sessions;
-    std::shared_ptr<coro_task> m_task;
+    std::unique_ptr<coro_task> m_task;
 };
 
 //------------------------------------------------------------------------------

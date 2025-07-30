@@ -75,11 +75,9 @@ class coro_task;
 
 inline auto make_logging_completion_notifier(
     const std::string& name, std::promise<void>& promise,
-    std::shared_ptr<coro_task> self,
-    std::function<void(std::shared_ptr<coro_task>, std::exception_ptr)>
-        on_finish = nullptr) {
+    std::function<void(std::exception_ptr)> on_finish = nullptr) {
 
-    return [self, &name, &promise,
+    return [&name, &promise,
             on_finish = std::move(on_finish)](std::exception_ptr e) {
         LOG_INFO() << "[" << name << "] completion handler";
         if (e) {
@@ -109,37 +107,25 @@ inline auto make_logging_completion_notifier(
         }
 
         if (on_finish)
-            on_finish(self, e);
+            on_finish(e);
 
         LOG_INFO() << "[" << name << "] completion handler: set promise ";
         promise.set_value();
+        // NOTE: You cannot use `name` and `promise` after this point
     };
 }
 
-class coro_task : public std::enable_shared_from_this<coro_task> {
-
+class coro_task {
 public:
-    static auto create(std::string name, boost::asio::io_context& ioc) {
-        return std::make_shared<coro_task>(std::move(name), ioc);
-    }
-
     coro_task(std::string name, boost::asio::io_context& ioc)
         : m_name{std::move(name)},
           m_strand(boost::asio::make_strand(ioc)),
           m_promise{},
           m_future(m_promise.get_future()) {}
 
-public:
     template <typename T>
-    void
-    spawn(boost::asio::traced_awaitable<T>&& aw,
-          std::function<void(std::shared_ptr<coro_task>, std::exception_ptr)>
-              on_finish = nullptr) {
-        LOG_DEBUG() << "[" << m_name
-                    << "] About to call shared_from_this() in spawn()";
-        auto self = shared_from_this();
-        LOG_DEBUG() << "[" << m_name
-                    << "] shared_from_this() succeeded in spawn()";
+    void spawn(boost::asio::traced_awaitable<T>&& aw,
+               std::function<void(std::exception_ptr)> on_finish = nullptr) {
         boost::asio::co_spawn(
             m_strand,
             [aw = std::move(aw)]() mutable -> boost::asio::awaitable<void> {
@@ -148,24 +134,14 @@ public:
                 co_await std::move(aw);
             },
             boost::asio::bind_cancellation_slot(
-                m_signal.slot(),
-                // [self](std::exception_ptr _) { self->m_promise.set_value();
-                // }));
-                make_logging_completion_notifier(m_name, m_promise, self,
-                                                 on_finish)));
+                m_signal.slot(), make_logging_completion_notifier(
+                                     m_name, m_promise, on_finish)));
     }
 
     template <typename Function,
               std::enable_if_t<std::is_invocable_v<Function>, int> = 0>
-    void
-    spawn(Function&& f,
-          std::function<void(std::shared_ptr<coro_task>, std::exception_ptr)>
-              on_finish = nullptr) {
-        LOG_DEBUG() << "[" << m_name
-                    << "] About to call shared_from_this() in spawn()";
-        auto self = shared_from_this();
-        LOG_DEBUG() << "[" << m_name
-                    << "] shared_from_this() succeeded in spawn()";
+    void spawn(Function&& f,
+               std::function<void(std::exception_ptr)> on_finish = nullptr) {
         boost::asio::co_spawn(
             m_strand,
             [f = std::forward<Function>(
@@ -175,11 +151,8 @@ public:
                 co_await f();
             },
             boost::asio::bind_cancellation_slot(
-                m_signal.slot(),
-                // [self](std::exception_ptr _) { self->m_promise.set_value();
-                // }));
-                make_logging_completion_notifier(m_name, m_promise, self,
-                                                 on_finish)));
+                m_signal.slot(), make_logging_completion_notifier(
+                                     m_name, m_promise, on_finish)));
     }
     coro_task(const coro_task&) = delete;
     coro_task& operator=(const coro_task&) = delete;
@@ -187,25 +160,26 @@ public:
     coro_task& operator=(coro_task&&) = delete;
 
     ~coro_task() {
+        LOG_DEBUG() << "[" << m_name << "] call cancel";
         cancel();
+        LOG_DEBUG() << "[" << m_name << "] waiting...";
         wait();
+        LOG_DEBUG() << "[" << m_name << "] waiting done";
     }
 
     void cancel() {
-        LOG_DEBUG() << "[" << m_name
-                    << "] About to call shared_from_this() in cancel()";
-        std::weak_ptr<coro_task> weak_self = weak_from_this();
-        LOG_DEBUG() << "[" << m_name
-                    << "] shared_from_this() succeeded in cancel()";
-        // Since the posted task can be executed after the object is destroyed,
-        boost::asio::post(m_strand, [weak_self, name = m_name]() {
-            if (auto self = weak_self.lock()) {
-                LOG_DEBUG() << "[" << name << "] emit signal";
-                self->m_signal.emit(boost::asio::cancellation_type::all);
-            } else {
-                LOG_DEBUG() << "[" << name << "] object no longer exists";
-            }
+        std::promise<void> promise;
+        auto future = promise.get_future();
+
+        // use dispatch, since destroyer can be called from the strand
+        boost::asio::dispatch(m_strand, [this, &promise]() {
+            LOG_DEBUG() << "[" << m_name << "] emit signal";
+            m_signal.emit(boost::asio::cancellation_type::all);
+            promise.set_value();
         });
+        LOG_DEBUG() << "[" << m_name << "] waiting for signal emitting...";
+        future.get();
+        LOG_DEBUG() << "[" << m_name << "] waiting for signal emitting done";
     }
 
     void wait(std::optional<std::chrono::steady_clock::duration> timeout =

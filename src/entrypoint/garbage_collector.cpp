@@ -7,8 +7,8 @@ garbage_collector::garbage_collector(boost::asio::io_context& ioc,
                                      storage::global::global_data_view& gdv)
     : m_dir(dir),
       m_gdv(gdv),
-      m_task{coro_task::create("garbage collector", ioc)} {
-    m_task->spawn(collect().start_trace());
+      m_task{"garbage collector", ioc} {
+    m_task.spawn(collect().start_trace());
 }
 
 coro<void> garbage_collector::collect() {
