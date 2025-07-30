@@ -30,7 +30,13 @@ BOOST_AUTO_TEST_CASE(supports_repeated_killing_and_reviving) {
         LOG_WARN() << "### Destroy ep:service...";
         ep.reset();
     }
+}
 
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_FIXTURE_TEST_SUITE(rr_storage, global_data_view_fixture)
+
+BOOST_AUTO_TEST_CASE(supports_repeated_killing_and_reviving) {
     auto config = get_group_config();
 
     for (auto k = 0ul; k < 100; ++k) {
