@@ -1,4 +1,4 @@
-name: Unit Tests TSAN (Linux, clang, x86_64)
+name: Unit Tests TSAN (clang)
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  unit-tsan-x86_64-linux:
+  unit-tsan:
     if: false
     strategy:
       matrix:

@@ -1,4 +1,4 @@
-name: Unit Tests UBSAN (Linux, clang, x86_64)
+name: Unit Tests (GCC)
 
 on:
   pull_request:
@@ -7,25 +7,22 @@ on:
   workflow_dispatch:
 
 jobs:
-
-  unit-ubsan-x86_64-linux:
+  unit-gcc:
     strategy:
       matrix:
-        target: [RelWithDebInfo]
+        target: [Release, Debug]
     uses: ./.github/workflows/unit_testing_workflow.yml
     with: 
        target: ${{ matrix.target }}
        runs_on: heavyweight-core-aarch64-jobs
        cmake_env: >
         {
-          "CC": "/usr/bin/clang-18",
-          "CXX": "/usr/bin/clang++-18"
+          "CC": "/usr/bin/gcc",
+          "CXX": "/usr/bin/g++"
         }
-       cmake_additional_args: -DENABLE_UBSAN=ON
        test_env: >
         {
-          "ETCDCTL_API": "3",
-          "ASAN_OPTIONS": "detect_odr_violation=0"
+          "ETCDCTL_API": "3"
         }
     secrets:
       ghcr_token: ${{ secrets.PAT }}
