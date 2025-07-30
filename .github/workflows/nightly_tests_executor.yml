@@ -215,7 +215,7 @@ jobs:
       github.event_name == 'schedule' || 
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'small-performance-test') ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
-    uses: ./.github/workflows/performance_testing_small_aws.yml
+    uses: ./.github/workflows/performance_testing_small.yml
     with:
       env_name: performance-testing-small-rr
       docker_image_tag: nightly-build
@@ -241,7 +241,7 @@ jobs:
       github.event_name == 'schedule' || 
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'small-performance-test') ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
-    uses: ./.github/workflows/performance_testing_small_aws.yml
+    uses: ./.github/workflows/performance_testing_small.yml
     with:
       env_name: performance-testing-small-ec
       docker_image_tag: nightly-build
