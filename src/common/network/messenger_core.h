@@ -37,6 +37,8 @@ public:
 
     messenger_core(messenger_core&& m) noexcept;
 
+    virtual ~messenger_core() = default;
+
     bool connected() { return m_tcp_stream.socket().is_open(); }
 
     template <typename T>
