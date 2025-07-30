@@ -25,6 +25,13 @@ global:
     }
 
 pysparkTest:
+  nodeSelector:
+    purpose: ci
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "ci"
+      effect: "NoSchedule"
   extraEnv:
     - name: BUCKET_NAME
       value: $BUCKET_NAME
@@ -32,7 +39,12 @@ pysparkTest:
 etcd:
   replicaCount: 1
   nodeSelector:
-    kubernetes.io/hostname: opm-k8s-worker-02
+    purpose: ci
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "ci"
+      effect: "NoSchedule"
   persistence:
     size: 5Gi
     storageClass: local-path
@@ -40,7 +52,12 @@ etcd:
 entrypoint:
   replicas: 1
   nodeSelector:
-    kubernetes.io/hostname: opm-k8s-worker-02
+    purpose: ci
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "ci"
+      effect: "NoSchedule"
   
   ingress:
     enabled: false
@@ -50,12 +67,22 @@ deduplicator:
   storageClass: local-path
   storageSize: 2Gi
   nodeSelector:
-    kubernetes.io/hostname: opm-k8s-worker-02
+    purpose: ci
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "ci"
+      effect: "NoSchedule"
 
 database:
   primary:
     nodeSelector:
-      kubernetes.io/hostname: opm-k8s-worker-02
+      purpose: ci
+    tolerations:
+      - key: "purpose"
+        operator: "Equal"
+        value: "ci"
+        effect: "NoSchedule"
 
     persistence:
       storageClass: local-path
@@ -64,11 +91,24 @@ database:
 databaseInit:
   image: $DATABASE_INIT_IMAGE
   nodeSelector:
-    kubernetes.io/hostname: opm-k8s-worker-02
+    purpose: ci
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "ci"
+      effect: "NoSchedule"
 
 coordinator:
   nodeSelector:
-    kubernetes.io/hostname: opm-k8s-worker-02
+    purpose: ci
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "ci"
+      effect: "NoSchedule"
+  extraEnvs:
+    - name: OTEL_RESOURCE_ATTRIBUTES
+      value: service.name=coordinator
 
 storage:
   groups:
@@ -79,15 +119,20 @@ storage:
       size: 5Gi
       mountPath: /var/lib/uh/storage
       nodeSelector:
-        kubernetes.io/hostname: opm-k8s-worker-02
+        purpose: ci
+      tolerations:
+        - key: "purpose"
+          operator: "Equal"
+          value: "ci"
+          effect: "NoSchedule"
 
 collector:
   config:
     exporters:
       otlphttp/uptrace:
-        endpoint: http://opm-k8s-worker-04.ultihash.io
+        endpoint: http://uptrace-backend.uptrace.svc.cluster.local:14318
         headers:
-          uptrace-dsn: http://${env:UH_EXPORTER_TOKEN}@opm-k8s-worker-04.ultihash.io
+          uptrace-dsn: http://${env:UH_EXPORTER_TOKEN}@uptrace-backend.uptrace.svc.cluster.local:14318
     receivers:
       kubeletstats: null
       prometheus: null
@@ -95,23 +140,28 @@ collector:
       pipelines:
         metrics:
           receivers:
-          - otlp
+            - otlp
   extraEnvs:
-  - name: UH_POD_IP
-    valueFrom:
-      fieldRef:
-        fieldPath: status.podIP
-  - name: UH_NODE_IP
-    valueFrom:
-      fieldRef:
-        fieldPath: status.hostIP
-  - name: UH_EXPORTER_TOKEN 
-    valueFrom:
-      secretKeyRef:
-        name: ultihash
-        key: token
+    - name: UH_POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+    - name: UH_NODE_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.hostIP
+    - name: UH_EXPORTER_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: ultihash
+          key: token
   nodeSelector:
-    kubernetes.io/hostname: opm-k8s-worker-02
+    purpose: ci
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "ci"
+      effect: "NoSchedule"
   presets:
     kubeletMetrics:
       enabled: false

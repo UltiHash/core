@@ -25,6 +25,13 @@ global:
     }
 
 s3aTests:
+  nodeSelector:
+    purpose: ci
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "ci"
+      effect: "NoSchedule"
   extraEnv:
     - name: GITHUB_PAT
       value: $GITHUB_PAT
