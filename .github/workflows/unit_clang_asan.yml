@@ -1,4 +1,4 @@
-name: Unit Tests ASAN (Linux, clang, x86_64)
+name: Unit Tests ASAN (clang)
 
 on:
   pull_request:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  unit-asan-x86_64-linux:
+  unit-asan:
     strategy:
       matrix:
         target: [RelWithDebInfo]
