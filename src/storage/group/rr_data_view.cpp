@@ -64,9 +64,12 @@ coro<std::size_t> rr_data_view::read_address(const address& addr,
                                              std::span<char> buffer) {
     co_await perform_for_address<void>(
         m_ioc, addr, pointer_traits::rr::get_storage_pointer,
-        [buffer](std::shared_ptr<storage_interface> svc,
+        [buffer](std::shared_ptr<storage_interface> storage,
                  const storage_address_info& info) -> coro<void> {
-            co_await svc->read_address(info.addr, buffer, info.pointer_offsets);
+            if (storage == nullptr)
+                throw std::runtime_error("Storage is not available");
+            co_await storage->read_address(info.addr, buffer,
+                                           info.pointer_offsets);
         },
         m_storage_index.get());
 
@@ -161,6 +164,9 @@ address rr_data_view::compute_rejected_address(
                                           std::shared_ptr<storage_interface>>(
         m_ioc,
         [&](size_t i, auto storage) -> coro<std::vector<refcount_t>> {
+            if (storage == nullptr)
+                throw std::runtime_error("Storage " + std::to_string(i) +
+                                         " is not available");
             co_return co_await storage->link(refcounts_by_storage[i]);
         },
         m_storage_index.get());
@@ -176,6 +182,9 @@ coro<std::size_t> rr_data_view::unlink(const address& addr) {
         co_await run_for_all<std::size_t, std::shared_ptr<storage_interface>>(
             m_ioc,
             [&](size_t i, auto storage) -> coro<std::size_t> {
+                if (storage == nullptr)
+                    throw std::runtime_error("Storage " + std::to_string(i) +
+                                             " is not available");
                 co_return co_await storage->unlink(refcounts_by_storage[i]);
             },
             m_storage_index.get());
