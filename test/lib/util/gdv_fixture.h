@@ -31,7 +31,7 @@ public:
             {
                 .id = 0,
                 .type = storage::group_config::type_t::ROUND_ROBIN,
-                .storages = 3,
+                .storages = 1,
             })
 #endif
         : m_config{config},
@@ -91,10 +91,12 @@ public:
         m_work_guard.reset();
 
         m_gdv.reset();
+        LOG_INFO() << "gdv destroyed";
 
         for (auto& storage : m_storage_instances) {
             if (storage != nullptr) {
                 try {
+                    LOG_INFO() << "stopping storage...";
                     storage.reset();
                 } catch (const std::exception& e) {
                     LOG_ERROR()
