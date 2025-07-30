@@ -21,7 +21,7 @@ private:
 
     directory& m_dir;
     storage::global::global_data_view& m_gdv;
-    std::shared_ptr<coro_task> m_task;
+    coro_task m_task;
 };
 
 } // namespace uh::cluster::ep
