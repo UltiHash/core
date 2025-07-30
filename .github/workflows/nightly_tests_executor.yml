@@ -270,4 +270,5 @@ jobs:
       docker_image_tag: nightly-build
     secrets:
       registry_token: ${{ secrets.REGISTRY_USER }}
+      ghcr_token: ${{ secrets.PAT }}
   
