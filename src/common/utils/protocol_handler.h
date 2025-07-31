@@ -8,8 +8,6 @@ namespace uh::cluster {
 struct protocol_handler {
     virtual coro<void> run() = 0;
 
-    virtual void cancel() = 0;
-
     virtual ~protocol_handler() = default;
 };
 

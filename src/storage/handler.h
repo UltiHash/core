@@ -18,19 +18,6 @@ public:
         LOG_INFO() << "session started: " << m_messenger.peer();
     }
 
-    void cancel() override {
-        auto& socket = m_messenger.get_socket();
-        if (socket.is_open()) {
-            try {
-                LOG_DEBUG() << "socket canceled";
-                socket.cancel();
-            } catch (const boost::system::system_error& e) {
-                LOG_ERROR() << "cancel failed: " << e.what();
-            }
-        } else {
-            LOG_ERROR() << "socket is not open, cancel skipped.";
-        }
-    }
     coro<void> run() override;
 
 private:

@@ -17,18 +17,6 @@ public:
         LOG_INFO() << "session started: " << m_socket.remote_endpoint();
     }
 
-    void cancel() override {
-        if (m_socket.is_open()) {
-            try {
-                LOG_DEBUG() << "socket canceled";
-                m_socket.cancel();
-            } catch (const boost::system::system_error& e) {
-                LOG_ERROR() << "cancel failed: " << e.what();
-            }
-        } else {
-            LOG_ERROR() << "socket is not open, cancel skipped.";
-        }
-    }
     coro<void> run() override;
 
 private:
