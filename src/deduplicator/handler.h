@@ -16,7 +16,6 @@ public:
           m_dedup{dedup} {
         LOG_INFO() << "session started: " << m_messenger.peer();
     }
-    ~handler() { LOG_INFO() << "session ended: " << m_messenger.peer(); }
 
     void cancel() override {
         auto& socket = m_messenger.get_socket();
