@@ -58,7 +58,10 @@ public:
 
         LOG_INFO() << "waiting sessions to be killed...";
         std::unique_lock<std::mutex> lock(m_sessions_mutex);
-        m_sessions_cv.wait(lock, [&] { return m_sessions.empty(); });
+        m_sessions_cv.wait(lock, [&] {
+            LOG_DEBUG() << "session size: " << m_sessions.size();
+            return m_sessions.empty();
+        });
         LOG_INFO() << "server destroyed";
     }
 
@@ -90,8 +93,7 @@ private:
             auto it = m_sessions.find(session);
             if (it != m_sessions.end()) {
                 m_sessions.erase(it);
-                LOG_DEBUG()
-                    << "session removed, remaining: " << m_sessions.size();
+                LOG_DEBUG() << "session removed";
                 m_sessions_cv.notify_all();
             }
         } catch (const std::exception& e) {
