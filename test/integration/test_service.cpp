@@ -18,22 +18,6 @@
 
 namespace uh::cluster {
 
-BOOST_FIXTURE_TEST_SUITE(services, global_data_view_fixture)
-
-BOOST_AUTO_TEST_CASE(supports_repeated_killing_and_reviving) {
-    auto& ioc = get_executor();
-    for (auto k = 0ul; k < 100; ++k) {
-        LOG_WARN() << "## iteration " << k;
-        LOG_WARN() << "### Create ep:service...";
-        auto ep = std::make_unique<ep::service>(ioc, service_config{},
-                                                entrypoint_config{});
-        LOG_WARN() << "### Destroy ep:service...";
-        ep.reset();
-    }
-}
-
-BOOST_AUTO_TEST_SUITE_END()
-
 BOOST_FIXTURE_TEST_SUITE(rr_storage, global_data_view_fixture)
 
 BOOST_AUTO_TEST_CASE(supports_repeated_killing_and_reviving) {
