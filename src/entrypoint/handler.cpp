@@ -41,7 +41,6 @@ coro<void> handler::run() {
             } catch (const error_exception& e) {
                 resp = make_response(command_exception(*e.error()));
             } catch (const std::exception& e) {
-                LOG_ERROR() << m_socket.remote_endpoint() << ": " << e.what();
                 resp = make_response(command_exception());
             }
 
