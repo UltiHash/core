@@ -21,7 +21,7 @@ jobs:
         uses: unfor19/install-aws-cli-action@v1
         with:
           version: 2
-          arch: amd64
+          arch: arm64
 
       - name: Setup the AWS credentials
         run: |
@@ -91,7 +91,7 @@ jobs:
         uses: unfor19/install-aws-cli-action@v1
         with:
           version: 2
-          arch: amd64
+          arch: arm64
 
       - name: Setup the AWS credentials
         run: |
