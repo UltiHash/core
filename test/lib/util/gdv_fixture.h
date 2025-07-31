@@ -31,12 +31,12 @@ public:
             {
                 .id = 0,
                 .type = storage::group_config::type_t::ROUND_ROBIN,
-                .storages = 1,
+                .storages = 3,
             })
 #endif
         : m_config{config},
           m_etcd(),
-          m_gdv_config{.storage_service_connection_count = 1},
+          m_gdv_config{},
           m_work_guard(boost::asio::make_work_guard(m_ioc)) {
     }
 
