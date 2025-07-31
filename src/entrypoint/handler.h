@@ -16,9 +16,6 @@ public:
           m_factory{factory} {
         LOG_INFO() << "session started: " << m_socket.remote_endpoint();
     }
-    ~handler() {
-        LOG_INFO() << "session ended: " << m_socket.remote_endpoint();
-    }
 
     void cancel() override {
         if (m_socket.is_open()) {
