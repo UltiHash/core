@@ -35,8 +35,9 @@ public:
         : m_config(std::move(config)),
           m_ioc(ioc),
           m_handler_factory(std::move(handler_factory)),
-          m_task{std::make_unique<coro_task>("do_accept", ioc)} {
-        m_task->spawn(do_accept());
+          m_connection_lister{
+              std::make_unique<coro_task>("connection_listner", ioc)} {
+        m_connection_lister->spawn(listen());
     }
 
     [[nodiscard]] const server_config& get_server_config() const {
@@ -45,15 +46,18 @@ public:
 
     ~server() {
         LOG_INFO() << "stopping server...";
-        m_task.reset();
+        m_connection_lister.reset();
 
-        std::this_thread::sleep_for(std::chrono::seconds(1));
         LOG_INFO() << "canceling sessions...";
+        std::vector<std::shared_ptr<coro_task>> sessions_copy;
         {
-            std::unique_lock<std::mutex> lock(m_sessions_mutex);
-            for (auto& session : m_sessions) {
+            std::lock_guard<std::mutex> lock(m_sessions_mutex);
+            sessions_copy.assign(m_sessions.begin(), m_sessions.end());
+        }
+
+        for (auto& session : sessions_copy) {
+            if (session)
                 session->cancel();
-            }
         }
 
         LOG_INFO() << "waiting sessions to be killed...";
@@ -87,6 +91,7 @@ private:
     }
 
     void remove_session(std::shared_ptr<coro_task> session) {
+        LOG_DEBUG() << "remove session: waiting for lock";
         std::lock_guard<std::mutex> lock(m_sessions_mutex);
         try {
             LOG_DEBUG() << "removing session";
@@ -115,7 +120,7 @@ private:
         return acceptor;
     }
 
-    coro<void> do_accept() {
+    coro<void> listen() {
 
         LOG_INFO() << "server config: " << m_config.bind_address << ":"
                    << m_config.port;
@@ -152,7 +157,7 @@ private:
     std::mutex m_sessions_mutex;
     std::condition_variable m_sessions_cv;
     std::unordered_set<std::shared_ptr<coro_task>> m_sessions;
-    std::unique_ptr<coro_task> m_task;
+    std::unique_ptr<coro_task> m_connection_lister;
 };
 
 //------------------------------------------------------------------------------
