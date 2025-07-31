@@ -20,13 +20,41 @@ namespace uh::cluster {
 
 BOOST_FIXTURE_TEST_SUITE(rr_storage, global_data_view_fixture)
 
-BOOST_AUTO_TEST_CASE(supports_repeated_killing_and_reviving) {
+BOOST_AUTO_TEST_CASE(supports_repeated_killing_and_reviving_entrypoint) {
+    auto& ioc = get_executor();
+    for (auto k = 0ul; k < 100; ++k) {
+        LOG_WARN() << "## iteration " << k;
+        LOG_WARN() << "### Create ep:service...";
+        auto ep = std::make_unique<ep::service>(ioc, service_config{},
+                                                entrypoint_config{});
+        LOG_WARN() << "### Destroy ep:service...";
+        ep.reset();
+    }
+}
+
+BOOST_AUTO_TEST_CASE(supports_repeated_killing_and_reviving_one_storage) {
     auto config = get_group_config();
 
     for (auto k = 0ul; k < 100; ++k) {
         LOG_WARN() << "## iteration " << k;
         deactivate_storage(config.storages - 1);
         activate_storage(config.storages - 1);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(supports_repeated_killing_and_reviving_all_storages) {
+    auto config = get_group_config();
+
+    for (auto k = 0ul; k < 20; ++k) {
+        LOG_WARN() << "## iteration " << k;
+        for (auto i = 0ul; i < config.storages; ++i) {
+            LOG_DEBUG() << "kill storage " << i;
+            deactivate_storage(i);
+        }
+        for (auto i = 0ul; i < config.storages; ++i) {
+            LOG_DEBUG() << "revive storage " << i;
+            activate_storage(i);
+        }
     }
 }
 
@@ -56,6 +84,22 @@ BOOST_AUTO_TEST_CASE(supports_repeated_killing_and_reviving) {
         deactivate_storage(config.storages - 1);
         LOG_WARN() << "### Create storage...";
         activate_storage(config.storages - 1);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(supports_repeated_killing_and_reviving_all_storages) {
+    auto config = get_group_config();
+
+    for (auto k = 0ul; k < 20; ++k) {
+        LOG_WARN() << "## iteration " << k;
+        for (auto i = 0ul; i < config.storages; ++i) {
+            LOG_DEBUG() << "kill storage " << i;
+            deactivate_storage(i);
+        }
+        for (auto i = 0ul; i < config.storages; ++i) {
+            LOG_DEBUG() << "revive storage " << i;
+            activate_storage(i);
+        }
     }
 }
 
