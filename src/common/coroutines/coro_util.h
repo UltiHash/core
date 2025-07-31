@@ -79,7 +79,6 @@ inline auto make_logging_completion_notifier(
 
     return [&name, &promise,
             on_finish = std::move(on_finish)](std::exception_ptr e) {
-        LOG_INFO() << "[" << name << "] completion handler";
         if (e) {
             try {
                 std::rethrow_exception(e);
