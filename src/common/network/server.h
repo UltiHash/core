@@ -58,14 +58,7 @@ public:
 
         LOG_INFO() << "waiting sessions to be killed...";
         std::unique_lock<std::mutex> lock(m_sessions_mutex);
-        m_sessions_cv.wait(lock, [&] {
-            LOG_DEBUG() << "session size: " << m_sessions.size();
-            return m_sessions.empty();
-        });
-        LOG_INFO() << "clear sessions";
-        m_sessions.clear();
-        LOG_INFO() << "clear handler factory";
-        m_handler_factory.reset();
+        m_sessions_cv.wait(lock, [&] { return m_sessions.empty(); });
         LOG_INFO() << "server destroyed";
     }
 
