@@ -159,11 +159,8 @@ public:
     coro_task& operator=(coro_task&&) = delete;
 
     ~coro_task() {
-        LOG_DEBUG() << "[" << m_name << "] call cancel";
         cancel();
-        LOG_DEBUG() << "[" << m_name << "] waiting...";
         wait();
-        LOG_DEBUG() << "[" << m_name << "] waiting done";
     }
 
     void cancel() {
@@ -172,13 +169,10 @@ public:
 
         // use dispatch, since destroyer can be called from the strand
         boost::asio::dispatch(m_strand, [this, &promise]() {
-            LOG_DEBUG() << "[" << m_name << "] emit signal";
             m_signal.emit(boost::asio::cancellation_type::all);
             promise.set_value();
         });
-        LOG_DEBUG() << "[" << m_name << "] waiting for signal emitting...";
         future.get();
-        LOG_DEBUG() << "[" << m_name << "] waiting for signal emitting done";
     }
 
     void wait(std::optional<std::chrono::steady_clock::duration> timeout =
