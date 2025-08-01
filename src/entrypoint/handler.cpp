@@ -72,14 +72,9 @@ coro<void> handler::run() {
 }
 
 coro<void> handler::proxy_raw_request(raw_request& rawreq) {
-    beast::flat_buffer buffer;
-    beast::http::request_parser<beast::http::vector_body<uint8_t>> parser;
-    parser.body_limit((std::numeric_limits<std::uint64_t>::max)());
-    co_await beast::http::async_read(m_socket, buffer, parser,
-                                     boost::asio::use_awaitable);
-    auto client_req = parser.release();
+    constexpr std::size_t buffer_size = 64 * 1024; // 64KB
 
-    std::string endpoint_host = "http://localhost";
+    std::string endpoint_host = "localhost";
     std::string endpoint_port = "8080";
     boost::asio::ip::tcp::resolver resolver(m_socket.get_executor());
     auto endpoints = co_await resolver.async_resolve(
@@ -88,16 +83,31 @@ coro<void> handler::proxy_raw_request(raw_request& rawreq) {
     co_await boost::asio::async_connect(endpoint_socket, endpoints,
                                         boost::asio::use_awaitable);
 
-    co_await beast::http::async_write(endpoint_socket, client_req,
-                                      boost::asio::use_awaitable);
+    co_await boost::asio::async_write(
+        endpoint_socket,
+        boost::asio::buffer(rawreq.buffer.data(), rawreq.buffer.size()),
+        boost::asio::use_awaitable);
 
-    beast::flat_buffer resp_buffer;
-    beast::http::response<beast::http::string_body> endpoint_resp;
-    co_await beast::http::async_read(endpoint_socket, resp_buffer,
-                                     endpoint_resp, boost::asio::use_awaitable);
+    std::vector<char> buffer(buffer_size);
+    for (;;) {
+        std::size_t n = co_await m_socket.async_read_some(
+            boost::asio::buffer(buffer), boost::asio::use_awaitable);
+        if (n == 0)
+            break;
+        co_await boost::asio::async_write(endpoint_socket,
+                                          boost::asio::buffer(buffer.data(), n),
+                                          boost::asio::use_awaitable);
+    }
 
-    co_await beast::http::async_write(m_socket, endpoint_resp,
-                                      boost::asio::use_awaitable);
+    for (;;) {
+        std::size_t n = co_await endpoint_socket.async_read_some(
+            boost::asio::buffer(buffer), boost::asio::use_awaitable);
+        if (n == 0)
+            break;
+        co_await boost::asio::async_write(m_socket,
+                                          boost::asio::buffer(buffer.data(), n),
+                                          boost::asio::use_awaitable);
+    }
 }
 
 coro<void> handler::handle_request(raw_request& rawreq, const std::string& id) {
