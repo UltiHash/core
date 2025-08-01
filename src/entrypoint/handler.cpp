@@ -17,12 +17,12 @@ coro<void> handler::run() {
         std::string id = generate_unique_id();
 
         raw_request rawreq;
-        response resp;
+        std::optional<response> resp;
 
         try {
             try {
                 rawreq = co_await raw_request::read(m_socket);
-                resp = co_await handle_request(rawreq, id).start_trace();
+                co_await handle_request(rawreq, id).start_trace();
                 metric<success>::increase(1);
 
             } catch (const boost::system::system_error& e) {
@@ -44,7 +44,9 @@ coro<void> handler::run() {
                 resp = make_response(command_exception());
             }
 
-            co_await write(m_socket, std::move(resp), id);
+            if (resp.has_value()) {
+                co_await write(m_socket, std::move(resp.value()), id);
+            }
 
         } catch (const boost::system::system_error& e) {
             if (e.code() == boost::asio::error::operation_aborted) {
@@ -69,8 +71,7 @@ coro<void> handler::run() {
     }
 }
 
-coro<response> handler::handle_request(raw_request& rawreq,
-                                       const std::string& id) {
+coro<void> handler::handle_request(raw_request& rawreq, const std::string& id) {
     std::unique_ptr<request> req;
     req = co_await m_factory.m_request_factory.create(m_socket, rawreq);
     LOG_INFO() << req->peer() << ": read request, id=" << id << ": " << *req;
@@ -86,7 +87,8 @@ coro<response> handler::handle_request(raw_request& rawreq,
 
     auto cors = co_await m_factory.m_cors->check(*req);
     if (cors.response) {
-        co_return std::move(*cors.response);
+        co_await write(m_socket, std::move(*cors.response), id);
+        co_return;
     }
 
     auto cmd = co_await m_factory.m_command_factory.create(*req);
@@ -127,7 +129,7 @@ coro<response> handler::handle_request(raw_request& rawreq,
     span->set_attribute("response-code",
                         static_cast<unsigned>(response.base().result()));
 
-    co_return response;
+    co_await write(m_socket, std::move(response), id);
 }
 
 handler_factory::handler_factory(command_factory&& comm_factory,
