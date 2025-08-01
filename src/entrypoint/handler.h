@@ -24,6 +24,7 @@ private:
     handler_factory& m_factory;
 
     coro<void> handle_request(http::raw_request& rawreq, const std::string& id);
+    coro<void> proxy_raw_request(http::raw_request& rawreq);
 };
 
 class handler_factory : public protocol_handler_factory {
