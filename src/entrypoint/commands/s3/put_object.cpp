@@ -40,18 +40,24 @@ coro<future<dedupe_response>> upload(boost::asio::io_context& ioc,
 
 } // namespace
 
-put_object::put_object(boost::asio::io_context& ioc,
-                       const entrypoint_config& conf, limits& uhlimits,
-                       directory& dir, storage::global::global_data_view& gdv,
+put_object::put_object(boost::asio::io_context& ioc, std::size_t buffer_size,
+                       limits& uhlimits, directory& dir,
+                       storage::global::global_data_view& gdv,
                        deduplicator_interface& dedup)
     : m_ioc(ioc),
-      m_config(conf),
+      m_buffer_size(buffer_size),
       m_dir(dir),
       m_gdv(gdv),
       m_limits(uhlimits),
       m_dedup(dedup) {}
 
 bool put_object::can_handle(const request& req) {
+    LOG_DEBUG() << "header in can_handle: " << req.get_header().headers;
+    LOG_DEBUG() << req.peer() << ": can handle put object: " << req.method()
+                << " " << req.bucket() << "/" << req.object_key();
+    // << " query(uploadId): " << *req.query("uploadId")
+    // << " req.header(\"x-amz-copy-source\"): "
+    // << *req.header("x-amz-copy-source");
     return req.method() == verb::put && req.bucket() != RESERVED_BUCKET_NAME &&
            !req.bucket().empty() && !req.object_key().empty() &&
            !req.query("uploadId") && !req.header("x-amz-copy-source");
@@ -72,7 +78,7 @@ coro<response> put_object::handle(request& req) {
     md5 hash;
 
     dedupe_response resp;
-    if (content_length >= m_config.buffer_size) {
+    if (content_length >= m_buffer_size) {
         resp = co_await put_large_object(req, hash);
     } else {
         resp = co_await put_small_object(req, hash);
@@ -83,11 +89,11 @@ coro<response> put_object::handle(request& req) {
 
     auto original_size = resp.addr.data_size();
     object obj{.name = req.object_key(),
-                .size = original_size,
-                .addr = std::move(resp.addr),
-                .etag = tag,
-                .mime = req.header("Content-Type")
-                            .value_or(ep::DEFAULT_OBJECT_CONTENT_TYPE)};
+               .size = original_size,
+               .addr = std::move(resp.addr),
+               .etag = tag,
+               .mime = req.header("Content-Type")
+                           .value_or(ep::DEFAULT_OBJECT_CONTENT_TYPE)};
 
     auto version = co_await safe_put_object(m_dir, m_gdv, req.bucket(), obj);
 
@@ -104,8 +110,7 @@ coro<response> put_object::handle(request& req) {
 
 coro<dedupe_response> put_object::put_large_object(request& req,
                                                    md5& hash) const {
-    const auto buffer_size = m_config.buffer_size;
-    double_buffer b(buffer_size);
+    double_buffer b(m_buffer_size);
 
     auto content_length = req.content_length();
     std::size_t transferred = 0;

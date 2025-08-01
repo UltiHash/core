@@ -8,10 +8,10 @@
 #include <magic_enum/magic_enum_switch.hpp>
 #include <magic_enum/magic_enum_utility.hpp>
 
-#include <opentelemetry/sdk/metrics/view/view_registry_factory.h>
-#include <opentelemetry/sdk/metrics/meter_context_factory.h>
 #include <opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_factory.h>
 #include <opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_options.h>
+#include <opentelemetry/sdk/metrics/meter_context_factory.h>
+#include <opentelemetry/sdk/metrics/view/view_registry_factory.h>
 
 #include <algorithm>
 
@@ -51,7 +51,9 @@ void initialize_counters() {
                 (metric_prefix == role_prefix or
                  (metric_prefix == GDV_PREFIX and
                   (role_prefix == get_role_prefix(DEDUPLICATOR_SERVICE) or
-                   role_prefix == get_role_prefix(ENTRYPOINT_SERVICE))))) {
+                   role_prefix == get_role_prefix(ENTRYPOINT_SERVICE) or
+                   role_prefix == get_role_prefix(GATEWAY_SERVICE) //
+                   )))) {
                 metric<type>::increase(0);
             }
         }

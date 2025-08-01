@@ -1,11 +1,14 @@
-#include "common/telemetry/log.h"
-#include "common/telemetry/trace/trace.h"
-#include "common/utils/signal_handler.h"
-#include "config/configuration.h"
-#include "coordinator/service.h"
-#include "deduplicator/service.h"
-#include "entrypoint/service.h"
-#include "storage/service.h"
+#include <common/telemetry/log.h>
+#include <common/telemetry/trace/trace.h>
+#include <common/utils/signal_handler.h>
+#include <common/utils/strings.h>
+#include <config/configuration.h>
+
+#include <coordinator/service.h>
+#include <deduplicator/service.h>
+#include <entrypoint/service.h>
+#include <gateway/service.h>
+#include <storage/service.h>
 
 using namespace uh;
 using namespace uh::cluster;
@@ -28,6 +31,8 @@ void execute_role(const config& c) {
                 deduplicator::service(c.service, c.deduplicator));
         case ENTRYPOINT_SERVICE:
             return start_service(ep::service(c.service, c.entrypoint));
+        case GATEWAY_SERVICE:
+            return start_service(gateway::service(c.service, c.gateway));
         case COORDINATOR_SERVICE:
             return start_service(
                 coordinator::service(c.service, c.coordinator));

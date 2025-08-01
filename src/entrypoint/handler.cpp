@@ -1,7 +1,9 @@
 #include "handler.h"
-#include "http/command_exception.h"
+
 #include <common/utils/downstream_exception.h>
 #include <common/utils/random.h>
+#include <entrypoint/http/command_exception.h>
+
 #include <format>
 
 using namespace uh::cluster::ep::http;
@@ -24,35 +26,40 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
          */
         std::string id = generate_unique_id();
 
-        raw_request rawreq;
-        response resp;
+        std::optional<response> resp;
 
         try {
             try {
-                rawreq = co_await raw_request::read(s);
-                resp = co_await handle_request(s, rawreq, id).start_trace();
+                co_await handle_request(s, id).start_trace();
                 metric<success>::increase(1);
 
             } catch (const boost::system::system_error& e) {
                 throw;
             } catch (const downstream_exception& e) {
-                if (e.code() == boost::asio::error::operation_aborted or
-                    e.code() == boost::beast::error::timeout) {
+                if (e.code() == boost::asio::error::operation_aborted) {
+                    throw e.original_exception();
+                } else if (e.code() == boost::beast::error::timeout) {
+                    LOG_WARN() << e.what();
                     resp = make_response(command_exception(error::busy));
                 } else {
+                    LOG_WARN() << e.what();
                     resp = make_response(
                         command_exception(error::internal_network_error));
                 }
             } catch (const command_exception& e) {
+                LOG_WARN() << e.what();
                 resp = make_response(e);
             } catch (const error_exception& e) {
+                LOG_WARN() << e.what();
                 resp = make_response(command_exception(*e.error()));
             } catch (const std::exception& e) {
-                LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
+                LOG_WARN() << e.what();
                 resp = make_response(command_exception());
             }
 
-            co_await write(s, std::move(resp), id);
+            if (resp.has_value()) {
+                co_await write(s, std::move(resp.value()), id);
+            }
 
         } catch (const boost::system::system_error& e) {
             if (e.code() == boost::beast::http::error::end_of_stream or
@@ -68,11 +75,10 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     s.close();
 }
 
-coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
-                                       raw_request& rawreq,
-                                       const std::string& id) {
-    std::unique_ptr<request> req;
-    req = co_await m_factory.create(s, rawreq);
+coro<void> handler::handle_request(boost::asio::ip::tcp::socket& s,
+                                   const std::string& id) {
+    auto req = co_await m_factory.create(s);
+
     LOG_INFO() << req->peer() << ": read request, id=" << id << ": " << *req;
 
     auto span = co_await boost::asio::this_coro::span;
@@ -86,7 +92,8 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
 
     auto cors = co_await m_cors->check(*req);
     if (cors.response) {
-        co_return std::move(*cors.response);
+        co_await write(s, std::move(*cors.response), id);
+        co_return;
     }
 
     auto cmd = co_await m_command_factory.create(*req);
@@ -126,7 +133,7 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
     span->set_attribute("response-code",
                         static_cast<unsigned>(response.base().result()));
 
-    co_return response;
+    co_await write(s, std::move(response), id);
 }
 
 } // namespace uh::cluster::ep

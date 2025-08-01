@@ -1,73 +1,138 @@
 #pragma once
 
-#include "command_exception.h"
-#include "common/types/common_types.h"
-#include "common/utils/strings.h"
-#include "entrypoint/http/body.h"
-#include "entrypoint/user/user.h"
-#include "raw_request.h"
+#include <common/types/common_types.h>
+#include <common/utils/strings.h>
+#include <entrypoint/http/body.h>
+#include <entrypoint/http/command_exception.h>
+#include <entrypoint/http/raw_request.h>
+#include <entrypoint/http/raw_response.h>
+#include <entrypoint/user/user.h>
 
 #include <map>
 #include <span>
 
 namespace uh::cluster::ep::http {
 
-class request {
+inline std::string get_bucket_id(const std::string& path) {
+    auto segments = split(path, '/');
+    return std::string(segments.size() >= 2 ? segments[1] : "");
+}
+
+inline std::string get_object_key(const std::string& path) {
+    auto segments = split(path, '/');
+    std::string key = segments.size() >= 3
+                          ? join(std::views::counted(segments.begin() + 2,
+                                                     segments.size() - 2),
+                                 "/")
+                          : "";
+    return std::string(key);
+}
+
+template <typename header_t> class message {
 public:
-    request() = default;
-    request(raw_request req, std::unique_ptr<body> body, ep::user::user user);
+    message() = default;
 
-    verb method() const;
+    message(header_t header, std::unique_ptr<body> body, ep::user::user user)
+        : m_header(std::move(header)),
+          m_body(std::move(body)),
+          m_authenticated_user(std::move(user)),
+          m_bucket_id(get_bucket_id(m_header.path)),
+          m_object_key(get_object_key(m_header.path)) {}
 
-    std::string_view target() const;
-    const std::string& path() const;
+    message(const message&) = delete;
+    message& operator=(const message&) = delete;
+    message(message&&) noexcept = default;
+    message& operator=(message&&) noexcept = default;
 
-    const std::string& bucket() const;
-    const std::string& object_key() const;
-    std::string arn() const;
+    verb method() const { return m_header.headers.method(); }
 
-    coro<std::size_t> read_body(std::span<char> buffer);
+    std::string_view target() const { return m_header.headers.target(); }
+    const std::string& path() const { return m_header.path; }
 
-    boost::asio::ip::tcp::endpoint peer() const { return m_peer; }
+    const std::string& bucket() const { return m_bucket_id; }
+    const std::string& object_key() const { return m_object_key; }
 
-    /** Payload that was read while reading the request headers.
+    std::string arn() const {
+        if (m_object_key.size() != 0)
+            return "arn:aws:s3:::" + m_bucket_id + "/" + m_object_key;
+        else
+            return "arn:aws:s3:::" + m_bucket_id;
+    }
+
+    const header_t& get_header() const noexcept { return m_header; }
+
+    coro<std::size_t> read_body(std::span<char> buffer) {
+        return m_body->read(buffer);
+    }
+
+    std::vector<boost::asio::const_buffer> get_raw_buffer() const noexcept {
+        return m_body->get_raw_buffer();
+    }
+
+    boost::asio::ip::tcp::endpoint peer() const { return m_header.peer; }
+
+    /** Payload that was read while reading the message headers.
      */
     std::size_t content_length() const {
-        return std::stoul(m_req.at("Content-Length"));
+        return std::stoul(m_header.headers.at("Content-Length"));
     }
 
     /**
      * Return value of query parameter specified by `name`. Return
      * `std::nullopt` if parameter is not set.
      */
-    std::optional<std::string> query(const std::string& name) const;
-    const std::map<std::string, std::string>& query_map() const;
+    std::optional<std::string> query(const std::string& name) const {
+        if (auto it = m_header.params.find(name); it != m_header.params.end()) {
+            return it->second;
+        }
+        return std::nullopt;
+    }
 
-    void set_query_params(const std::string& query);
+    const std::map<std::string, std::string>& query_map() const {
+        return m_header.params;
+    }
 
-    const boost::beast::http::fields& header() const;
+    void set_query_params(const std::string& query) {
+        boost::urls::url url;
+        url.set_encoded_query(query);
 
-    bool has_query() const;
+        std::map<std::string, std::string> params;
+        for (const auto& param : url.params()) {
+            params[param.key] = param.value;
+        }
 
-    std::optional<std::string> header(const std::string& name) const;
+        m_header.params = std::move(params);
+    }
 
-    bool keep_alive() const { return m_req.keep_alive(); }
+    const auto& header() const { return m_header.headers; }
 
-    const user::user& authenticated_user() const;
+    bool has_query() const { return !m_header.params.empty(); }
+
+    std::optional<std::string> header(const std::string& name) const {
+        if (auto it = m_header.headers.find(name);
+            it != m_header.headers.end()) {
+            return it->value();
+        }
+        return {};
+    }
+
+    bool keep_alive() const { return m_header.headers.keep_alive(); }
+
+    const user::user& authenticated_user() const {
+        return m_authenticated_user;
+    }
 
 private:
-    friend std::ostream& operator<<(std::ostream& out, const request& req);
-
-    boost::beast::http::request<boost::beast::http::empty_body> m_req;
+    header_t m_header;
     std::unique_ptr<body> m_body;
     user::user m_authenticated_user;
-    boost::asio::ip::tcp::endpoint m_peer;
 
     std::string m_bucket_id{};
     std::string m_object_key{};
-    std::map<std::string, std::string> m_params;
-    std::string m_path;
 };
+
+using request = message<raw_request>;
+using response_reader = message<raw_response>;
 
 std::string get_bucket_id(const std::string& path);
 std::string get_object_key(const std::string& path);
@@ -117,6 +182,16 @@ inline std::optional<bool> query<bool>(const request& req,
     return to_bool(*value);
 }
 
-std::ostream& operator<<(std::ostream& out, const request& req);
+inline std::ostream& operator<<(std::ostream& out, const request& req) {
+    out << req.header().method_string() << " " << req.header().target() << " ";
+
+    std::string delim;
+    for (const auto& field : req.header()) {
+        out << delim << field.name_string() << ": " << field.value();
+        delim = ", ";
+    }
+
+    return out;
+}
 
 } // namespace uh::cluster::ep::http

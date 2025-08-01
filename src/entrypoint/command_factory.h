@@ -1,28 +1,29 @@
 #pragma once
 
-#include "commands/command.h"
-#include "common/service_interfaces/deduplicator_interface.h"
 #include "config.h"
-#include "directory.h"
-#include "limits.h"
-#include "multipart_state.h"
-#include "storage/global/data_view.h"
+
+#include <common/service_interfaces/deduplicator_interface.h>
+#include <entrypoint/commands/command.h>
+#include <entrypoint/directory.h>
+#include <entrypoint/limits.h>
+#include <entrypoint/multipart_state.h>
+#include <storage/global/data_view.h>
 
 #include <entrypoint/user/db.h>
 
-namespace uh::cluster {
+namespace uh::cluster::ep {
 
 struct command_factory {
     command_factory(boost::asio::io_context& ioc,
                     deduplicator_interface& dedupe, directory& dir,
-                    multipart_state& uploads, entrypoint_config& config,
+                    multipart_state& uploads, std::size_t buffer_size,
                     storage::global::global_data_view& gdv, limits& uhlimits,
                     ep::user::db& users, license_watcher& watcher)
         : m_ioc(ioc),
           m_dedupe(dedupe),
           m_directory(dir),
           m_uploads(uploads),
-          m_config(config),
+          m_buffer_size(buffer_size),
           m_gdv(gdv),
           m_limits(uhlimits),
           m_users(users),
@@ -42,11 +43,11 @@ private:
     deduplicator_interface& m_dedupe;
     directory& m_directory;
     multipart_state& m_uploads;
-    entrypoint_config& m_config;
+    std::size_t m_buffer_size;
     storage::global::global_data_view& m_gdv;
     limits& m_limits;
     ep::user::db& m_users;
     license_watcher& m_license_watcher;
 };
 
-} // end namespace uh::cluster
+} // namespace uh::cluster::ep

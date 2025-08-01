@@ -1,17 +1,27 @@
 #!/bin/bash
 
+gateway=0
 dedup=1
 storage_cfg='[{"id":0,"type":"ROUND_ROBIN","storages":1}]'
+port_offset=0
 # storage_cfg='[{"id":0,"type":"ERASURE_CODING","storages":3,"data_shards":2,"parity_shards":1,"stripe_size_kib":64}]'
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        -g|--gateway)
+            gateway=1
+            shift
+            ;;
         -d|--dedup)
             dedup="$2"
             shift 2
             ;;
         -s|--storage-cfg)
             storage_cfg="$2"
+            shift 2
+            ;;
+        -p|--port-offset)
+            port_offset="$2"
             shift 2
             ;;
         *)
@@ -37,7 +47,7 @@ declare -A storage_state
 declare -A new_storage_provisioned
 
 _create() {
-    local port=$((9300 + group_id + 10 + id))
+    local port=$((9300 + group_id + 10 + id + port_offset))
     UH_STORAGE_GROUP_ID=$group_id UH_STORAGE_INSTANCE_ID="$id" $UH_CLUSTER --workdir "$data_path" storage --port "$port" &> "$log_dir/storage-$group_id-$id.log" &
     process_map["$group_id-$id"]=$!
 }
@@ -162,24 +172,31 @@ ETCDCTL_API=3 etcdctl del --from-key /
 echo "*** starting services"
 export TSAN_OPTIONS="detect_odr_violation=0,suppressions=@PROJECT_SOURCE_DIR@/tsan-suppressions"
 
-if [[ -n "$storage_cfg" ]]; then
-    echo "Parsing storage configuration JSON..."
-    parse_json_by_type "$storage_cfg"
-fi
-
 export UH_STORAGE_GROUPS="$storage_cfg"
 
 export OTEL_RESOURCE_ATTRIBUTES="service.name=coordinator"
 $UH_CLUSTER coordinator &> $log_dir/coordinator.log &
 
+echo "Parsing storage configuration JSON..."
+parse_json_by_type "$storage_cfg"
+
 export OTEL_RESOURCE_ATTRIBUTES="service.name=deduplicator"
 for ((id = 0; id < $dedup; ++id)); do
     mkdir -p $UH_DATA/deduplicator-$id
-    $UH_CLUSTER --workdir $UH_DATA/deduplicator-$id deduplicator --port $((9200 + id)) &> $log_dir/deduplicator-$id.log &
+    $UH_CLUSTER --workdir $UH_DATA/deduplicator-$id deduplicator --port $((9200 + id + port_offset)) &> $log_dir/deduplicator-$id.log &
+    pid_deduplicators+=($!)
 done
 
-export OTEL_RESOURCE_ATTRIBUTES="service.name=entrypoint"
-$UH_CLUSTER entrypoint &> $log_dir/entrypoint.log &
+
+if [ "$gateway" = "1" ]; then
+    export OTEL_RESOURCE_ATTRIBUTES="service.name=gateway"
+    $UH_CLUSTER gateway --port $((8080 + port_offset)) &> $log_dir/gateway.log &
+    pid_entrypoint=$!
+else
+    export OTEL_RESOURCE_ATTRIBUTES="service.name=entrypoint"
+    $UH_CLUSTER entrypoint --port $((8080 + port_offset)) &> $log_dir/entrypoint.log &
+    pid_entrypoint=$!
+fi
 
 get_running_processes() {
     ps -eo pid,cmd | grep -E '^\s*[0-9]+\s+\S*uh-cluster' | sed 's/\S*uh-cluster/uh-cluster/'

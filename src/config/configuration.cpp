@@ -162,6 +162,39 @@ CLI::App* sub_entrypoint(CLI::App& app, entrypoint_config& cfg) {
     return rv;
 }
 
+CLI::App* sub_gateway(CLI::App& app, gateway_config& cfg) {
+
+    auto* rv = app.add_subcommand("gateway", "Run as gateway service");
+
+    rv->add_option("--server-threads", cfg.num_threads,
+                   "threads handling incoming connections")
+        ->default_val(cfg.num_threads);
+
+    register_server(*rv, cfg.server);
+    register_global_data_view(*rv, cfg.global_data_view);
+
+    rv->add_option("--dedupe-connections", cfg.dedupe_node_connection_count,
+                   "number of connections per deduplication service")
+        ->default_val(cfg.dedupe_node_connection_count);
+
+    rv->add_option("--worker", cfg.worker_thread_count,
+                   "number of worker threads")
+        ->default_val(cfg.worker_thread_count);
+
+    rv->add_option("--buffer-size", cfg.buffer_size,
+                   "buffer size before sending data to deduplicators")
+        ->default_val(cfg.buffer_size);
+
+    rv->add_flag("--no-dedupe", cfg.noop_deduplicator,
+                 "disable deduplication and write directly to storage")
+        ->default_val(cfg.noop_deduplicator)
+        ->envname(ENV_CFG_NO_DEDUPE);
+
+    configure(*rv, cfg.database);
+
+    return rv;
+}
+
 CLI::App* sub_deduplicator(CLI::App& app, deduplicator_config& cfg) {
     auto* rv =
         app.add_subcommand("deduplicator", "Run as deduplicator service");
@@ -246,6 +279,7 @@ std::optional<config> read_config(int argc, char** argv) {
 
     auto sub_str = sub_storage(app, rv.storage);
     auto sub_ep = sub_entrypoint(app, rv.entrypoint);
+    auto sub_px = sub_gateway(app, rv.gateway);
     auto sub_dd = sub_deduplicator(app, rv.deduplicator);
     auto sub_rk = sub_coordinator(app, rv.coordinator);
 
@@ -285,6 +319,8 @@ std::optional<config> read_config(int argc, char** argv) {
             std::filesystem::path(rv.service.working_dir) / "deduplicator";
     } else if (sub_ep->parsed()) {
         rv.role = ENTRYPOINT_SERVICE;
+    } else if (sub_px->parsed()) {
+        rv.role = GATEWAY_SERVICE;
     } else if (sub_rk->parsed()) {
         rv.role = COORDINATOR_SERVICE;
         auto& cfg = rv.coordinator;

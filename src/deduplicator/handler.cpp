@@ -35,15 +35,20 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             } catch (const boost::system::system_error& e) {
                 throw;
             } catch (const downstream_exception& e) {
-                if (e.code() == boost::asio::error::operation_aborted or
-                    e.code() == boost::beast::error::timeout) {
+                if (e.code() == boost::asio::error::operation_aborted) {
+                    throw e.original_exception();
+                } else if (e.code() == boost::beast::error::timeout) {
+                    LOG_WARN() << e.what();
                     err = error(error::busy, e.what());
                 } else {
+                    LOG_WARN() << e.what();
                     err = error(error::internal_network_error, e.what());
                 }
             } catch (const error_exception& e) {
+                LOG_WARN() << e.what();
                 err = e.error();
             } catch (const std::exception& e) {
+                LOG_WARN() << e.what();
                 err = error(error::unknown, e.what());
             }
 

@@ -12,35 +12,46 @@ std::size_t get_length(raw_request& req) {
         return std::stoul(*content_length);
     }
 
-    return 0ull;
+    return 0ul;
 }
 
 } // namespace
 
 raw_body::raw_body(boost::asio::ip::tcp::socket& sock, raw_request& req)
     : m_socket(sock),
-      m_buffer(std::move(req.buffer)),
+      m_body_prefix(req.get_remained_buffer()),
       m_length(get_length(req)) {}
 
 std::optional<std::size_t> raw_body::length() const { return m_length; }
 
 coro<std::size_t> raw_body::read(std::span<char> dest) {
-    auto rv = 0ull;
+    m_raw_buffers.clear();
 
-    if (m_buffer.size() > 0ull) {
-        auto count = asio::buffer_copy(asio::buffer(&dest[0], dest.size()),
-                                       m_buffer.data());
-        m_buffer.consume(count);
+    auto rv = 0ul;
+    static_assert(std::is_same_v<decltype(rv), std::size_t>,
+                  "auto rv = 0ul is not the same type as std::size_t");
+
+    if (m_body_prefix.size() > 0ul) {
+        auto count = std::min(m_body_prefix.size(), dest.size());
+        std::memcpy(&dest[0], m_body_prefix.data(), count);
+
+        m_raw_buffers.push_back({m_body_prefix.data(), count});
+        m_read_position += count;
         rv += count;
         m_length -= count;
     }
 
-    auto count = std::min(dest.size(), m_length);
-    auto read = co_await asio::async_read(
-        m_socket, asio::buffer(&dest[rv], count), asio::use_awaitable);
+    auto remaining_count = std::min(dest.size() - rv, m_length);
+    if (remaining_count > 0) {
+        auto read = co_await asio::async_read(
+            m_socket, asio::buffer(&dest[rv], remaining_count),
+            asio::use_awaitable);
 
-    rv += read;
-    m_length -= read;
+        m_raw_buffers.push_back({&dest[rv], read});
+        rv += read;
+        m_length -= read;
+    }
+
     co_return rv;
 }
 

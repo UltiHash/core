@@ -40,7 +40,7 @@
 #include <entrypoint/commands/iam/list_user_policies.h>
 #include <entrypoint/commands/iam/put_user_policy.h>
 
-namespace uh::cluster {
+namespace uh::cluster::ep {
 
 coro<std::unique_ptr<command>>
 command_factory::action_command(ep::http::request& req) {
@@ -99,6 +99,9 @@ command_factory::action_command(ep::http::request& req) {
 }
 
 coro<std::unique_ptr<command>> command_factory::create(ep::http::request& req) {
+
+    LOG_DEBUG() << "in factory create request: " << req.get_header().headers;
+
     if (req.method() == ep::http::verb::post && req.path() == "/") {
         co_return co_await action_command(req);
     }
@@ -107,7 +110,7 @@ coro<std::unique_ptr<command>> command_factory::create(ep::http::request& req) {
         co_return std::make_unique<get_object>(m_directory, m_gdv);
     }
     if (put_object::can_handle(req)) {
-        co_return std::make_unique<put_object>(m_ioc, m_config, m_limits,
+        co_return std::make_unique<put_object>(m_ioc, m_buffer_size, m_limits,
                                                m_directory, m_gdv, m_dedupe);
     }
     if (multipart::can_handle(req)) {
@@ -204,4 +207,4 @@ limits& command_factory::get_limits() const { return m_limits; }
 
 directory& command_factory::get_directory() const { return m_directory; }
 
-} // namespace uh::cluster
+} // namespace uh::cluster::ep
