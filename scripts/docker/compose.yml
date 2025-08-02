@@ -15,7 +15,7 @@ services:
       ALLOW_NONE_AUTHENTICATION: yes
 
   database-init:
-    image: registry.ultihash.io/stable/database-init:1.2.0
+    image: registry.ultihash.io/stable/database-init:1.5.0
     depends_on:
       - database
     environment:
@@ -30,10 +30,22 @@ services:
       DB_PORT: 5432
       PGPASSWORD: uh
 
-  storage:
-    image: registry.ultihash.io/stable/core:1.2.0
+  coordinator:
+    image: registry.ultihash.io/stable/core:1.5.0
     depends_on:
        - etcd
+    environment:
+      UH_LICENSE: ${UH_LICENSE_STRING}
+      UH_LOG_LEVEL: INFO
+      UH_OTEL_ENDPOINT: http://otel:4317
+      UH_TRACES_ENABLED: 1
+    command: ["/usr/bin/bash", "-l", "-c", "sleep 10 && uh-cluster --registry etcd:2379 coordinator"]
+
+  storage:
+    image: registry.ultihash.io/stable/core:1.5.0
+    depends_on:
+       - etcd
+       - coordinator
     environment:
       UH_LICENSE: ${UH_LICENSE_STRING}
       UH_LOG_LEVEL: INFO
@@ -42,10 +54,11 @@ services:
     command: ["/usr/bin/bash", "-l", "-c", "sleep 10 && uh-cluster --registry etcd:2379 storage"]
 
   deduplicator:
-    image: registry.ultihash.io/stable/core:1.2.0
+    image: registry.ultihash.io/stable/core:1.5.0
     depends_on:
       - etcd
       - storage
+      - coordinator
     environment:
       UH_LICENSE: ${UH_LICENSE_STRING}
       UH_LOG_LEVEL: INFO
@@ -54,11 +67,12 @@ services:
     command: ["/usr/bin/bash", "-l", "-c", "sleep 10 && uh-cluster --registry etcd:2379 deduplicator"]
 
   entrypoint:
-    image: registry.ultihash.io/stable/core:1.2.0
+    image: registry.ultihash.io/stable/core:1.5.0
     depends_on:
       - etcd
       - storage
       - deduplicator
+      - coordinator
     environment:
       UH_LICENSE: ${UH_LICENSE_STRING}
       UH_LOG_LEVEL: INFO
