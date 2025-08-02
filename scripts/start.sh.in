@@ -2,6 +2,7 @@
 
 dedup=1
 storage_cfg='[{"id":0,"type":"ROUND_ROBIN","storages":1}]'
+port_offset=0
 # storage_cfg='[{"id":0,"type":"ERASURE_CODING","storages":3,"data_shards":2,"parity_shards":1,"stripe_size_kib":64}]'
 
 while [[ $# -gt 0 ]]; do
@@ -12,6 +13,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -s|--storage-cfg)
             storage_cfg="$2"
+            shift 2
+            ;;
+        -p|--port-offset)
+            port_offset="$2"
             shift 2
             ;;
         *)
@@ -38,7 +43,7 @@ declare -A storage_state
 declare -A new_storage_provisioned
 
 _create() {
-    local port=$((9300 + group_id + 10 + id))
+    local port=$((9300 + group_id + 10 + id + port_offset))
     UH_STORAGE_GROUP_ID=$group_id UH_STORAGE_INSTANCE_ID="$id" $UH_CLUSTER --workdir "$data_path" storage --port "$port" &> "$log_dir/storage-$group_id-$id.log" &
     storage_pids["$group_id-$id"]=$!
 }
@@ -178,12 +183,12 @@ export OTEL_RESOURCE_ATTRIBUTES="service.name=deduplicator"
 pid_deduplicators=()
 for ((id = 0; id < $dedup; ++id)); do
     mkdir -p $UH_DATA/deduplicator-$id
-    $UH_CLUSTER --workdir $UH_DATA/deduplicator-$id deduplicator --port $((9200 + id)) &> $log_dir/deduplicator-$id.log &
+    $UH_CLUSTER --workdir $UH_DATA/deduplicator-$id deduplicator --port $((9200 + id + port_offset)) &> $log_dir/deduplicator-$id.log &
     pid_deduplicators+=($!)
 done
 
 export OTEL_RESOURCE_ATTRIBUTES="service.name=entrypoint"
-$UH_CLUSTER entrypoint &> $log_dir/entrypoint.log &
+$UH_CLUSTER entrypoint --port $((8080 + port_offset)) &> $log_dir/entrypoint.log &
 pid_entrypoint=$!
 
 get_running_processes() {
