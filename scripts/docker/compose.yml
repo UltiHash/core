@@ -39,6 +39,10 @@ services:
       UH_LOG_LEVEL: INFO
       UH_OTEL_ENDPOINT: http://otel:4317
       UH_TRACES_ENABLED: 1
+      UH_DB_HOSTPORT: database:5432
+      UH_DB_USER: postgres
+      UH_DB_PASS: uh
+      UH_STORAGE_GROUPS: '[{"id":0,"type":"ROUND_ROBIN","storages":1}]'
     command:
       [
         "/usr/bin/bash",
