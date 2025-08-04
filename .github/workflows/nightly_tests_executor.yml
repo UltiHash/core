@@ -200,7 +200,7 @@ jobs:
     needs: 
       - build-core
       - build-database-init
-      - s3a-test-ec
+      #- s3a-test-ec
     if: |
       github.event_name == 'schedule' || 
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'stability-test') ||
@@ -250,7 +250,7 @@ jobs:
     needs: 
       - build-core
       - build-database-init
-      - stability-test-ec
+      #- stability-test-ec
     if: |
       github.event_name == 'schedule' || 
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'small-performance-test') ||
