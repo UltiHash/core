@@ -96,27 +96,21 @@ jobs:
       uh_license: ${{ secrets.UH_LICENSE_JSON }}
       monitoring_token: ${{ secrets.MONITORING_TOKEN_AWS }}
 
-  pyspark-test:
+  pyspark-test-rr:
     needs: 
       - build-core
       - build-database-init
-    strategy:
-      matrix:
-        test: 
-          - name: simple-rr
-            helm_values: testing/pyspark/helm-values-rr.yaml
-          - name: simple-ec
-            helm_values: testing/pyspark/helm-values-ec.yaml
+      - feature-test-ec
     if: |
       github.event_name == 'schedule' || 
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'pyspark-test') ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
     uses: ./.github/workflows/pyspark_testing.yml
     with:
-      env_name: pyspark-testing-${{ matrix.test.name }}
+      env_name: pyspark-testing-rr
       docker_image_tag: nightly-build
       docker_registry: ${{ vars.DOCKER_REGISTRY }}
-      helm_values: ${{ matrix.test.helm_values }}
+      helm_values: testing/pyspark/helm-values-rr.yaml
     secrets:
       ghcr_token: ${{ secrets.PAT }}
       docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
@@ -127,27 +121,71 @@ jobs:
       uh_license: ${{ secrets.UH_LICENSE_JSON }}
       monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
 
-  s3a-test:
+  pyspark-test-ec:
+    needs:
+      - build-core
+      - build-database-init
+      - pyspark-test-rr
+    if: |
+      github.event_name == 'schedule' || 
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'pyspark-test') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
+    uses: ./.github/workflows/pyspark_testing.yml
+    with:
+      env_name: pyspark-testing-ec
+      docker_image_tag: nightly-build
+      docker_registry: ${{ vars.DOCKER_REGISTRY }}
+      helm_values: testing/pyspark/helm-values-ec.yaml
+    secrets:
+      ghcr_token: ${{ secrets.PAT }}
+      docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
+      docker_registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+      registry_token: ${{ secrets.REGISTRY_USER }}
+      aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY}}
+      aws_secret_access_key: ${{ secrets.AWS_SECRET_KEY}}
+      uh_license: ${{ secrets.UH_LICENSE_JSON }}
+      monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
+
+  s3a-test-rr:
     needs: 
       - build-core
       - build-database-init
-    strategy:
-      matrix:
-        test: 
-          - name: simple-rr
-            helm_values: testing/s3a/helm-values-rr.yaml
-          - name: simple-ec
-            helm_values: testing/s3a/helm-values-ec.yaml
+      - pyspark-test-ec
     if: |
       github.event_name == 'schedule' || 
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 's3a-test') ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
     uses: ./.github/workflows/s3a_testing.yml
     with:
-      env_name: s3a-testing-${{ matrix.test.name }}
+      env_name: s3a-testing-rr
       docker_image_tag: nightly-build
       docker_registry: ${{ vars.DOCKER_REGISTRY }}
-      helm_values: ${{ matrix.test.helm_values }}
+      helm_values: testing/s3a/helm-values-rr.yaml
+    secrets:
+      ghcr_token: ${{ secrets.PAT }}
+      docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
+      docker_registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+      registry_token: ${{ secrets.REGISTRY_USER }}
+      aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY}}
+      aws_secret_access_key: ${{ secrets.AWS_SECRET_KEY}}
+      uh_license: ${{ secrets.UH_LICENSE_JSON }}
+      monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
+
+  s3a-test-ec:
+    needs:
+      - build-core
+      - build-database-init
+      - s3a-test-rr
+    if: |
+      github.event_name == 'schedule' || 
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 's3a-test') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
+    uses: ./.github/workflows/s3a_testing.yml
+    with:
+      env_name: s3a-testing-ec
+      docker_image_tag: nightly-build
+      docker_registry: ${{ vars.DOCKER_REGISTRY }}
+      helm_values: testing/s3a/helm-values-ec.yaml
     secrets:
       ghcr_token: ${{ secrets.PAT }}
       docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
@@ -162,6 +200,7 @@ jobs:
     needs: 
       - build-core
       - build-database-init
+      - s3a-test-ec
     if: |
       github.event_name == 'schedule' || 
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'stability-test') ||
@@ -211,6 +250,7 @@ jobs:
     needs: 
       - build-core
       - build-database-init
+      - stability-test-ec
     if: |
       github.event_name == 'schedule' || 
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'small-performance-test') ||
