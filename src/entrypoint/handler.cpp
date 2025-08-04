@@ -80,34 +80,58 @@ coro<void> handler::proxy_raw_request(raw_request& rawreq) {
     auto endpoints = co_await resolver.async_resolve(
         endpoint_host, endpoint_port, boost::asio::use_awaitable);
     boost::asio::ip::tcp::socket endpoint_socket(m_socket.get_executor());
+    LOG_DEBUG() << "Connecting to endpoint " << endpoint_host << ":"
+                << endpoint_port;
     co_await boost::asio::async_connect(endpoint_socket, endpoints,
                                         boost::asio::use_awaitable);
 
+    LOG_DEBUG() << "trying to write raw request to endpoint " << endpoint_host
+                << ":" << endpoint_port;
     co_await boost::asio::async_write(
         endpoint_socket,
         boost::asio::buffer(rawreq.buffer.data(), rawreq.buffer.size()),
         boost::asio::use_awaitable);
 
+    LOG_DEBUG() << "raw request written to endpoint " << endpoint_host << ":"
+                << endpoint_port;
+
+    auto content_length = rawreq.headers["content-length"];
+    auto transfer_encoding = rawreq.headers["transfer-encoding"];
+
     std::vector<char> buffer(buffer_size);
-    for (;;) {
-        std::size_t n = co_await m_socket.async_read_some(
-            boost::asio::buffer(buffer), boost::asio::use_awaitable);
-        if (n == 0)
-            break;
-        co_await boost::asio::async_write(endpoint_socket,
-                                          boost::asio::buffer(buffer.data(), n),
-                                          boost::asio::use_awaitable);
+
+    bool has_body = (transfer_encoding == "chunked") ||
+                    (!content_length.empty() && content_length != "0");
+    if (!has_body) {
+        LOG_DEBUG() << "raw request has no body";
+    } else {
+        for (;;) {
+            std::size_t n = co_await m_socket.async_read_some(
+                boost::asio::buffer(buffer), boost::asio::use_awaitable);
+            if (n == 0)
+                break;
+            co_await boost::asio::async_write(
+                endpoint_socket, boost::asio::buffer(buffer.data(), n),
+                boost::asio::use_awaitable);
+        }
     }
 
+    LOG_DEBUG() << "reading response from endpoint " << endpoint_host << ":"
+                << endpoint_port;
     for (;;) {
+        LOG_DEBUG() << "reading raw response from endpoint " << endpoint_host
+                    << ":" << endpoint_port;
         std::size_t n = co_await endpoint_socket.async_read_some(
             boost::asio::buffer(buffer), boost::asio::use_awaitable);
         if (n == 0)
             break;
+        LOG_DEBUG() << "raw response read from endpoint " << endpoint_host
+                    << ":" << endpoint_port;
         co_await boost::asio::async_write(m_socket,
                                           boost::asio::buffer(buffer.data(), n),
                                           boost::asio::use_awaitable);
     }
+    LOG_DEBUG() << "raw request proxying completed";
 }
 
 coro<void> handler::handle_request(raw_request& rawreq, const std::string& id) {
