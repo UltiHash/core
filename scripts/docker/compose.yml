@@ -15,7 +15,7 @@ services:
       ALLOW_NONE_AUTHENTICATION: yes
 
   database-init:
-    image: registry.ultihash.io/stable/database-init:1.5.0
+    image: registry.ultihash.io/stable/database-init:1.6.0
     depends_on:
       - database
     environment:
@@ -31,7 +31,7 @@ services:
       PGPASSWORD: uh
 
   coordinator:
-    image: registry.ultihash.io/stable/core:1.5.0
+    image: registry.ultihash.io/stable/core:1.6.0
     depends_on:
       - etcd
     environment:
@@ -52,7 +52,7 @@ services:
       ]
 
   storage:
-    image: registry.ultihash.io/stable/core:1.5.0
+    image: registry.ultihash.io/stable/core:1.6.0
     depends_on:
       - etcd
       - coordinator
@@ -70,7 +70,7 @@ services:
       ]
 
   deduplicator:
-    image: registry.ultihash.io/stable/core:1.5.0
+    image: registry.ultihash.io/stable/core:1.6.0
     depends_on:
       - etcd
       - storage
@@ -89,7 +89,7 @@ services:
       ]
 
   entrypoint:
-    image: registry.ultihash.io/stable/core:1.5.0
+    image: registry.ultihash.io/stable/core:1.6.0
     depends_on:
       - etcd
       - storage
