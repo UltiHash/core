@@ -40,68 +40,10 @@
 #include <entrypoint/commands/iam/list_user_policies.h>
 #include <entrypoint/commands/iam/put_user_policy.h>
 
-namespace uh::cluster::ep {
-
-coro<std::unique_ptr<command>>
-command_factory::action_command(ep::http::request& req) {
-    auto length = std::stoull(req.header("content-length").value_or("0"));
-    if (length == 0) {
-        throw command_exception(ep::http::status::bad_request, "InvalidURI",
-                                "The specified URI couldn't be parsed.");
-    }
-
-    if (length > MAX_POST_QUERY_LENGTH) {
-        throw command_exception(ep::http::status::bad_request,
-                                "MaxMessageLengthExceeded",
-                                "Your request was too large.");
-    }
-
-    std::string post_query(length, '\0');
-    auto size = co_await req.read_body({&post_query[0], length});
-    post_query.resize(size);
-
-    req.set_query_params(post_query);
-
-    if (ep::iam::create_user::can_handle(req)) {
-        co_return std::make_unique<ep::iam::create_user>(m_users);
-    }
-
-    if (ep::iam::delete_user::can_handle(req)) {
-        co_return std::make_unique<ep::iam::delete_user>(m_users);
-    }
-
-    if (ep::iam::create_access_key::can_handle(req)) {
-        co_return std::make_unique<ep::iam::create_access_key>(m_users);
-    }
-
-    if (ep::iam::delete_access_key::can_handle(req)) {
-        co_return std::make_unique<ep::iam::delete_access_key>(m_users);
-    }
-
-    if (ep::iam::put_user_policy::can_handle(req)) {
-        co_return std::make_unique<ep::iam::put_user_policy>(m_users);
-    }
-
-    if (ep::iam::list_user_policies::can_handle(req)) {
-        co_return std::make_unique<ep::iam::list_user_policies>(m_users);
-    }
-
-    if (ep::iam::get_user_policy::can_handle(req)) {
-        co_return std::make_unique<ep::iam::get_user_policy>(m_users);
-    }
-
-    if (ep::iam::delete_user_policy::can_handle(req)) {
-        co_return std::make_unique<ep::iam::delete_user_policy>(m_users);
-    }
-
-    throw command_exception(ep::http::status::bad_request, "InvalidURI",
-                            "The specified URI couldn't be parsed.");
-}
+namespace uh::cluster::proxy {
 
 coro<std::unique_ptr<command>> command_factory::create(ep::http::request& req) {
-    if (req.method() == ep::http::verb::post && req.path() == "/") {
-        co_return co_await action_command(req);
-    }
+    // return std::make_unique<forward_command>(m_ioc);
 
     if (get_object::can_handle(req)) {
         co_return std::make_unique<get_object>(m_directory, m_gdv);
@@ -204,4 +146,4 @@ limits& command_factory::get_limits() const { return m_limits; }
 
 directory& command_factory::get_directory() const { return m_directory; }
 
-} // namespace uh::cluster::ep
+} // namespace uh::cluster::proxy

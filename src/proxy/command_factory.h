@@ -11,7 +11,7 @@
 
 #include <entrypoint/user/db.h>
 
-namespace uh::cluster::ep {
+namespace uh::cluster::proxy {
 
 struct command_factory {
     command_factory(boost::asio::io_context& ioc,
@@ -26,7 +26,6 @@ struct command_factory {
           m_buffer_size(buffer_size),
           m_gdv(gdv),
           m_limits(uhlimits),
-          m_users(users),
           m_license_watcher(watcher) {}
 
     coro<std::unique_ptr<command>> create(ep::http::request& req);
@@ -35,8 +34,6 @@ struct command_factory {
     [[nodiscard]] directory& get_directory() const;
 
 private:
-    coro<std::unique_ptr<command>> action_command(ep::http::request& req);
-
     static constexpr std::size_t MAX_POST_QUERY_LENGTH = 64 * KIBI_BYTE;
 
     boost::asio::io_context& m_ioc;
@@ -46,8 +43,7 @@ private:
     std::size_t m_buffer_size;
     storage::global::global_data_view& m_gdv;
     limits& m_limits;
-    ep::user::db& m_users;
     license_watcher& m_license_watcher;
 };
 
-} // namespace uh::cluster::ep
+} // namespace uh::cluster::proxy

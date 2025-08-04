@@ -12,9 +12,8 @@ namespace uh::cluster {
 
 class put_object : public command {
 public:
-    put_object(boost::asio::io_context&, const entrypoint_config&, limits&,
-               directory&, storage::global::global_data_view&,
-               deduplicator_interface&);
+    put_object(boost::asio::io_context&, std::size_t, limits&, directory&,
+               storage::global::global_data_view&, deduplicator_interface&);
 
     static bool can_handle(const ep::http::request& req);
 
@@ -31,7 +30,7 @@ private:
                                            md5& hash) const;
 
     boost::asio::io_context& m_ioc;
-    const entrypoint_config& m_config;
+    std::size_t m_buffer_size;
     directory& m_dir;
     storage::global::global_data_view& m_gdv;
     limits& m_limits;

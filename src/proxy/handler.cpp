@@ -1,12 +1,13 @@
 #include "handler.h"
-#include "http/command_exception.h"
+
 #include <common/utils/downstream_exception.h>
 #include <common/utils/random.h>
+#include <entrypoint/http/command_exception.h>
 #include <format>
 
 using namespace uh::cluster::ep::http;
 
-namespace uh::cluster::ep {
+namespace uh::cluster::proxy {
 
 coro<void> handler::run() {
     std::optional<std::string> failed_request_id{std::nullopt};
@@ -141,4 +142,4 @@ handler_factory::handler_factory(command_factory&& comm_factory,
       m_policy(std::move(policy)),
       m_cors(std::move(cors)) {}
 
-} // namespace uh::cluster::ep
+} // namespace uh::cluster::proxy

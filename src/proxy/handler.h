@@ -1,11 +1,14 @@
 #pragma once
 
-#include "cors/module.h"
-#include "http/request_factory.h"
-#include "policy/module.h"
-#include <entrypoint/command_factory.h>
+#include <proxy/command_factory.h>
 
-namespace uh::cluster::ep {
+#include <entrypoint/cors/module.h>
+#include <entrypoint/http/request_factory.h>
+#include <entrypoint/policy/module.h>
+
+using namespace uh::cluster::ep;
+
+namespace uh::cluster::proxy {
 
 class handler_factory;
 
@@ -46,4 +49,4 @@ private:
     std::unique_ptr<policy::module> m_policy;
     std::unique_ptr<cors::module> m_cors;
 };
-} // end namespace uh::cluster::ep
+} // namespace uh::cluster::proxy
