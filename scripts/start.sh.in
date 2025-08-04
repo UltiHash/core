@@ -191,7 +191,7 @@ for ((id = 0; id < $dedup; ++id)); do
 done
 
 
-if "$proxy"; then
+if [ "$proxy" = "1" ]; then
     export OTEL_RESOURCE_ATTRIBUTES="service.name=proxy"
     $UH_CLUSTER proxy --port $((8080 + port_offset)) &> $log_dir/proxy.log &
     pid_entrypoint=$!
