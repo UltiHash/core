@@ -41,7 +41,8 @@ enum role : uint8_t {
     STORAGE_SERVICE,
     DEDUPLICATOR_SERVICE,
     ENTRYPOINT_SERVICE,
-    COORDINATOR_SERVICE
+    COORDINATOR_SERVICE,
+    PROXY_SERVICE,
 };
 
 inline role global_service_role;

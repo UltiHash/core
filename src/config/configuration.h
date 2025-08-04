@@ -7,6 +7,7 @@
 #include <coordinator/config.h>
 #include <deduplicator/config.h>
 #include <entrypoint/config.h>
+#include <proxy/config.h>
 #include <storage/config.h>
 
 #include <CLI/CLI.hpp>
@@ -20,6 +21,7 @@ struct config {
     uh::log::config log;
 
     entrypoint_config entrypoint;
+    proxy_config proxy;
     storage_config storage;
     deduplicator_config deduplicator;
     coordinator_config coordinator;

@@ -13,6 +13,8 @@ coro<raw_request> raw_request::read(asio::ip::tcp::socket& sock) {
     beast::flat_buffer buffer;
     parser.body_limit((std::numeric_limits<std::uint64_t>::max)());
 
+    // TODO: split this into two parts: one for reading the header and
+    // one for parsing it. And save raw header buffer somewhere to forward it.
     co_await beast::http::async_read_header(sock, buffer, parser,
                                             asio::use_awaitable);
 
