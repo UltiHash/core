@@ -36,7 +36,9 @@ jobs:
       registry_token: ${{ secrets.REGISTRY_USER }}
     
   build-database-init:
-    uses: ./.github/workflows/docker_build_template.yml 
+    uses: ./.github/workflows/docker_build_template.yml
+    needs:
+      - build-core
     with:
       docker_context: .
       dockerfile_path: tools/database-init/Dockerfile
