@@ -81,6 +81,15 @@ public:
     static void publish_configs(etcd_manager& etcd,
                                 const storage::group_configs& group_configs) {
         for (const auto& cfg : group_configs.configs) {
+            auto stored_config =
+                etcd.get(ns::root.storage_groups.group_configs[cfg.id]);
+            if (!stored_config.empty() and stored_config != cfg.to_string()) {
+                throw std::runtime_error("supplied storage group configuration "
+                                         "with id " +
+                                         std::to_string(cfg.id) +
+                                         " does not match with existing "
+                                         "storage group configuration");
+            }
             if (cfg.type != storage::group_config::type_t::ERASURE_CODING) {
                 storage::group_config modified_config = cfg;
                 modified_config.stripe_size_kib = DEFAULT_PAGE_SIZE / KIBI_BYTE;
