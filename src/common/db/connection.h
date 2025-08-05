@@ -160,7 +160,6 @@ private:
         }
     }
 
-    boost::asio::io_context& m_ioc;
     std::unique_ptr<PGconn, void (*)(PGconn*)> m_ptr;
     boost::asio::posix::stream_descriptor m_fd;
 
