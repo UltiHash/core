@@ -73,6 +73,7 @@ run_for_all(boost::asio::io_context& ioc, Func func,
 
 class coro_task;
 
+namespace impl {
 inline auto make_logging_completion_notifier(
     const std::string& name, std::promise<void>& promise,
     std::function<void(std::exception_ptr)> on_finish = nullptr) {
@@ -113,6 +114,7 @@ inline auto make_logging_completion_notifier(
         // NOTE: You cannot use `name` and `promise` after this point
     };
 }
+} // namespace impl
 
 class coro_task {
 public:
@@ -128,7 +130,7 @@ public:
         boost::asio::co_spawn(
             m_strand, std::forward<T>(t),
             boost::asio::bind_cancellation_slot(
-                m_signal.slot(), make_logging_completion_notifier(
+                m_signal.slot(), impl::make_logging_completion_notifier(
                                      m_name, m_promise, on_finish)));
     }
 
