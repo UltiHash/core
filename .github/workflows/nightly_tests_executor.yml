@@ -222,11 +222,25 @@ jobs:
       uh_license: ${{ secrets.UH_LICENSE_JSON }}
       monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
 
+  stability-test-cooldown:
+    runs-on: lightweight-generic-jobs
+    needs:
+      - stability-test-rr
+    if: |
+      github.event_name == 'schedule' || 
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'stability-test') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
+
+    steps:
+      - name: Sleep for 5 minutes
+        run: sleep 300s
+        shell: bash
+
   stability-test-ec:
     needs: 
       - build-core
       - build-database-init
-      - stability-test-rr
+      - stability-test-cooldown
     if: |
       github.event_name == 'schedule' || 
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'stability-test') ||
@@ -272,15 +286,31 @@ jobs:
       uh_license: ${{ secrets.UH_LICENSE_JSON }}
       monitoring_token: ${{ secrets.MONITORING_TOKEN_AWS }}
 
-  small-performance-test-ec:
-    needs: 
-      - build-core
-      - build-database-init
+  small-performance-test-cooldown:
+    runs-on: lightweight-generic-jobs
+    needs:
       - small-performance-test-rr
     if: |
       github.event_name == 'schedule' || 
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'small-performance-test') ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
+
+    steps:
+      - name: Sleep for 5 minutes
+        run: sleep 300s
+        shell: bash
+      
+
+  small-performance-test-ec:
+    needs: 
+      - build-core
+      - build-database-init
+      - small-performance-test-cooldown
+    if: |
+      github.event_name == 'schedule' || 
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'small-performance-test') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
+
     uses: ./.github/workflows/performance_testing_small.yml
     with:
       env_name: performance-testing-small-ec
