@@ -1,4 +1,4 @@
-name: Unit Tests UBSAN (Linux, clang, x86_64)
+name: Unit Tests UBSAN (clang)
 
 on:
   pull_request:
@@ -8,14 +8,14 @@ on:
 
 jobs:
 
-  unit-ubsan-x86_64-linux:
+  unit-ubsan:
     strategy:
       matrix:
         target: [RelWithDebInfo]
     uses: ./.github/workflows/unit_testing_workflow.yml
     with: 
        target: ${{ matrix.target }}
-       runs_on: heavyweight-core-x86-64-jobs
+       runs_on: heavyweight-core-aarch64-jobs
        cmake_env: >
         {
           "CC": "/usr/bin/clang-18",

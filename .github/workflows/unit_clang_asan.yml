@@ -1,4 +1,4 @@
-name: Unit Tests (Linux, GCC, x86_64)
+name: Unit Tests ASAN (clang)
 
 on:
   pull_request:
@@ -7,22 +7,24 @@ on:
   workflow_dispatch:
 
 jobs:
-  unit-gcc-x86_64-linux:
+  unit-asan:
     strategy:
       matrix:
-        target: [Release, Debug]
+        target: [RelWithDebInfo]
     uses: ./.github/workflows/unit_testing_workflow.yml
     with: 
        target: ${{ matrix.target }}
-       runs_on: heavyweight-core-x86-64-jobs
+       runs_on: heavyweight-core-aarch64-jobs
        cmake_env: >
         {
-          "CC": "/usr/bin/gcc",
-          "CXX": "/usr/bin/g++"
+          "CC": "/usr/bin/clang-18",
+          "CXX": "/usr/bin/clang++-18"
         }
+       cmake_additional_args: -DENABLE_ASAN=ON
        test_env: >
         {
-          "ETCDCTL_API": "3"
+          "ETCDCTL_API": "3",
+          "ASAN_OPTIONS": "detect_odr_violation=0"
         }
     secrets:
       ghcr_token: ${{ secrets.PAT }}
