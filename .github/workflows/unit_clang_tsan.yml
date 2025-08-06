@@ -1,4 +1,4 @@
-name: Unit Tests TSAN (Linux, clang, x86_64)
+name: Unit Tests TSAN (clang)
 
 on:
   push:
@@ -9,12 +9,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  unit-tsan-x86_64-linux:
+  unit-tsan:
     if: false
     strategy:
       matrix:
         build: [RelWithDebInfo]
-    runs-on: heavyweight-core-x86-64-jobs
+    runs-on: heavyweight-core-aarch64-jobs
 
     steps:
       - uses: actions/checkout@v4
