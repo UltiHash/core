@@ -85,52 +85,6 @@ coro<void> handler::handle_request(raw_request& rawreq, const std::string& id) {
     span->set_attribute("request-user-name", req->authenticated_user().name);
     span->set_attribute("request-bucket", req->bucket());
     span->set_attribute("request-key", req->object_key());
-
-    auto cors = co_await m_factory.m_cors->check(*req);
-    if (cors.response) {
-        co_await write(m_socket, std::move(*cors.response), id);
-        co_return;
-    }
-
-    auto cmd = co_await m_factory.m_command_factory.create(*req);
-
-    span->set_name(cmd->action_id());
-    span->set_attribute("request-id", id);
-
-    LOG_DEBUG() << req->peer() << ": validating " << cmd->action_id();
-
-    LOG_DEBUG() << req->peer() << ": checking policies";
-    if (!req->authenticated_user().super_user &&
-        co_await m_factory.m_policy->check(*req, *cmd) ==
-            ep::policy::effect::deny) {
-        LOG_INFO() << req->peer() << ": command execution denied by policy";
-        throw command_exception(
-            status::forbidden, "AccessDenied",
-            std::format("You do not have {} permissions to the requested "
-                        "S3 Prefix{}.",
-                        cmd->action_id(), req->path()));
-    }
-
-    co_await cmd->validate(*req);
-
-    if (auto expect = req->header("expect");
-        expect && *expect == "100-continue") {
-        LOG_INFO() << req->peer() << ": sending 100 CONTINUE";
-        co_await write(m_socket, response(status::continue_), id);
-    }
-
-    LOG_DEBUG() << req->peer() << ": executing " << cmd->action_id();
-    auto response = co_await cmd->handle(*req);
-    if (cors.headers) {
-        for (auto& hdr : *cors.headers) {
-            response.set(hdr.first, std::move(hdr.second));
-        }
-    }
-
-    span->set_attribute("response-code",
-                        static_cast<unsigned>(response.base().result()));
-
-    co_await write(m_socket, std::move(response), id);
 }
 
 handler_factory::handler_factory(command_factory&& comm_factory,
