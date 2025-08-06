@@ -28,9 +28,10 @@ coro<std::size_t> raw_body::read(std::span<char> dest) {
     auto rv = 0ull;
 
     if (m_buffer.size() > 0ull) {
-        auto count = asio::buffer_copy(asio::buffer(&dest[0], dest.size()),
-                                       m_buffer.data());
-        m_buffer.consume(count);
+        auto src_buf = asio::buffer(m_buffer.data(), m_buffer.size());
+        auto count =
+            asio::buffer_copy(asio::buffer(&dest[0], dest.size()), src_buf);
+        m_buffer.erase(m_buffer.begin(), m_buffer.begin() + count);
         rv += count;
         m_length -= count;
     }

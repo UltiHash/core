@@ -22,12 +22,13 @@ struct raw_request {
     static coro<raw_request> read(boost::asio::ip::tcp::socket& sock);
     static raw_request
     from_string(beast::http::request<beast::http::empty_body> header,
-                beast::flat_buffer buffer, boost::asio::ip::tcp::endpoint peer);
+                boost::asio::ip::tcp::endpoint peer,
+                std::vector<char>&& buffer);
 
     std::optional<std::string> optional(const std::string& name) const;
     std::string require(const std::string& name) const;
 
-    beast::flat_buffer buffer;
+    std::vector<char> buffer;
 
     beast::http::request<beast::http::empty_body> headers;
     boost::asio::ip::tcp::endpoint peer;

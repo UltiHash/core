@@ -1,31 +1,40 @@
 #include "raw_request.h"
 
 #include "command_exception.h"
-#include "common/utils/strings.h"
+
+#include <boost/asio/buffer.hpp>
+#include <common/telemetry/log.h>
+#include <common/utils/strings.h>
+#include <sstream>
 
 using namespace boost;
 
 namespace uh::cluster::ep::http {
 
 coro<raw_request> raw_request::read(asio::ip::tcp::socket& sock) {
-
     beast::http::request_parser<beast::http::empty_body> parser;
-    beast::flat_buffer buffer;
     parser.body_limit((std::numeric_limits<std::uint64_t>::max)());
+    std::vector<char> buffer;
 
-    // TODO: split this into two parts: one for reading the header and
-    // one for parsing it. And save raw header buffer somewhere to forward it.
-    co_await beast::http::async_read_header(sock, buffer, parser,
-                                            asio::use_awaitable);
+    auto header_length = co_await asio::async_read_until(
+        sock, asio::dynamic_buffer(buffer), "\r\n\r\n", asio::use_awaitable);
+    beast::error_code ec;
+    parser.put(boost::asio::buffer(buffer), ec);
 
-    co_return from_string(parser.release(), std::move(buffer),
-                          sock.remote_endpoint());
+    if (!parser.is_header_done()) {
+        throw std::runtime_error("Incomplete HTTP header");
+    }
+
+    buffer.erase(buffer.begin(), buffer.begin() + header_length);
+
+    co_return from_string(parser.release(), sock.remote_endpoint(),
+                          std::move(buffer));
 }
 
 raw_request
 raw_request::from_string(beast::http::request<beast::http::empty_body> headers,
-                         beast::flat_buffer buffer,
-                         boost::asio::ip::tcp::endpoint peer) {
+                         boost::asio::ip::tcp::endpoint peer,
+                         std::vector<char>&& buffer) {
 
     raw_request rv;
 

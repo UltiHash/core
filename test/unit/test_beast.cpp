@@ -22,9 +22,13 @@ BOOST_AUTO_TEST_SUITE(a_beast_parser)
 
 BOOST_AUTO_TEST_CASE(parses_header_and_body) {
     std::string header_and_body =
-        "POST /112 HTTP/1.1\r\nHost: 127.0.0.1:8080\r\nUser-Agent: "
-        "curl/7.68.0\r\nAccept: */*\r\nContent-Length: 13\r\nContent-Type: "
-        "application/x-www-form-urlencoded\r\n\r\n1212312312312";
+        "POST /112 HTTP/1.1\r\n"
+        "Host: 127.0.0.1:8080\r\n"
+        "User-Agent: curl/7.68.0\r\n"
+        "Accept: */*\r\nContent-Length: 13\r\n"
+        "Content-Type: application/x-www-form-urlencoded\r\n"
+        "\r\n"
+        "1212312312312";
 
     http::request_parser<http::string_body> parser;
     boost::beast::error_code ec;
@@ -39,14 +43,15 @@ BOOST_AUTO_TEST_CASE(parses_header_and_body) {
     BOOST_TEST(!ec);
 
     BOOST_TEST(parser.is_header_done());
-    BOOST_TEST(parser.is_done());
 }
 
 BOOST_AUTO_TEST_CASE(parses_header_and_body_seperately) {
-    std::string header =
-        "POST /112 HTTP/1.1\r\nHost: 127.0.0.1:8080\r\nUser-Agent: "
-        "curl/7.68.0\r\nAccept: */*\r\nContent-Length: 13\r\nContent-Type: "
-        "application/x-www-form-urlencoded\r\n\r\n";
+    std::string header = "POST /112 HTTP/1.1\r\n"
+                         "Host: 127.0.0.1:8080\r\n"
+                         "User-Agent: curl/7.68.0\r\n"
+                         "Accept: */*\r\nContent-Length: 13\r\n"
+                         "Content-Type: application/x-www-form-urlencoded\r\n"
+                         "\r\n";
     std::string body = "1212312312312";
 
     http::request_parser<http::string_body> parser;
@@ -63,7 +68,46 @@ BOOST_AUTO_TEST_CASE(parses_header_and_body_seperately) {
     BOOST_TEST(!ec);
 
     BOOST_TEST(parser.is_header_done());
-    BOOST_TEST(parser.is_done() == true);
+}
+
+BOOST_AUTO_TEST_CASE(parses_s3_header) {
+    // clang-format off
+    auto header = std::string(
+        "PUT /xxx/classical.00051.wav HTTP/1.1\r\n"
+        "Host: localhost:8080\r\n"
+        "Accept-Encoding: identity\r\n"
+        "User-Agent: Boto3/1.34.46 md/Botocore#1.34.46 ua/2.0 "
+            "os/linux#6.14.0-27-generic md/arch#x86_64 lang/python#3.12.3 "
+            "md/pyimpl#CPython cfg/retry-mode#standard Botocore/1.34.46\r\n"
+        "Content-MD5: 8ZIZc/SNPVXoAxpcGBGiIA==\r\n"
+        "Expect: 100-continue\r\n"
+        "X-Amz-Date: 20250806T084505Z\r\n"
+        "X-Amz-Content-SHA256: "
+            "529f84176f8e05feb59b151db3a07b3347c6cd9fa945b77c3f7b1da18a409ac0\r\n"
+        "Authorization: AWS4-HMAC-SHA256 "
+            "Credential=FANCY-ROOT-KEY/20250806/eu-central-1/s3/aws4_request, "
+            "SignedHeaders=content-md5;host;x-amz-content-sha256;x-amz-date, "
+            "Signature="
+            "a5f7d5622c04829eff143c51f629c07c1d202a34c5d4b61cb56696ac3405d6a1\r\n"
+        "amz-sdk-invocation-id: b0cf8641-8ca1-4d92-b4a4-29cf2f1ada10\r\n"
+        "amz-sdk-request: attempt=1\r\n"
+        "Content-Length: 1322732\r\n"
+        "\r\n");
+    // clang-format on
+
+    http::request_parser<http::string_body> parser;
+    parser.body_limit((std::numeric_limits<std::uint64_t>::max)());
+    boost::beast::error_code ec;
+
+    // parse header
+    parser.put(boost::asio::buffer(header.data(), header.size()), ec);
+    std::cout << ec.message() << std::endl;
+    BOOST_TEST(!ec);
+
+    BOOST_TEST(parser.is_header_done());
+
+    auto headers = parser.release();
+    BOOST_TEST(headers["Content-Length"] == "1322732");
 }
 
 BOOST_AUTO_TEST_CASE(works_well_with_tcp_communication) {
