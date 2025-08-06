@@ -15,7 +15,7 @@ public:
 
 private:
     boost::asio::ip::tcp::socket& m_socket;
-    boost::beast::flat_buffer m_buffer;
+    std::vector<char> m_buffer;
     std::size_t m_length;
 };
 
