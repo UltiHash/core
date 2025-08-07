@@ -43,8 +43,6 @@
 namespace uh::cluster::proxy {
 
 coro<std::unique_ptr<command>> command_factory::create(ep::http::request& req) {
-    // return std::make_unique<forward_command>(m_ioc);
-
     if (get_object::can_handle(req)) {
         co_return std::make_unique<get_object>(m_directory, m_gdv);
     }
