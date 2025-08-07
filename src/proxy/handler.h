@@ -14,16 +14,19 @@ class handler_factory;
 
 class handler : public protocol_handler {
 public:
-    handler(boost::asio::ip::tcp::socket&& socket, handler_factory& factory)
-        : m_socket{std::move(socket)},
+    handler(boost::asio::ip::tcp::socket&& client,
+            boost::asio::ip::tcp::socket&& endpoint, handler_factory& factory)
+        : m_client{std::move(client)},
+          m_endpoint{std::move(endpoint)},
           m_factory{factory} {
-        LOG_INFO() << "session started: " << m_socket.remote_endpoint();
+        LOG_INFO() << "session started: " << m_client.remote_endpoint();
     }
 
     coro<void> run() override;
 
 private:
-    boost::asio::ip::tcp::socket m_socket;
+    boost::asio::ip::tcp::socket m_client;
+    boost::asio::ip::tcp::socket m_endpoint;
     handler_factory& m_factory;
 
     coro<void> handle_request(http::raw_request& rawreq, const std::string& id);
@@ -37,9 +40,22 @@ public:
                              std::unique_ptr<policy::module> policy,
                              std::unique_ptr<cors::module> cors);
 
-    std::unique_ptr<protocol_handler>
+    coro<std::unique_ptr<protocol_handler>>
     create_handler(boost::asio::ip::tcp::socket&& s) {
-        return std::make_unique<handler>(std::move(s), *this);
+
+        std::string endpoint_host = "localhost";
+        std::string endpoint_port = "8080";
+        boost::asio::ip::tcp::resolver resolver(s.get_executor());
+        auto endpoints = co_await resolver.async_resolve(
+            endpoint_host, endpoint_port, boost::asio::use_awaitable);
+        boost::asio::ip::tcp::socket endpoint_socket(s.get_executor());
+        LOG_DEBUG() << "Connecting to endpoint " << endpoint_host << ":"
+                    << endpoint_port;
+        co_await boost::asio::async_connect(endpoint_socket, endpoints,
+                                            boost::asio::use_awaitable);
+
+        co_return std::make_unique<handler>(std::move(s),
+                                            std::move(endpoint_socket), *this);
     }
 
 private:

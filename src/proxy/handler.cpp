@@ -22,7 +22,7 @@ coro<void> handler::run() {
 
         try {
             try {
-                rawreq = co_await raw_request::read(m_socket);
+                rawreq = co_await raw_request::read(m_client);
                 co_await handle_request(rawreq, id).start_trace();
                 metric<success>::increase(1);
 
@@ -46,7 +46,7 @@ coro<void> handler::run() {
             }
 
             if (resp.has_value()) {
-                co_await write(m_socket, std::move(resp.value()), id);
+                co_await write(m_client, std::move(resp.value()), id);
             }
 
         } catch (const boost::system::system_error& e) {
@@ -55,7 +55,7 @@ coro<void> handler::run() {
                 break;
             } else if (e.code() == boost::beast::http::error::end_of_stream or
                        e.code() == boost::asio::error::eof) {
-                LOG_INFO() << m_socket.remote_endpoint() << " disconnected";
+                LOG_INFO() << m_client.remote_endpoint() << " disconnected";
                 break;
             }
             throw;
@@ -68,13 +68,13 @@ coro<void> handler::run() {
 
         auto resp =
             make_response(command_exception(error::service_unavailable));
-        co_await write(m_socket, std::move(resp), *failed_request_id);
+        co_await write(m_client, std::move(resp), *failed_request_id);
     }
 }
 
 coro<void> handler::handle_request(raw_request& rawreq, const std::string& id) {
     std::unique_ptr<request> req;
-    req = co_await m_factory.m_request_factory.create(m_socket, rawreq);
+    req = co_await m_factory.m_request_factory.create(m_client, rawreq);
     LOG_INFO() << req->peer() << ": read request, id=" << id << ": " << *req;
 
     auto span = co_await boost::asio::this_coro::span;
