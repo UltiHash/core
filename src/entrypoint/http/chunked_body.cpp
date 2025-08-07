@@ -22,7 +22,7 @@ std::optional<std::size_t> chunked_body::length() const { return {}; }
 
 coro<std::size_t> chunked_body::read(std::span<char> dest) {
     if (m_end) {
-        throw std::runtime_error("trying to read past end of data");
+        co_return 0;
     }
 
     m_buffer.erase(m_buffer.begin(), m_buffer.begin() + m_read_position);
