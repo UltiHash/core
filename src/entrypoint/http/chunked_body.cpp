@@ -13,9 +13,10 @@ chunked_body::chunked_body(boost::asio::ip::tcp::socket& sock, raw_request& req,
       m_buffer(),
       m_trailing(trailing) {
     m_buffer.reserve(BUFFER_SIZE);
-    m_buffer.resize(req.buffer.size());
+    m_buffer.resize(req.get_remained_buffer().size());
     asio::buffer_copy(asio::buffer(m_buffer),
-                      asio::buffer(req.buffer.data(), req.buffer.size()));
+                      asio::buffer(req.get_remained_buffer().data(),
+                                   req.get_remained_buffer().size()));
 }
 
 std::optional<std::size_t> chunked_body::length() const { return {}; }

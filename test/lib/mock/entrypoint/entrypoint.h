@@ -20,7 +20,8 @@ class mock_body : public ep::http::body {
 public:
     coro<std::size_t> read(std::span<char>) override;
     std::optional<std::size_t> length() const override;
-    std::vector<boost::asio::const_buffer> get_raw_buffer() const override {
+    std::vector<boost::asio::const_buffer>
+    get_raw_buffer() const noexcept override {
         return {};
     }
 };
