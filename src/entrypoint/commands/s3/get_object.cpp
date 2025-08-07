@@ -2,6 +2,7 @@
 
 #include <common/utils/time_utils.h>
 
+#include <entrypoint/formats.h>
 #include <entrypoint/http/command_exception.h>
 #include <entrypoint/http/range.h>
 #include <entrypoint/utils.h>
