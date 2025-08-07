@@ -1,4 +1,5 @@
 #include "handler.h"
+#include "forward.h"
 
 #include <common/utils/downstream_exception.h>
 #include <common/utils/random.h>
@@ -10,6 +11,17 @@ using namespace uh::cluster::ep::http;
 namespace uh::cluster::proxy {
 
 coro<void> handler::run() {
+    std::string endpoint_host = "localhost";
+    std::string endpoint_port = "8080";
+    boost::asio::ip::tcp::resolver resolver(m_client.get_executor());
+    auto endpoints = co_await resolver.async_resolve(
+        endpoint_host, endpoint_port, boost::asio::use_awaitable);
+    boost::asio::ip::tcp::socket endpoint(m_client.get_executor());
+    LOG_DEBUG() << "Connecting to endpoint " << endpoint_host << ":"
+                << endpoint_port;
+    co_await boost::asio::async_connect(endpoint, endpoints,
+                                        boost::asio::use_awaitable);
+
     std::optional<std::string> failed_request_id{std::nullopt};
 
     auto state = co_await boost::asio::this_coro::cancellation_state;
@@ -23,7 +35,7 @@ coro<void> handler::run() {
         try {
             try {
                 rawreq = co_await raw_request::read(m_client);
-                co_await handle_request(rawreq, id).start_trace();
+                co_await handle_request(rawreq, endpoint, id).start_trace();
                 metric<success>::increase(1);
 
             } catch (const boost::system::system_error& e) {
@@ -72,7 +84,9 @@ coro<void> handler::run() {
     }
 }
 
-coro<void> handler::handle_request(raw_request& rawreq, const std::string& id) {
+coro<void> handler::handle_request(raw_request& rawreq,
+                                   boost::asio::ip::tcp::socket& endpoint,
+                                   const std::string& id) {
     std::unique_ptr<request> req;
     req = co_await m_factory.m_request_factory.create(m_client, rawreq);
     LOG_INFO() << req->peer() << ": read request, id=" << id << ": " << *req;
@@ -85,6 +99,8 @@ coro<void> handler::handle_request(raw_request& rawreq, const std::string& id) {
     span->set_attribute("request-user-name", req->authenticated_user().name);
     span->set_attribute("request-bucket", req->bucket());
     span->set_attribute("request-key", req->object_key());
+
+    co_await forward(*req, endpoint);
 }
 
 handler_factory::handler_factory(command_factory&& comm_factory,
