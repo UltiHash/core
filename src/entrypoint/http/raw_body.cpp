@@ -25,8 +25,6 @@ raw_body::raw_body(boost::asio::ip::tcp::socket& sock, raw_request& req)
 std::optional<std::size_t> raw_body::length() const { return m_length; }
 
 coro<std::size_t> raw_body::read(std::span<char> dest) {
-    m_buffer.erase(m_buffer.begin(), m_buffer.begin() + m_read_position);
-    m_read_position = 0;
     m_raw_buffers.clear();
 
     auto rv = 0ul;
