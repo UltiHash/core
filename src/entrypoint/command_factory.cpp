@@ -99,6 +99,9 @@ command_factory::action_command(ep::http::request& req) {
 }
 
 coro<std::unique_ptr<command>> command_factory::create(ep::http::request& req) {
+
+    LOG_DEBUG() << "in factory create request: " << req.get_header().headers;
+
     if (req.method() == ep::http::verb::post && req.path() == "/") {
         co_return co_await action_command(req);
     }

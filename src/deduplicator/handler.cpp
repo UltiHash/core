@@ -36,13 +36,17 @@ coro<void> handler::run() {
                 if (e.code() == boost::asio::error::operation_aborted) {
                     throw e.original_exception();
                 } else if (e.code() == boost::beast::error::timeout) {
+                    LOG_WARN() << e.what();
                     err = error(error::busy, e.what());
                 } else {
+                    LOG_WARN() << e.what();
                     err = error(error::internal_network_error, e.what());
                 }
             } catch (const error_exception& e) {
+                LOG_WARN() << e.what();
                 err = e.error();
             } catch (const std::exception& e) {
+                LOG_WARN() << e.what();
                 err = error(error::unknown, e.what());
             }
 

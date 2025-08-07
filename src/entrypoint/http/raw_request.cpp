@@ -12,14 +12,13 @@ using namespace boost;
 namespace uh::cluster::ep::http {
 
 coro<raw_request> raw_request::read(asio::ip::tcp::socket& sock) {
+    auto [buffer, header_length] = co_await header::read_header_data(sock);
+
     beast::http::request_parser<beast::http::empty_body> parser;
     parser.body_limit((std::numeric_limits<std::uint64_t>::max)());
-    std::vector<char> buffer;
 
-    auto header_length = co_await asio::async_read_until(
-        sock, asio::dynamic_buffer(buffer), "\r\n\r\n", asio::use_awaitable);
     beast::error_code ec;
-    parser.put(boost::asio::buffer(buffer), ec);
+    parser.put(asio::buffer(buffer), ec);
 
     if (!parser.is_header_done()) {
         throw std::runtime_error("Incomplete HTTP header");
@@ -33,7 +32,6 @@ raw_request
 raw_request::from_string(beast::http::request<beast::http::empty_body> headers,
                          boost::asio::ip::tcp::endpoint peer,
                          std::vector<char>&& buffer, size_t header_length) {
-
     raw_request rv;
 
     rv.headers = std::move(headers);
@@ -42,8 +40,8 @@ raw_request::from_string(beast::http::request<beast::http::empty_body> headers,
             "bad http version. support exists only for HTTP 1.1.\n");
     }
 
-    rv.buffer = std::move(buffer);
-    rv.read_position = header_length;
+    rv.m_buffer = std::move(buffer);
+    rv.m_read_position = header_length;
     rv.peer = peer;
 
     const auto& target = rv.headers.target();
@@ -65,26 +63,6 @@ raw_request::from_string(beast::http::request<beast::http::empty_body> headers,
     }
 
     return rv;
-}
-
-std::optional<std::string>
-raw_request::optional(const std::string& name) const {
-
-    if (auto header = headers.find(name); header != headers.end()) {
-        return header->value();
-    }
-
-    return {};
-}
-
-std::string raw_request::require(const std::string& name) const {
-
-    auto header = headers.find(name);
-    if (header == headers.end()) {
-        throw std::runtime_error(name + " not found");
-    }
-
-    return header->value();
 }
 
 std::map<std::string_view, std::string_view>
