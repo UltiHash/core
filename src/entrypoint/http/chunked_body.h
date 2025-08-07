@@ -30,7 +30,8 @@ public:
     std::optional<std::size_t> length() const override;
     coro<std::size_t> read(std::span<char> dest) override;
 
-    std::vector<boost::asio::const_buffer> get_raw_buffer() const override {
+    std::vector<boost::asio::const_buffer>
+    get_raw_buffer() const noexcept override {
         return m_raw_buffers;
     }
 

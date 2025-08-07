@@ -15,12 +15,14 @@ public:
 
     coro<std::size_t> read(std::span<char> dest) override;
 
-    std::vector<boost::asio::const_buffer> get_raw_buffer() const override {
+    std::vector<boost::asio::const_buffer>
+    get_raw_buffer() const noexcept override {
         return m_raw_buffers;
     }
 
 private:
     boost::asio::ip::tcp::socket& m_socket;
+    std::span<const char> m_body_prefix;
     std::vector<char> m_buffer;
     std::size_t m_length;
     std::size_t m_read_position = 0;

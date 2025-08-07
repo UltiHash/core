@@ -22,13 +22,11 @@ struct raw_request {
     static coro<raw_request> read(boost::asio::ip::tcp::socket& sock);
     static raw_request
     from_string(beast::http::request<beast::http::empty_body> header,
-                boost::asio::ip::tcp::endpoint peer,
-                std::vector<char>&& buffer);
+                boost::asio::ip::tcp::endpoint peer, std::vector<char>&& buffer,
+                size_t header_length);
 
     std::optional<std::string> optional(const std::string& name) const;
     std::string require(const std::string& name) const;
-
-    std::vector<char> buffer;
 
     beast::http::request<beast::http::empty_body> headers;
     boost::asio::ip::tcp::endpoint peer;
@@ -36,6 +34,17 @@ struct raw_request {
     std::map<std::string, std::string> params;
     std::string path;
     std::string encoded_path;
+
+    auto get_remained_buffer() const {
+        return std::span<const char>(buffer).subspan(read_position);
+    }
+    auto get_raw_buffer() const {
+        return std::span<const char>(buffer).subspan(0, read_position);
+    }
+
+private:
+    std::vector<char> buffer;
+    std::size_t read_position = 0;
 };
 
 /**

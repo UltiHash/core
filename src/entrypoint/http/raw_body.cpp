@@ -19,7 +19,7 @@ std::size_t get_length(raw_request& req) {
 
 raw_body::raw_body(boost::asio::ip::tcp::socket& sock, raw_request& req)
     : m_socket(sock),
-      m_buffer(std::move(req.buffer)),
+      m_body_prefix(req.get_remained_buffer()),
       m_length(get_length(req)) {}
 
 std::optional<std::size_t> raw_body::length() const { return m_length; }
@@ -31,11 +31,11 @@ coro<std::size_t> raw_body::read(std::span<char> dest) {
     static_assert(std::is_same_v<decltype(rv), std::size_t>,
                   "auto rv = 0ul is not the same type as std::size_t");
 
-    if (m_buffer.size() > 0ul) {
-        auto count = std::min(m_buffer.size(), dest.size());
-        std::memcpy(&dest[0], m_buffer.data(), count);
+    if (m_body_prefix.size() > 0ul) {
+        auto count = std::min(m_body_prefix.size(), dest.size());
+        std::memcpy(&dest[0], m_body_prefix.data(), count);
 
-        m_raw_buffers.push_back({m_buffer.data(), count});
+        m_raw_buffers.push_back({m_body_prefix.data(), count});
         m_read_position += count;
         rv += count;
         m_length -= count;

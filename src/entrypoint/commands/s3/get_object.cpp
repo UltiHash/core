@@ -66,7 +66,8 @@ public:
         co_return buffer_size;
     }
 
-    std::vector<boost::asio::const_buffer> get_raw_buffer() const override {
+    std::vector<boost::asio::const_buffer>
+    get_raw_buffer() const noexcept override {
         // TODO: Add chunk header
         return {};
     }

@@ -25,16 +25,14 @@ coro<raw_request> raw_request::read(asio::ip::tcp::socket& sock) {
         throw std::runtime_error("Incomplete HTTP header");
     }
 
-    buffer.erase(buffer.begin(), buffer.begin() + header_length);
-
     co_return from_string(parser.release(), sock.remote_endpoint(),
-                          std::move(buffer));
+                          std::move(buffer), header_length);
 }
 
 raw_request
 raw_request::from_string(beast::http::request<beast::http::empty_body> headers,
                          boost::asio::ip::tcp::endpoint peer,
-                         std::vector<char>&& buffer) {
+                         std::vector<char>&& buffer, size_t header_length) {
 
     raw_request rv;
 
@@ -45,6 +43,7 @@ raw_request::from_string(beast::http::request<beast::http::empty_body> headers,
     }
 
     rv.buffer = std::move(buffer);
+    rv.read_position = header_length;
     rv.peer = peer;
 
     const auto& target = rv.headers.target();

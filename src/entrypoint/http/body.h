@@ -23,7 +23,8 @@ public:
     /*
      * Return a raw buffer from the previous read call.
      */
-    virtual std::vector<boost::asio::const_buffer> get_raw_buffer() const = 0;
+    virtual std::vector<boost::asio::const_buffer>
+    get_raw_buffer() const noexcept = 0;
 };
 
 } // namespace uh::cluster::ep::http
