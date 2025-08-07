@@ -228,7 +228,7 @@ BOOST_AUTO_TEST_CASE(reads_and_parses_header_only) {
     BOOST_TEST(parser.get()[boost::beast::http::field::host] == "localhost");
 }
 
-BOOST_AUTO_TEST_CASE(stores_raw_buffer_using_custom_parser) {
+BOOST_AUTO_TEST_CASE(parses_header_which_is_read_using_read_until) {
     boost::asio::io_context io;
     boost::asio::ip::tcp::acceptor acceptor(io,
                                             {boost::asio::ip::tcp::v4(), 0});
@@ -257,14 +257,57 @@ BOOST_AUTO_TEST_CASE(stores_raw_buffer_using_custom_parser) {
     boost::beast::error_code ec;
     resp_parser.put(boost::asio::buffer(resp_header.data(), resp_header.size()),
                     ec);
-    std::cout << ec.message() << std::endl;
-    BOOST_TEST(!ec);
+
     BOOST_TEST(resp_parser.is_header_done());
     BOOST_TEST(resp_parser.get().method_string() == "POST");
     BOOST_TEST(resp_parser.get().target() == "/test");
     BOOST_TEST(resp_parser.get()[boost::beast::http::field::host] ==
                "localhost");
 }
+
+BOOST_AUTO_TEST_CASE(supports_vector_of_const_buffers) {
+    boost::asio::io_context io;
+    boost::asio::ip::tcp::acceptor acceptor(io,
+                                            {boost::asio::ip::tcp::v4(), 0});
+    auto endpoint = acceptor.local_endpoint();
+
+    boost::asio::ip::tcp::socket server_sock(io);
+    boost::asio::ip::tcp::socket client_sock(io);
+
+    client_sock.connect(endpoint);
+    acceptor.accept(server_sock);
+
+    std::string req_1 = "POST /test HTTP/1.1\r\n";
+    std::string req_2 = "Host: localhost\r\nContent-Length: 5\r\n\r\nabcde";
+
+    std::vector<boost::asio::const_buffer> req = {boost::asio::buffer(req_1),
+                                                  boost::asio::buffer(req_2)};
+    boost::asio::write(client_sock, req);
+    std::cout << "Request sent: " << req_1 << req_2 << std::endl;
+
+    boost::asio::streambuf resp_buffer;
+    boost::beast::http::request_parser<boost::beast::http::string_body>
+        resp_parser;
+    std::cout << "Read started..." << std::endl;
+    boost::asio::read_until(server_sock, resp_buffer, "\r\n\r\n");
+    std::cout << "Read done" << std::endl;
+    std::istream resp_is(&resp_buffer);
+    std::string resp_header;
+    resp_header.resize(resp_buffer.size());
+    resp_is.read(&resp_header[0], resp_buffer.size());
+
+    // Client parses the request header
+    boost::beast::error_code ec;
+    resp_parser.put(boost::asio::buffer(resp_header.data(), resp_header.size()),
+                    ec);
+
+    BOOST_TEST(resp_parser.is_header_done());
+    BOOST_TEST(resp_parser.get().method_string() == "POST");
+    BOOST_TEST(resp_parser.get().target() == "/test");
+    BOOST_TEST(resp_parser.get()[boost::beast::http::field::host] ==
+               "localhost");
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 } // namespace uh::cluster
