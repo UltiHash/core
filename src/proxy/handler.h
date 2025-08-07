@@ -26,8 +26,7 @@ private:
     boost::asio::ip::tcp::socket m_client;
     handler_factory& m_factory;
 
-    coro<void> handle_request(http::raw_request& rawreq,
-                              boost::asio::ip::tcp::socket& endpoint,
+    coro<void> handle_request(boost::asio::ip::tcp::socket& endpoint,
                               const std::string& id);
     coro<void> proxy_raw_request(http::raw_request& rawreq);
 };

@@ -16,13 +16,11 @@ coro<void> handler::run() {
         // Note: lifetime of response must not exceed lifetime of request.
         std::string id = generate_unique_id();
 
-        raw_request rawreq;
         std::optional<response> resp;
 
         try {
             try {
-                rawreq = co_await raw_request::read(m_socket);
-                co_await handle_request(rawreq, id).start_trace();
+                co_await handle_request(id).start_trace();
                 metric<success>::increase(1);
 
             } catch (const boost::system::system_error& e) {
@@ -31,16 +29,21 @@ coro<void> handler::run() {
                 if (e.code() == boost::asio::error::operation_aborted) {
                     throw e.original_exception();
                 } else if (e.code() == boost::beast::error::timeout) {
+                    LOG_WARN() << e.what();
                     resp = make_response(command_exception(error::busy));
                 } else {
+                    LOG_WARN() << e.what();
                     resp = make_response(
                         command_exception(error::internal_network_error));
                 }
             } catch (const command_exception& e) {
+                LOG_WARN() << e.what();
                 resp = make_response(e);
             } catch (const error_exception& e) {
+                LOG_WARN() << e.what();
                 resp = make_response(command_exception(*e.error()));
             } catch (const std::exception& e) {
+                LOG_WARN() << e.what();
                 resp = make_response(command_exception());
             }
 
@@ -71,9 +74,11 @@ coro<void> handler::run() {
     }
 }
 
-coro<void> handler::handle_request(raw_request& rawreq, const std::string& id) {
-    std::unique_ptr<request> req;
-    req = co_await m_factory.m_request_factory.create(m_socket, rawreq);
+coro<void> handler::handle_request(const std::string& id) {
+    auto req = co_await m_factory.m_request_factory.create(m_socket);
+
+    LOG_DEBUG() << "after-auth request: " << req->get_header().headers;
+
     LOG_INFO() << req->peer() << ": read request, id=" << id << ": " << *req;
 
     auto span = co_await boost::asio::this_coro::span;

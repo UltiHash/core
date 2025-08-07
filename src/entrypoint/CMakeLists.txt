@@ -53,6 +53,7 @@ add_library(entrypoint
             http/chunked_body.cpp
             http/basic_auth.cpp
             http/raw_request.cpp
+            http/raw_response.cpp
             http/aws4_hmac_sha256.cpp
             http/no_auth.cpp
             http/request_factory.cpp

@@ -12,8 +12,8 @@ namespace uh::cluster::ep::http {
 request_factory::request_factory(user::db& users)
     : m_users(users) {}
 
-coro<std::unique_ptr<request>> request_factory::create(ip::tcp::socket& sock,
-                                                       raw_request& req) {
+coro<std::unique_ptr<request>> request_factory::create(ip::tcp::socket& sock) {
+    auto req = co_await raw_request::read(sock);
 
     LOG_DEBUG() << "pre-auth request: " << req.headers;
 
@@ -37,7 +37,7 @@ coro<std::unique_ptr<request>> request_factory::create(ip::tcp::socket& sock,
                                                              std::move(req));
     }
 
-    co_return co_await no_auth::create(sock, req);
+    co_return co_await no_auth::create(sock, std::move(req));
 }
 
 } // namespace uh::cluster::ep::http
