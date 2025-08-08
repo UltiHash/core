@@ -31,11 +31,13 @@ coro<std::size_t> raw_body::read(std::span<char> dest) {
     static_assert(std::is_same_v<decltype(rv), std::size_t>,
                   "auto rv = 0ul is not the same type as std::size_t");
 
-    if (m_body_prefix.size() > 0ul) {
-        auto count = std::min(m_body_prefix.size(), dest.size());
-        std::memcpy(&dest[0], m_body_prefix.data(), count);
+    if (m_read_position < m_body_prefix.size()) {
+        auto count =
+            std::min(m_body_prefix.size() - m_read_position, dest.size());
+        std::memcpy(&dest[0], m_body_prefix.data() + m_read_position, count);
 
-        m_raw_buffers.push_back({m_body_prefix.data(), count});
+        m_raw_buffers.push_back(
+            {m_body_prefix.data() + m_read_position, count});
         m_read_position += count;
         rv += count;
         m_length -= count;
