@@ -7,7 +7,7 @@
 #include <coordinator/service.h>
 #include <deduplicator/service.h>
 #include <entrypoint/service.h>
-#include <proxy/service.h>
+#include <gateway/service.h>
 #include <storage/service.h>
 
 using namespace uh;
