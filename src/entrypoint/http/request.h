@@ -109,8 +109,8 @@ public:
     bool has_query() const { return !m_header.params.empty(); }
 
     std::optional<std::string> header(const std::string& name) const {
-        if (auto it = m_header.headers.base().find(name);
-            it != m_header.headers.base().end()) {
+        if (auto it = m_header.headers.find(name);
+            it != m_header.headers.end()) {
             return it->value();
         }
         return {};
