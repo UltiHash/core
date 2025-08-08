@@ -52,12 +52,6 @@ put_object::put_object(boost::asio::io_context& ioc, std::size_t buffer_size,
       m_dedup(dedup) {}
 
 bool put_object::can_handle(const request& req) {
-    LOG_DEBUG() << "header in can_handle: " << req.get_header().headers;
-    LOG_DEBUG() << req.peer() << ": can handle put object: " << req.method()
-                << " " << req.bucket() << "/" << req.object_key();
-    // << " query(uploadId): " << *req.query("uploadId")
-    // << " req.header(\"x-amz-copy-source\"): "
-    // << *req.header("x-amz-copy-source");
     return req.method() == verb::put && req.bucket() != RESERVED_BUCKET_NAME &&
            !req.bucket().empty() && !req.object_key().empty() &&
            !req.query("uploadId") && !req.header("x-amz-copy-source");
