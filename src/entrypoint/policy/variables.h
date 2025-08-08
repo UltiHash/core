@@ -13,9 +13,7 @@ class command;
 
 namespace ep::http {
 
-class raw_request;
-template <typename header> class message;
-using request = message<raw_request>;
+class request;
 
 } // namespace ep::http
 
