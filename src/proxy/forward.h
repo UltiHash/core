@@ -14,7 +14,7 @@ inline coro<void> forward(ep::http::request& req,
     std::size_t count = 0;
 
     co_await boost::asio::async_write(endpoint,
-                                      req.get_header().get_raw_buffer());
+                                      req.get_raw_request().get_raw_buffer());
     do {
         count = co_await req.read_body({&buffer[0], buffer_size});
         auto raw_buffer = req.get_raw_buffer();

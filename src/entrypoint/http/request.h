@@ -31,22 +31,22 @@ class request {
 public:
     request() = default;
 
-    request(raw_request header, std::unique_ptr<body> body, ep::user::user user)
-        : m_header(std::move(header)),
+    request(raw_request rawreq, std::unique_ptr<body> body, ep::user::user user)
+        : m_rawreq(std::move(rawreq)),
           m_body(std::move(body)),
           m_authenticated_user(std::move(user)),
-          m_bucket_id(get_bucket_id(m_header.path)),
-          m_object_key(get_object_key(m_header.path)) {}
+          m_bucket_id(get_bucket_id(m_rawreq.path)),
+          m_object_key(get_object_key(m_rawreq.path)) {}
 
     request(const request&) = delete;
     request& operator=(const request&) = delete;
     request(request&&) noexcept = default;
     request& operator=(request&&) noexcept = default;
 
-    verb method() const { return m_header.headers.method(); }
+    verb method() const { return m_rawreq.headers.method(); }
 
-    std::string_view target() const { return m_header.headers.target(); }
-    const std::string& path() const { return m_header.path; }
+    std::string_view target() const { return m_rawreq.headers.target(); }
+    const std::string& path() const { return m_rawreq.path; }
 
     const std::string& bucket() const { return m_bucket_id; }
     const std::string& object_key() const { return m_object_key; }
@@ -58,7 +58,7 @@ public:
             return "arn:aws:s3:::" + m_bucket_id;
     }
 
-    const raw_request& get_header() const noexcept { return m_header; }
+    const raw_request& get_raw_request() const noexcept { return m_rawreq; }
 
     coro<std::size_t> read_body(std::span<char> buffer) {
         return m_body->read(buffer);
@@ -68,12 +68,12 @@ public:
         return m_body->get_raw_buffer();
     }
 
-    boost::asio::ip::tcp::endpoint peer() const { return m_header.peer; }
+    boost::asio::ip::tcp::endpoint peer() const { return m_rawreq.peer; }
 
     /** Payload that was read while reading the request headers.
      */
     std::size_t content_length() const {
-        return std::stoul(m_header.headers.at("Content-Length"));
+        return std::stoul(m_rawreq.headers.at("Content-Length"));
     }
 
     /**
@@ -81,14 +81,14 @@ public:
      * `std::nullopt` if parameter is not set.
      */
     std::optional<std::string> query(const std::string& name) const {
-        if (auto it = m_header.params.find(name); it != m_header.params.end()) {
+        if (auto it = m_rawreq.params.find(name); it != m_rawreq.params.end()) {
             return it->second;
         }
         return std::nullopt;
     }
 
     const std::map<std::string, std::string>& query_map() const {
-        return m_header.params;
+        return m_rawreq.params;
     }
 
     void set_query_params(const std::string& query) {
@@ -100,29 +100,29 @@ public:
             params[param.key] = param.value;
         }
 
-        m_header.params = std::move(params);
+        m_rawreq.params = std::move(params);
     }
 
-    const auto& header() const { return m_header.headers; }
-
-    bool has_query() const { return !m_header.params.empty(); }
+    bool has_query() const { return !m_rawreq.params.empty(); }
 
     std::optional<std::string> header(const std::string& name) const {
-        if (auto it = m_header.headers.find(name);
-            it != m_header.headers.end()) {
+        if (auto it = m_rawreq.headers.find(name);
+            it != m_rawreq.headers.end()) {
             return it->value();
         }
         return {};
     }
 
-    bool keep_alive() const { return m_header.headers.keep_alive(); }
+    bool keep_alive() const { return m_rawreq.headers.keep_alive(); }
 
     const user::user& authenticated_user() const {
         return m_authenticated_user;
     }
 
+    const auto& base() const { return m_rawreq.headers; }
+
 private:
-    raw_request m_header;
+    raw_request m_rawreq;
     std::unique_ptr<body> m_body;
     user::user m_authenticated_user;
 
@@ -179,10 +179,10 @@ inline std::optional<bool> query<bool>(const request& req,
 }
 
 inline std::ostream& operator<<(std::ostream& out, const request& req) {
-    out << req.header().method_string() << " " << req.header().target() << " ";
+    out << req.base().method_string() << " " << req.base().target() << " ";
 
     std::string delim;
-    for (const auto& field : req.header()) {
+    for (const auto& field : req.base()) {
         out << delim << field.name_string() << ": " << field.value();
         delim = ", ";
     }
