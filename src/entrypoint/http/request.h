@@ -5,7 +5,6 @@
 #include <entrypoint/http/body.h>
 #include <entrypoint/http/command_exception.h>
 #include <entrypoint/http/raw_request.h>
-#include <entrypoint/http/raw_response.h>
 #include <entrypoint/user/user.h>
 
 #include <map>
@@ -28,21 +27,21 @@ inline std::string get_object_key(const std::string& path) {
     return std::string(key);
 }
 
-template <typename header_t> class message {
+class request {
 public:
-    message() = default;
+    request() = default;
 
-    message(header_t header, std::unique_ptr<body> body, ep::user::user user)
+    request(raw_request header, std::unique_ptr<body> body, ep::user::user user)
         : m_header(std::move(header)),
           m_body(std::move(body)),
           m_authenticated_user(std::move(user)),
           m_bucket_id(get_bucket_id(m_header.path)),
           m_object_key(get_object_key(m_header.path)) {}
 
-    message(const message&) = delete;
-    message& operator=(const message&) = delete;
-    message(message&&) noexcept = default;
-    message& operator=(message&&) noexcept = default;
+    request(const request&) = delete;
+    request& operator=(const request&) = delete;
+    request(request&&) noexcept = default;
+    request& operator=(request&&) noexcept = default;
 
     verb method() const { return m_header.headers.method(); }
 
@@ -59,7 +58,7 @@ public:
             return "arn:aws:s3:::" + m_bucket_id;
     }
 
-    const header_t& get_header() const noexcept { return m_header; }
+    const raw_request& get_header() const noexcept { return m_header; }
 
     coro<std::size_t> read_body(std::span<char> buffer) {
         return m_body->read(buffer);
@@ -71,7 +70,7 @@ public:
 
     boost::asio::ip::tcp::endpoint peer() const { return m_header.peer; }
 
-    /** Payload that was read while reading the message headers.
+    /** Payload that was read while reading the request headers.
      */
     std::size_t content_length() const {
         return std::stoul(m_header.headers.at("Content-Length"));
@@ -123,16 +122,13 @@ public:
     }
 
 private:
-    header_t m_header;
+    raw_request m_header;
     std::unique_ptr<body> m_body;
     user::user m_authenticated_user;
 
     std::string m_bucket_id{};
     std::string m_object_key{};
 };
-
-using request = message<raw_request>;
-using response_reader = message<raw_response>;
 
 std::string get_bucket_id(const std::string& path);
 std::string get_object_key(const std::string& path);

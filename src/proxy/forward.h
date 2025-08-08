@@ -2,7 +2,6 @@
 
 #include <entrypoint/commands/command.h>
 #include <entrypoint/directory.h>
-#include <entrypoint/http/raw_response.h>
 
 namespace uh::cluster {
 
@@ -21,8 +20,6 @@ inline coro<void> forward(ep::http::request& req,
         auto raw_buffer = req.get_raw_buffer();
         co_await boost::asio::async_write(endpoint, raw_buffer);
     } while (count == buffer_size);
-
-    auto rawresp = co_await ep::http::raw_response::read(endpoint);
 }
 
 } // namespace uh::cluster
