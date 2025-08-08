@@ -11,7 +11,7 @@
 
 #include <entrypoint/user/db.h>
 
-namespace uh::cluster::proxy {
+namespace uh::cluster::gateway {
 
 struct command_factory {
     command_factory(boost::asio::io_context& ioc,
@@ -46,4 +46,4 @@ private:
     license_watcher& m_license_watcher;
 };
 
-} // namespace uh::cluster::proxy
+} // namespace uh::cluster::gateway

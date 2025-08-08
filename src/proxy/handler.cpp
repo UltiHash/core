@@ -9,7 +9,7 @@
 
 using namespace uh::cluster::ep::http;
 
-namespace uh::cluster::proxy {
+namespace uh::cluster::gateway {
 
 coro<void> handler::run() {
     std::string endpoint_host = "localhost";
@@ -117,4 +117,4 @@ handler_factory::handler_factory(command_factory&& comm_factory,
       m_policy(std::move(policy)),
       m_cors(std::move(cors)) {}
 
-} // namespace uh::cluster::proxy
+} // namespace uh::cluster::gateway

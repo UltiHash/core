@@ -1,6 +1,6 @@
 #!/bin/bash
 
-proxy=0
+gateway=0
 dedup=1
 storage_cfg='[{"id":0,"type":"ROUND_ROBIN","storages":1}]'
 port_offset=0
@@ -8,8 +8,8 @@ port_offset=0
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        -x|--proxy)
-            proxy=1
+        -g|--gateway)
+            gateway=1
             shift
             ;;
         -d|--dedup)
@@ -191,9 +191,9 @@ for ((id = 0; id < $dedup; ++id)); do
 done
 
 
-if [ "$proxy" = "1" ]; then
-    export OTEL_RESOURCE_ATTRIBUTES="service.name=proxy"
-    $UH_CLUSTER proxy --port $((8080 + port_offset)) &> $log_dir/proxy.log &
+if [ "$gateway" = "1" ]; then
+    export OTEL_RESOURCE_ATTRIBUTES="service.name=gateway"
+    $UH_CLUSTER gateway --port $((8080 + port_offset)) &> $log_dir/gateway.log &
     pid_entrypoint=$!
 else
     export OTEL_RESOURCE_ATTRIBUTES="service.name=entrypoint"

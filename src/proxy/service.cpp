@@ -7,7 +7,7 @@
 #include <format>
 #include <magic_enum/magic_enum.hpp>
 
-namespace uh::cluster::proxy {
+namespace uh::cluster::gateway {
 
 namespace {
 
@@ -29,7 +29,7 @@ coro<void> update_limits(uh::cluster::directory& directory, limits& l) {
 }
 
 std::unique_ptr<deduplicator_interface>
-make_deduplicator(const proxy_config& config,
+make_deduplicator(const gateway_config& config,
                   storage::global::global_data_view& storage,
                   storage::global::cache& cache, boost::asio::io_context& ioc,
                   etcd_manager& etcd) {
@@ -53,10 +53,10 @@ make_deduplicator(const proxy_config& config,
 } // namespace
 
 service::service(boost::asio::io_context& ioc, const service_config& sc,
-                 proxy_config config)
+                 gateway_config config)
     : m_config(std::move(config)),
       m_etcd{sc.etcd_config},
-      m_service_id(get_service_id(m_etcd, get_service_string(PROXY_SERVICE),
+      m_service_id(get_service_id(m_etcd, get_service_string(GATEWAY_SERVICE),
                                   sc.working_dir)),
       m_gdv{ioc, m_etcd, config.global_data_view},
       m_cache(ioc, m_gdv, config.global_data_view.read_cache_capacity_l2),
@@ -102,4 +102,4 @@ service::~service() {
            int64_t>::remove_gauge_callback();
 }
 
-} // namespace uh::cluster::proxy
+} // namespace uh::cluster::gateway

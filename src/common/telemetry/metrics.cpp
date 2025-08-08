@@ -52,7 +52,7 @@ void initialize_counters() {
                  (metric_prefix == GDV_PREFIX and
                   (role_prefix == get_role_prefix(DEDUPLICATOR_SERVICE) or
                    role_prefix == get_role_prefix(ENTRYPOINT_SERVICE) or
-                   role_prefix == get_role_prefix(PROXY_SERVICE) //
+                   role_prefix == get_role_prefix(GATEWAY_SERVICE) //
                    )))) {
                 metric<type>::increase(0);
             }

@@ -40,7 +40,7 @@
 #include <entrypoint/commands/iam/list_user_policies.h>
 #include <entrypoint/commands/iam/put_user_policy.h>
 
-namespace uh::cluster::proxy {
+namespace uh::cluster::gateway {
 
 coro<std::unique_ptr<command>> command_factory::create(ep::http::request& req) {
     if (get_object::can_handle(req)) {
@@ -144,4 +144,4 @@ limits& command_factory::get_limits() const { return m_limits; }
 
 directory& command_factory::get_directory() const { return m_directory; }
 
-} // namespace uh::cluster::proxy
+} // namespace uh::cluster::gateway
