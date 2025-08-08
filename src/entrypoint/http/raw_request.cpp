@@ -35,7 +35,7 @@ raw_request::from_string(beast::http::request<beast::http::empty_body> headers,
     raw_request rv;
 
     rv.headers = std::move(headers);
-    if (rv.headers.base().version() != 11) {
+    if (rv.headers.version() != 11) {
         throw std::runtime_error(
             "bad http version. support exists only for HTTP 1.1.\n");
     }

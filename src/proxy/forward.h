@@ -6,8 +6,8 @@
 
 namespace uh::cluster {
 
-inline coro<ep::http::response>
-forward(ep::http::request& req, boost::asio::ip::tcp::socket& endpoint) {
+inline coro<void> forward(ep::http::request& req,
+                          boost::asio::ip::tcp::socket& endpoint) {
 
     constexpr std::size_t buffer_size = 64 * KIBI_BYTE;
     std::string buffer;
@@ -23,19 +23,6 @@ forward(ep::http::request& req, boost::asio::ip::tcp::socket& endpoint) {
     } while (count == buffer_size);
 
     auto rawresp = co_await ep::http::raw_response::read(endpoint);
-
-    // if (rawresp.optional("Transfer-Encoding").value_or("") == "chunked") {
-    //     auto body = std::make_unique<chunked_body>(endpoint, rawresp);
-    //     co_return std::make_unique<request>(std::move(rawresp),
-    //     std::move(body),
-    //                                         std::move(user));
-    // } else {
-    //     auto body = std::make_unique<raw_body>(endpoint, rawresp);
-    //     co_return std::make_unique<request>(std::move(rawresp),
-    //     std::move(body),
-    //                                         std::move(user));
-    // }
-    co_return ep::http::response(ep::http::status::no_content);
 }
 
 } // namespace uh::cluster

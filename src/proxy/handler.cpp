@@ -1,9 +1,10 @@
 #include "handler.h"
-#include "forward.h"
 
 #include <common/utils/downstream_exception.h>
 #include <common/utils/random.h>
 #include <entrypoint/http/command_exception.h>
+#include <proxy/forward.h>
+
 #include <format>
 
 using namespace uh::cluster::ep::http;
@@ -103,6 +104,8 @@ coro<void> handler::handle_request(boost::asio::ip::tcp::socket& endpoint,
     span->set_attribute("request-key", req->object_key());
 
     co_await forward(*req, endpoint);
+
+    // TODO: Implement response backwarding and parsing
 }
 
 handler_factory::handler_factory(command_factory&& comm_factory,

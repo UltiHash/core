@@ -15,8 +15,6 @@ request_factory::request_factory(user::db& users)
 coro<std::unique_ptr<request>> request_factory::create(ip::tcp::socket& sock) {
     auto req = co_await raw_request::read(sock);
 
-    LOG_DEBUG() << "pre-auth request: " << req.headers;
-
     if (auto auth = req.optional("Authorization"); auth) {
 
         if (auth->starts_with("AWS4-HMAC-SHA256 ")) {

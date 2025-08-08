@@ -16,8 +16,7 @@ namespace uh::cluster::ep::http {
 namespace beast = boost::beast;
 using status = beast::http::status;
 
-class raw_response
-    : public header<beast::http::response<beast::http::empty_body>> {
+class raw_response : public header<beast::http::response_header<>> {
 public:
     static coro<raw_response> read(boost::asio::ip::tcp::socket& sock);
     static raw_response

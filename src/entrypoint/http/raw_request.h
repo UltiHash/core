@@ -18,8 +18,7 @@ namespace uh::cluster::ep::http {
 namespace beast = boost::beast;
 using verb = beast::http::verb;
 
-class raw_request
-    : public header<beast::http::request<beast::http::empty_body>> {
+class raw_request : public header<beast::http::request_header<>> {
 public:
     static coro<raw_request> read(boost::asio::ip::tcp::socket& sock);
     static raw_request

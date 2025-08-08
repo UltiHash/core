@@ -77,8 +77,6 @@ coro<void> handler::run() {
 coro<void> handler::handle_request(const std::string& id) {
     auto req = co_await m_factory.m_request_factory.create(m_socket);
 
-    LOG_DEBUG() << "after-auth request: " << req->get_header().headers;
-
     LOG_INFO() << req->peer() << ": read request, id=" << id << ": " << *req;
 
     auto span = co_await boost::asio::this_coro::span;
