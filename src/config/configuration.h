@@ -8,6 +8,7 @@
 #include <deduplicator/config.h>
 #include <entrypoint/config.h>
 #include <storage/config.h>
+#include <proxy/config.h>
 
 #include <CLI/CLI.hpp>
 #include <optional>
@@ -23,6 +24,7 @@ struct config {
     storage_config storage;
     deduplicator_config deduplicator;
     coordinator_config coordinator;
+    proxy::config proxy;
 };
 
 std::optional<config> read_config(int argc, char** argv);

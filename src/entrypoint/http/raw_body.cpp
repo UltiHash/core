@@ -22,6 +22,13 @@ raw_body::raw_body(boost::asio::ip::tcp::socket& sock, raw_request& req)
       m_buffer(std::move(req.buffer)),
       m_length(get_length(req)) {}
 
+raw_body::raw_body(boost::asio::ip::tcp::socket& sock, boost::beast::flat_buffer b, std::size_t len)
+    : m_socket(sock),
+      m_buffer(std::move(b)),
+      m_length(len)
+{
+}
+
 std::optional<std::size_t> raw_body::length() const { return m_length; }
 
 coro<std::size_t> raw_body::read(std::span<char> dest) {

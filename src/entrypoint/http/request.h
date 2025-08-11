@@ -55,6 +55,8 @@ public:
 
     const user::user& authenticated_user() const;
 
+    const boost::beast::http::request<boost::beast::http::empty_body>& base() const { return m_req; }
+
 private:
     friend std::ostream& operator<<(std::ostream& out, const request& req);
 
