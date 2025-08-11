@@ -165,9 +165,9 @@ CLI::App* sub_entrypoint(CLI::App& app, entrypoint_config& cfg) {
     return rv;
 }
 
-CLI::App* sub_proxy(CLI::App& app, proxy_config& cfg) {
+CLI::App* sub_gateway(CLI::App& app, gateway_config& cfg) {
 
-    auto* rv = app.add_subcommand("proxy", "Run as proxy service");
+    auto* rv = app.add_subcommand("gateway", "Run as gateway service");
 
     rv->add_option("--server-threads", cfg.num_threads,
                    "threads handling incoming connections")
@@ -288,7 +288,7 @@ std::optional<config> read_config(int argc, char** argv) {
 
     auto sub_str = sub_storage(app, rv.storage);
     auto sub_ep = sub_entrypoint(app, rv.entrypoint);
-    auto sub_px = sub_proxy(app, rv.proxy);
+    auto sub_gw = sub_gateway(app, rv.gateway);
     auto sub_dd = sub_deduplicator(app, rv.deduplicator);
     auto sub_rk = sub_coordinator(app, rv.coordinator);
 
@@ -328,8 +328,8 @@ std::optional<config> read_config(int argc, char** argv) {
             std::filesystem::path(rv.service.working_dir) / "deduplicator";
     } else if (sub_ep->parsed()) {
         rv.role = ENTRYPOINT_SERVICE;
-    } else if (sub_px->parsed()) {
-        rv.role = PROXY_SERVICE;
+    } else if (sub_gw->parsed()) {
+        rv.role = GATEWAY_SERVICE;
     } else if (sub_rk->parsed()) {
         rv.role = COORDINATOR_SERVICE;
         auto& cfg = rv.coordinator;
