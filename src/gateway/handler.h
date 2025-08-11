@@ -25,9 +25,10 @@ private:
     std::unique_ptr<policy::module> m_policy;
     std::unique_ptr<cors::module> m_cors;
 
-    coro<void> handle_request(boost::asio::ip::tcp::socket& s,
-                              boost::asio::ip::tcp::socket& endpoint,
-                              const std::string& id);
+    coro<http::response> handle_request(boost::asio::ip::tcp::socket& s,
+                                        boost::asio::ip::tcp::socket& endpoint,
+                                        http::raw_request&& rawreq,
+                                        const std::string& id);
 };
 
 } // namespace uh::cluster::gateway

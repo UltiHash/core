@@ -22,8 +22,9 @@ private:
     std::unique_ptr<policy::module> m_policy;
     std::unique_ptr<cors::module> m_cors;
 
-    coro<void> handle_request(boost::asio::ip::tcp::socket& s,
-                              const std::string& id);
+    coro<http::response> handle_request(boost::asio::ip::tcp::socket& s,
+                                        http::raw_request&& rawreq,
+                                        const std::string& id);
 };
 
 } // end namespace uh::cluster::ep

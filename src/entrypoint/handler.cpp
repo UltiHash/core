@@ -24,11 +24,13 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
         // Note: lifetime of response must not exceed lifetime of request.
         std::string id = generate_unique_id();
 
-        std::optional<response> resp;
+        response resp;
 
         try {
             try {
-                co_await handle_request(s, id).start_trace();
+                auto rawreq = co_await raw_request::read(s);
+                resp = co_await handle_request(s, std::move(rawreq), id)
+                           .start_trace();
                 metric<success>::increase(1);
 
             } catch (const boost::system::system_error& e) {
@@ -55,9 +57,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 resp = make_response(command_exception());
             }
 
-            if (resp.has_value()) {
-                co_await write(s, std::move(resp.value()), id);
-            }
+            co_await write(s, std::move(resp), id);
 
         } catch (const boost::system::system_error& e) {
             if (e.code() == boost::asio::error::operation_aborted) {
@@ -82,9 +82,10 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     }
 }
 
-coro<void> handler::handle_request(boost::asio::ip::tcp::socket& s,
-                                   const std::string& id) {
-    auto req = co_await m_factory.create(s);
+coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
+                                       raw_request&& rawreq,
+                                       const std::string& id) {
+    auto req = co_await m_factory.create(s, std::move(rawreq));
     LOG_INFO() << req->peer() << ": read request, id=" << id << ": " << *req;
 
     auto span = co_await boost::asio::this_coro::span;
@@ -98,8 +99,7 @@ coro<void> handler::handle_request(boost::asio::ip::tcp::socket& s,
 
     auto cors = co_await m_cors->check(*req);
     if (cors.response) {
-        co_await write(s, std::move(*cors.response), id);
-        co_return;
+        co_return std::move(*cors.response);
     }
 
     auto cmd = co_await m_command_factory.create(*req);
@@ -139,7 +139,7 @@ coro<void> handler::handle_request(boost::asio::ip::tcp::socket& s,
     span->set_attribute("response-code",
                         static_cast<unsigned>(response.base().result()));
 
-    co_await write(s, std::move(response), id);
+    co_return response;
 }
 
 } // namespace uh::cluster::ep
