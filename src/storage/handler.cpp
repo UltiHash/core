@@ -62,7 +62,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             if (e.code() == boost::asio::error::operation_aborted) {
                 break;
             } else if (e.code() == boost::asio::error::eof) {
-                LOG_INFO() << s.remote_endpoint() << " disconnected";
+                LOG_INFO() << m.peer() << " disconnected";
                 break;
             }
             throw;
