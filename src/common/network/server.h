@@ -29,12 +29,11 @@ struct server_config {
 class server {
 
 public:
-    server(server_config config,
-           std::unique_ptr<protocol_handler_factory> handler_factory,
+    server(server_config config, std::unique_ptr<protocol_handler> handler,
            boost::asio::io_context& ioc)
         : m_config(std::move(config)),
           m_ioc(ioc),
-          m_handler_factory(std::move(handler_factory)),
+          m_handler(std::move(handler)),
           m_connection_lister{
               std::make_unique<coro_task>("connection_listner", ioc)} {
         m_connection_lister->spawn(listen());
@@ -71,7 +70,7 @@ public:
 
 private:
     void create_session(std::string name, boost::asio::io_context& ioc,
-                        std::unique_ptr<protocol_handler> handler) {
+                        coro<void> handle) {
         std::lock_guard<std::mutex> lock(m_sessions_mutex);
 
         auto [it, inserted] =
@@ -82,9 +81,9 @@ private:
             return;
         }
         (*it)->spawn(
-            [handler = std::move(handler)]() mutable -> coro<void> {
+            [handle = std::move(handle)]() mutable -> coro<void> {
                 counter_guard<active_connections> guard;
-                co_await handler->run();
+                co_await std::move(handle);
             },
             // session should alive until the completion handler removes it
             [this, self = *it](std::exception_ptr _) { remove_session(self); });
@@ -145,14 +144,13 @@ private:
                 return std::format("session {}:{}", conn_address, conn_port);
             }();
 
-            create_session(name, m_ioc,
-                           m_handler_factory->create_handler(std::move(s)));
+            create_session(name, m_ioc, m_handler->handle(std::move(s)));
         }
     }
 
     const server_config m_config;
     boost::asio::io_context& m_ioc;
-    std::unique_ptr<protocol_handler_factory> m_handler_factory;
+    std::unique_ptr<protocol_handler> m_handler;
 
     std::mutex m_sessions_mutex;
     std::condition_variable m_sessions_cv;

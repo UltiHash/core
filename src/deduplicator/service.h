@@ -29,8 +29,8 @@ public:
           m_cache(ioc, m_gdv, config.global_data_view.read_cache_capacity_l2),
           m_deduplicator(
               std::make_shared<local_deduplicator>(config, m_gdv, m_cache)),
-          m_server(config.server,
-                   std::make_unique<handler_factory>(*m_deduplicator), ioc),
+          m_server(config.server, std::make_unique<handler>(*m_deduplicator),
+                   ioc),
           m_service_registry(m_etcd,
                              ns::root.deduplicator.hostports[m_service_id],
                              config.server.port) {}
