@@ -3,8 +3,6 @@
 #include "body.h"
 #include "raw_request.h"
 
-#include <vector>
-
 namespace uh::cluster::ep::http {
 
 class raw_body : public body {
@@ -23,7 +21,6 @@ public:
 private:
     boost::asio::ip::tcp::socket& m_socket;
     std::span<const char> m_body_prefix;
-    std::vector<char> m_buffer;
     std::size_t m_length;
     std::size_t m_read_position = 0;
     std::vector<boost::asio::const_buffer> m_raw_buffers;

@@ -39,20 +39,9 @@ public:
         return std::span<const char>(m_buffer).subspan(0, m_read_position);
     }
 
-    std::optional<std::string> optional(const std::string& name) const {
-        if (auto iter = headers.find(name); iter != headers.end()) {
-            return iter->value();
-        }
-        return {};
-    }
+    std::optional<std::string> optional(const std::string& name) const;
 
-    std::string require(const std::string& name) const {
-        auto iter = headers.find(name);
-        if (iter == headers.end()) {
-            throw std::runtime_error(name + " not found");
-        }
-        return iter->value();
-    }
+    std::string require(const std::string& name) const;
 
     boost::asio::ip::tcp::endpoint peer;
     std::map<std::string, std::string> params;
