@@ -7,7 +7,7 @@
 #include <coordinator/config.h>
 #include <deduplicator/config.h>
 #include <entrypoint/config.h>
-#include <proxy/config.h>
+#include <gateway/config.h>
 #include <storage/config.h>
 
 #include <CLI/CLI.hpp>

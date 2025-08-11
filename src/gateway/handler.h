@@ -1,6 +1,6 @@
 #pragma once
 
-#include <proxy/command_factory.h>
+#include <gateway/command_factory.h>
 
 #include <entrypoint/cors/module.h>
 #include <entrypoint/http/request_factory.h>

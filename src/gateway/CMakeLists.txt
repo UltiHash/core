@@ -1,7 +1,7 @@
-add_library(proxy
+add_library(gateway
             handler.cpp
             service.cpp
             command_factory.cpp
             )
 
-target_link_libraries(proxy entrypoint)
+target_link_libraries(gateway entrypoint)
