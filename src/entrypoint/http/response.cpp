@@ -22,8 +22,10 @@ response::response(http::status status)
 
 response::response(beast::http::response<beast::http::empty_body> res,
                    std::unique_ptr<http::body> body)
-    : m_res(std::move(res)),
-      m_body(std::move(body)) {}
+    :  m_res(std::move(res)),
+       m_body(std::move(body))
+{
+}
 
 void response::set_body(std::unique_ptr<http::body>&& body) noexcept {
     m_body = std::move(body);
@@ -129,7 +131,6 @@ coro<void> write(asio::ip::tcp::socket& out, response&& res,
 
         auto count = co_await res.body().read(buffer);
         buffer.resize(count);
-        LOG_DEBUG() << out.remote_endpoint() << ": read " << count << " bytes from body";
 
         if (fut) {
             co_await fut->get();
@@ -137,13 +138,11 @@ coro<void> write(asio::ip::tcp::socket& out, response&& res,
 
         promise<std::size_t> p;
         fut = p.get_future();
-        LOG_DEBUG() << out.remote_endpoint() << ": writing " << buffer.size() << " bytes to client, " << body.length().value_or(0) << " bytes to go";
         asio::async_write(out, asio::buffer(buffer), use_promise(std::move(p)));
 
         buffers.flip();
     }
 
-    LOG_DEBUG() << out.remote_endpoint() << ": body write issued, waiting for finish";
     if (fut) {
         co_await fut->get();
         fut.reset();

@@ -21,7 +21,6 @@ raw_body::raw_body(boost::asio::ip::tcp::socket& sock, raw_request& req)
     : m_socket(sock),
       m_body_prefix(),
       m_length(get_length(req)) {
-
     m_body_prefix.resize(req.get_remained_buffer().size());
     asio::buffer_copy(asio::buffer(m_body_prefix),
                       asio::buffer(req.get_remained_buffer().data(),
@@ -32,13 +31,6 @@ raw_body::raw_body(boost::asio::ip::tcp::socket& sock, std::vector<char> b, std:
      : m_socket(sock),
        m_body_prefix(std::move(b)),
        m_length(len) {}
-
-raw_body::raw_body(boost::asio::ip::tcp::socket& sock, boost::beast::flat_buffer b, std::size_t len)
-    : m_socket(sock),
-      m_buffer(std::move(b)),
-      m_length(len)
-{
-}
 
 std::optional<std::size_t> raw_body::length() const { return m_length; }
 
