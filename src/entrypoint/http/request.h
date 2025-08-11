@@ -67,6 +67,7 @@ public:
     const beast::http::request<beast::http::empty_body>& base() const;
 
 private:
+    friend std::ostream& operator<<(std::ostream& out, const request& req);
     raw_request m_rawreq;
     std::unique_ptr<body> m_body;
     user::user m_authenticated_user;
