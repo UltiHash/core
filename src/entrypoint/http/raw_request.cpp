@@ -65,6 +65,22 @@ raw_request::from_string(beast::http::request<beast::http::empty_body> headers,
     return rv;
 }
 
+std::optional<std::string>
+raw_request::optional(const std::string& name) const {
+    if (auto iter = headers.find(name); iter != headers.end()) {
+        return iter->value();
+    }
+    return {};
+}
+
+std::string raw_request::require(const std::string& name) const {
+    auto iter = headers.find(name);
+    if (iter == headers.end()) {
+        throw std::runtime_error(name + " not found");
+    }
+    return iter->value();
+}
+
 std::map<std::string_view, std::string_view>
 parse_values_string(std::string_view values, char pair_separator,
                     char field_separator) {
