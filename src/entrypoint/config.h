@@ -8,8 +8,12 @@
 namespace uh::cluster {
 
 struct entrypoint_config {
+    std::size_t num_threads = 4;
+
     server_config server = {
-        .threads = 4, .port = 8080, .bind_address = "0.0.0.0"};
+        .port = 8080,
+        .bind_address = "0.0.0.0",
+    };
 
     bool noop_deduplicator = false;
     std::size_t dedupe_node_connection_count = 10ul;

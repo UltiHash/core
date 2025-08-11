@@ -6,14 +6,16 @@ garbage_collector::garbage_collector(boost::asio::io_context& ioc,
                                      directory& dir,
                                      storage::global::global_data_view& gdv)
     : m_dir(dir),
-      m_gdv(gdv) {
-    boost::asio::co_spawn(ioc, collect().start_trace(), boost::asio::detached);
+      m_gdv(gdv),
+      m_task{"garbage collector", ioc} {
+    m_task.spawn(collect().start_trace());
 }
 
 coro<void> garbage_collector::collect() {
     boost::asio::steady_timer timer(co_await boost::asio::this_coro::executor);
 
-    while (true) {
+    auto state = co_await boost::asio::this_coro::cancellation_state;
+    while (state.cancelled() == boost::asio::cancellation_type::none) {
         auto to_delete = co_await m_dir.next_deleted();
         if (!to_delete) {
             co_await m_dir.clear_buckets();

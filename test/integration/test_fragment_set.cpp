@@ -17,7 +17,6 @@ namespace uh::cluster {
 
 struct fragment_set_fixture : public global_data_view_fixture {
     temp_directory tmp_dir;
-    std::shared_ptr<storage::data_view> gdv;
     std::shared_ptr<storage::global::cache> cache;
     std::shared_ptr<fragment_set> frag_set;
 
@@ -26,7 +25,7 @@ struct fragment_set_fixture : public global_data_view_fixture {
 
     void setup() {
         global_data_view_fixture::setup();
-        gdv = get_data_view();
+        auto gdv = get_data_view();
         cache = std::make_shared<storage::global::cache>(get_executor(), *gdv,
                                                          1000);
         frag_set = std::make_shared<fragment_set>(1000, *cache);
@@ -36,6 +35,7 @@ struct fragment_set_fixture : public global_data_view_fixture {
 
     std::pair<shared_buffer<char>, address> create_fragment(char fill_char,
                                                             std::size_t size) {
+        auto gdv = get_data_view();
         shared_buffer<char> fragment(size);
         memset(fragment.data(), fill_char, size);
         auto addr = boost::asio::co_spawn(

@@ -8,20 +8,12 @@ using namespace uh::cluster::ep::http;
 
 namespace uh::cluster::ep {
 
-handler::handler(command_factory&& comm_factory, request_factory&& factory,
-                 std::unique_ptr<ep::policy::module> policy,
-                 std::unique_ptr<ep::cors::module> cors)
-    : m_command_factory(comm_factory),
-      m_factory(std::move(factory)),
-      m_policy(std::move(policy)),
-      m_cors(std::move(cors)) {}
+coro<void> handler::run() {
+    std::optional<std::string> failed_request_id{std::nullopt};
 
-coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
-    for (;;) {
-
-        /*
-         * Note: lifetime of response must not exceed lifetime of request.
-         */
+    auto state = co_await boost::asio::this_coro::cancellation_state;
+    while (state.cancelled() == boost::asio::cancellation_type::none) {
+        // Note: lifetime of response must not exceed lifetime of request.
         std::string id = generate_unique_id();
 
         raw_request rawreq;
@@ -29,15 +21,16 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
         try {
             try {
-                rawreq = co_await raw_request::read(s);
-                resp = co_await handle_request(s, rawreq, id).start_trace();
+                rawreq = co_await raw_request::read(m_socket);
+                resp = co_await handle_request(rawreq, id).start_trace();
                 metric<success>::increase(1);
 
             } catch (const boost::system::system_error& e) {
                 throw;
             } catch (const downstream_exception& e) {
-                if (e.code() == boost::asio::error::operation_aborted or
-                    e.code() == boost::beast::error::timeout) {
+                if (e.code() == boost::asio::error::operation_aborted) {
+                    throw e.original_exception();
+                } else if (e.code() == boost::beast::error::timeout) {
                     resp = make_response(command_exception(error::busy));
                 } else {
                     resp = make_response(
@@ -48,31 +41,38 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             } catch (const error_exception& e) {
                 resp = make_response(command_exception(*e.error()));
             } catch (const std::exception& e) {
-                LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
                 resp = make_response(command_exception());
             }
 
-            co_await write(s, std::move(resp), id);
+            co_await write(m_socket, std::move(resp), id);
 
         } catch (const boost::system::system_error& e) {
-            if (e.code() == boost::beast::http::error::end_of_stream or
-                e.code() == boost::asio::error::eof) {
-                LOG_INFO() << s.remote_endpoint() << " disconnected";
+            if (e.code() == boost::asio::error::operation_aborted) {
+                failed_request_id = id;
+                break;
+            } else if (e.code() == boost::beast::http::error::end_of_stream or
+                       e.code() == boost::asio::error::eof) {
+                LOG_INFO() << m_socket.remote_endpoint() << " disconnected";
                 break;
             }
             throw;
         }
     }
 
-    s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
-    s.close();
+    if (failed_request_id) {
+        co_await boost::asio::this_coro::reset_cancellation_state(
+            boost::asio::disable_cancellation());
+
+        auto resp =
+            make_response(command_exception(error::service_unavailable));
+        co_await write(m_socket, std::move(resp), *failed_request_id);
+    }
 }
 
-coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
-                                       raw_request& rawreq,
+coro<response> handler::handle_request(raw_request& rawreq,
                                        const std::string& id) {
     std::unique_ptr<request> req;
-    req = co_await m_factory.create(s, rawreq);
+    req = co_await m_factory.m_request_factory.create(m_socket, rawreq);
     LOG_INFO() << req->peer() << ": read request, id=" << id << ": " << *req;
 
     auto span = co_await boost::asio::this_coro::span;
@@ -84,12 +84,12 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
     span->set_attribute("request-bucket", req->bucket());
     span->set_attribute("request-key", req->object_key());
 
-    auto cors = co_await m_cors->check(*req);
+    auto cors = co_await m_factory.m_cors->check(*req);
     if (cors.response) {
         co_return std::move(*cors.response);
     }
 
-    auto cmd = co_await m_command_factory.create(*req);
+    auto cmd = co_await m_factory.m_command_factory.create(*req);
 
     span->set_name(cmd->action_id());
     span->set_attribute("request-id", id);
@@ -98,7 +98,8 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
 
     LOG_DEBUG() << req->peer() << ": checking policies";
     if (!req->authenticated_user().super_user &&
-        co_await m_policy->check(*req, *cmd) == ep::policy::effect::deny) {
+        co_await m_factory.m_policy->check(*req, *cmd) ==
+            ep::policy::effect::deny) {
         LOG_INFO() << req->peer() << ": command execution denied by policy";
         throw command_exception(
             status::forbidden, "AccessDenied",
@@ -112,7 +113,7 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
     if (auto expect = req->header("expect");
         expect && *expect == "100-continue") {
         LOG_INFO() << req->peer() << ": sending 100 CONTINUE";
-        co_await write(s, response(status::continue_), id);
+        co_await write(m_socket, response(status::continue_), id);
     }
 
     LOG_DEBUG() << req->peer() << ": executing " << cmd->action_id();
@@ -128,5 +129,14 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
 
     co_return response;
 }
+
+handler_factory::handler_factory(command_factory&& comm_factory,
+                                 request_factory&& req_factory,
+                                 std::unique_ptr<ep::policy::module> policy,
+                                 std::unique_ptr<ep::cors::module> cors)
+    : m_command_factory(std::move(comm_factory)),
+      m_request_factory(std::move(req_factory)),
+      m_policy(std::move(policy)),
+      m_cors(std::move(cors)) {}
 
 } // namespace uh::cluster::ep
