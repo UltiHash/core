@@ -15,7 +15,7 @@ spec:
       effect: "NoSchedule"
   containers:
     - name: performance-tester
-      image: ghcr.io/ultihash/core-performance-test:latest
+      image: registry.ultihash.io/dev/core-performance-test:latest
       imagePullPolicy: Always
       env:
         - name: TEST_TYPE
