@@ -33,16 +33,10 @@ public:
            boost::asio::io_context& ioc)
         : m_config(std::move(config)),
           m_ioc(ioc),
-<<<<<<< HEAD
-          m_handler_factory(std::move(handler_factory)),
+          m_handler(std::move(handler)),
           m_connection_lister{
               std::make_unique<coro_task>("connection_listner", ioc)} {
         m_connection_lister->spawn(listen());
-=======
-          m_handler(std::move(handler)),
-          m_task{std::make_unique<coro_task>("do_accept", ioc)} {
-        m_task->spawn(do_accept());
->>>>>>> parent of a1b2af0e (Refactoring handlers)
     }
 
     [[nodiscard]] const server_config& get_server_config() const {
@@ -75,9 +69,8 @@ public:
     }
 
 private:
-<<<<<<< HEAD
     void create_session(std::string name, boost::asio::io_context& ioc,
-                        std::unique_ptr<protocol_handler> handler) {
+                        coro<void> handle) {
         std::lock_guard<std::mutex> lock(m_sessions_mutex);
 
         auto [it, inserted] =
@@ -88,9 +81,9 @@ private:
             return;
         }
         (*it)->spawn(
-            [handler = std::move(handler)]() mutable -> coro<void> {
+            [handle = std::move(handle)]() mutable -> coro<void> {
                 counter_guard<active_connections> guard;
-                co_await handler->run();
+                co_await std::move(handle);
             },
             // session should alive until the completion handler removes it
             [this, self = *it](std::exception_ptr _) { remove_session(self); });
@@ -110,37 +103,6 @@ private:
         } catch (const std::exception& e) {
             LOG_ERROR() << "failed to remove session: " << e.what();
         }
-=======
-    class session {
-    public:
-        session(std::string name, boost::asio::io_context& ioc,
-                boost::asio::ip::tcp::socket&& socket)
-            : m_task{std::move(name), ioc},
-              m_socket{std::move(socket)} {}
-
-        auto& task() { return m_task; }
-        auto& socket() { return m_socket; }
-        void cancel() {
-            m_task.cancel();
-            m_socket.cancel();
-        }
-
-    private:
-        coro_task m_task;
-        boost::asio::ip::tcp::socket m_socket;
-    };
-
-    auto& emplace(std::string name, boost::asio::io_context& ioc,
-                  boost::asio::ip::tcp::socket&& socket) {
-        std::lock_guard<std::mutex> lock(m_sessions_mutex);
-        return m_sessions.emplace_back(name, ioc, std::move(socket));
-    }
-
-    void erase(std::list<session>::const_iterator it) {
-        std::lock_guard<std::mutex> lock(m_sessions_mutex);
-        if (it != m_sessions.end())
-            m_sessions.erase(it);
->>>>>>> parent of a1b2af0e (Refactoring handlers)
     }
 
     boost::asio::ip::tcp::acceptor
@@ -182,33 +144,7 @@ private:
                 return std::format("session {}:{}", conn_address, conn_port);
             }();
 
-<<<<<<< HEAD
-            create_session(name, m_ioc,
-                           m_handler_factory->create_handler(std::move(s)));
-=======
-            auto& session = emplace(name, m_ioc, std::move(s));
-            auto& socket = session.socket();
-            session.task().spawn(
-                [this, &socket]() mutable -> coro<void> {
-                    auto ep = socket.remote_endpoint();
-                    LOG_INFO() << "connection from: " << ep;
-
-                    counter_guard<active_connections> guard;
-
-                    co_await m_handler->handle(socket);
-
-                    LOG_INFO() << "session ended: " << ep;
-                },
-
-                [this, session_it =
-                           std::prev(m_sessions.end())](std::exception_ptr e) {
-                    LOG_DEBUG()
-                        << "session finished: "
-                        << std::distance(m_sessions.begin(), session_it);
-                    erase(session_it);
-                    m_sessions_cv.notify_all();
-                });
->>>>>>> parent of a1b2af0e (Refactoring handlers)
+            create_session(name, m_ioc, m_handler->handle(std::move(s)));
         }
     }
 
@@ -218,13 +154,8 @@ private:
 
     std::mutex m_sessions_mutex;
     std::condition_variable m_sessions_cv;
-<<<<<<< HEAD
     std::unordered_set<std::shared_ptr<coro_task>> m_sessions;
     std::unique_ptr<coro_task> m_connection_lister;
-=======
-    std::list<session> m_sessions;
-    std::unique_ptr<coro_task> m_task;
->>>>>>> parent of a1b2af0e (Refactoring handlers)
 };
 
 //------------------------------------------------------------------------------
