@@ -98,8 +98,8 @@ inline auto make_logging_completion_notifier(
                                << ex.code() << " : " << ex.what();
                 }
             } catch (const std::exception& ex) {
-                LOG_WARN() << "[" << name
-                           << "] completion handler: exception: " << ex.what();
+                LOG_WARN() << "[" << name << "] completion handler: exception, "
+                           << ex.what();
             } catch (...) {
                 LOG_WARN() << "[" << name
                            << "] completion handler: unknown non-std exception";
