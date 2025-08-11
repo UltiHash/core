@@ -869,15 +869,21 @@ BOOST_AUTO_TEST_CASE(
                      .get();
     });
 
-    for (auto i = 0ul; i < config.storages; ++i) {
-        LOG_DEBUG() << "kill storage " << i;
-        deactivate_storage(i);
-    }
+    LOG_DEBUG() << "kill storage 1";
+    deactivate_storage(1);
 
-    for (auto i = 0ul; i < config.storages; ++i) {
-        LOG_DEBUG() << "revive storage " << i;
-        activate_storage(i);
-    }
+    LOG_DEBUG() << "kill storage 5";
+    deactivate_storage(5);
+
+    get_etcd_manager().wait(
+        ns::root.storage_groups[get_group_config().id].group_state,
+        serialize(storage::group_state::DEGRADED));
+
+    LOG_DEBUG() << "introduce new storage as storage 1";
+    introduce_new_storage(1);
+
+    LOG_DEBUG() << "introduce new storage as storage 5";
+    introduce_new_storage(5);
 
     get_etcd_manager().wait(
         ns::root.storage_groups[get_group_config().id].group_state,

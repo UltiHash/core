@@ -8,8 +8,9 @@
 namespace uh::cluster {
 
 struct storage_config {
+    std::size_t num_threads = 4;
+
     server_config server = {
-        .threads = 4,
         .port = 9200,
         .bind_address = "0.0.0.0",
     };
