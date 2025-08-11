@@ -42,7 +42,9 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
         try {
             try {
-                co_await handle_request(s, endpoint, id).start_trace();
+                auto rawreq = co_await raw_request::read(s);
+                co_await handle_request(s, endpoint, std::move(rawreq), id)
+                    .start_trace();
                 metric<success>::increase(1);
 
             } catch (const boost::system::system_error& e) {
@@ -96,11 +98,12 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     }
 }
 
-coro<void> handler::handle_request(boost::asio::ip::tcp::socket& s,
-                                   boost::asio::ip::tcp::socket& endpoint,
-                                   const std::string& id) {
+coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
+                                       boost::asio::ip::tcp::socket& endpoint,
+                                       raw_request&& rawreq,
+                                       const std::string& id) {
     std::unique_ptr<request> req;
-    req = co_await m_factory.create(s);
+    req = co_await m_factory.create(s, std::move(rawreq));
     LOG_INFO() << req->peer() << ": read request, id=" << id << ": " << *req;
 
     auto span = co_await boost::asio::this_coro::span;
@@ -114,6 +117,7 @@ coro<void> handler::handle_request(boost::asio::ip::tcp::socket& s,
 
     co_await forward(*req, endpoint);
 
+    co_return response{beast::http::status::ok};
     // TODO: Implement response backwarding and parsing
 }
 
