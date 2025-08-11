@@ -50,8 +50,7 @@ public:
           m_storage(std::make_shared<local_storage>(
               m_storage_id, make_ds_config(sc.data_store, m_group_config),
               sc.working_directory)),
-          m_server(sc.server, std::make_unique<handler_factory>(*m_storage),
-                   ioc),
+          m_server(sc.server, std::make_unique<handler>(*m_storage), ioc),
           m_service_registry(m_etcd,
                              ns::root.storage_groups[m_group_id]
                                  .storage_hostports[m_storage_id],

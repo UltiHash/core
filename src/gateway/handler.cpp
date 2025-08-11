@@ -11,13 +11,21 @@ using namespace uh::cluster::ep::http;
 
 namespace uh::cluster::gateway {
 
-coro<void> handler::run() {
+handler::handler(command_factory&& comm_factory, request_factory&& factory,
+                 std::unique_ptr<ep::policy::module> policy,
+                 std::unique_ptr<ep::cors::module> cors)
+    : m_command_factory(comm_factory),
+      m_factory(std::move(factory)),
+      m_policy(std::move(policy)),
+      m_cors(std::move(cors)) {}
+
+coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     std::string endpoint_host = "localhost";
     std::string endpoint_port = "8080";
-    boost::asio::ip::tcp::resolver resolver(m_client.get_executor());
+    boost::asio::ip::tcp::resolver resolver(s.get_executor());
     auto endpoints = co_await resolver.async_resolve(
         endpoint_host, endpoint_port, boost::asio::use_awaitable);
-    boost::asio::ip::tcp::socket endpoint(m_client.get_executor());
+    boost::asio::ip::tcp::socket endpoint(s.get_executor());
     LOG_DEBUG() << "Connecting to endpoint " << endpoint_host << ":"
                 << endpoint_port;
     co_await boost::asio::async_connect(endpoint, endpoints,
@@ -34,7 +42,7 @@ coro<void> handler::run() {
 
         try {
             try {
-                co_await handle_request(endpoint, id).start_trace();
+                co_await handle_request(s, endpoint, id).start_trace();
                 metric<success>::increase(1);
 
             } catch (const boost::system::system_error& e) {
@@ -62,7 +70,7 @@ coro<void> handler::run() {
             }
 
             if (resp.has_value()) {
-                co_await write(m_client, std::move(resp.value()), id);
+                co_await write(s, std::move(resp.value()), id);
             }
 
         } catch (const boost::system::system_error& e) {
@@ -71,7 +79,7 @@ coro<void> handler::run() {
                 break;
             } else if (e.code() == boost::beast::http::error::end_of_stream or
                        e.code() == boost::asio::error::eof) {
-                LOG_INFO() << m_client.remote_endpoint() << " disconnected";
+                LOG_INFO() << s.remote_endpoint() << " disconnected";
                 break;
             }
             throw;
@@ -84,14 +92,15 @@ coro<void> handler::run() {
 
         auto resp =
             make_response(command_exception(error::service_unavailable));
-        co_await write(m_client, std::move(resp), *failed_request_id);
+        co_await write(s, std::move(resp), *failed_request_id);
     }
 }
 
-coro<void> handler::handle_request(boost::asio::ip::tcp::socket& endpoint,
+coro<void> handler::handle_request(boost::asio::ip::tcp::socket& s,
+                                   boost::asio::ip::tcp::socket& endpoint,
                                    const std::string& id) {
     std::unique_ptr<request> req;
-    req = co_await m_factory.m_request_factory.create(m_client);
+    req = co_await m_factory.create(s);
     LOG_INFO() << req->peer() << ": read request, id=" << id << ": " << *req;
 
     auto span = co_await boost::asio::this_coro::span;
@@ -107,14 +116,5 @@ coro<void> handler::handle_request(boost::asio::ip::tcp::socket& endpoint,
 
     // TODO: Implement response backwarding and parsing
 }
-
-handler_factory::handler_factory(command_factory&& comm_factory,
-                                 request_factory&& req_factory,
-                                 std::unique_ptr<ep::policy::module> policy,
-                                 std::unique_ptr<ep::cors::module> cors)
-    : m_command_factory(std::move(comm_factory)),
-      m_request_factory(std::move(req_factory)),
-      m_policy(std::move(policy)),
-      m_cors(std::move(cors)) {}
 
 } // namespace uh::cluster::gateway
