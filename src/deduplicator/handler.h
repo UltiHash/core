@@ -16,7 +16,7 @@ public:
     coro<void> handle(boost::asio::ip::tcp::socket s) override;
 
 private:
-    coro<void> handle_dedupe(const messenger::header& hdr, messenger& m);
+    coro<void> handle_request(const messenger::header& hdr, messenger& m);
 
     local_deduplicator& m_local_dedupe;
 };

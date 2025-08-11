@@ -30,7 +30,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
                 boost::asio::context::set_pointer(context, "peer", &peer);
 
-                co_await handle_dedupe(hdr, m).continue_trace(
+                co_await handle_request(hdr, m).continue_trace(
                     std::move(context));
 
             } catch (const boost::system::system_error& e) {
@@ -50,7 +50,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             }
 
             if (err) {
-                LOG_WARN() << hdr.peer
+                LOG_WARN() << peer
                            << " error handling request: " << err->message();
                 co_await m.send_error(*err);
             }
@@ -60,7 +60,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 e.code() == boost::system::errc::bad_file_descriptor) {
                 break;
             } else if (e.code() == boost::asio::error::eof) {
-                LOG_INFO() << s.remote_endpoint() << " disconnected";
+                LOG_INFO() << peer << " disconnected";
                 break;
             }
             throw;
@@ -69,7 +69,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     LOG_INFO() << m.peer() << " expired";
 }
 
-coro<void> handler::handle_dedupe(const messenger::header& hdr, messenger& m) {
+coro<void> handler::handle_request(const messenger::header& hdr, messenger& m) {
     std::optional<error> err;
     switch (hdr.type) {
     case DEDUPLICATOR_REQ: {
