@@ -75,9 +75,6 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             make_response(command_exception(error::service_unavailable));
         co_await write(s, std::move(resp), *failed_request_id);
     }
-
-    s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
-    s.close();
 }
 
 coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
