@@ -9,6 +9,7 @@ uh_add_test(test_global_data_view PRIVATE storage coordinator MODE with_ec)
 uh_add_test(test_fragment_set PRIVATE deduplicator MODE with_ec)
 
 uh_add_test(test_awaitable_promise PRIVATE network)
+uh_add_test(test_coordinator PRIVATE etcd storage coordinator)
 uh_add_test(test_data_store PRIVATE storage)
 uh_add_test(test_deduplicator PRIVATE uh_mock_global_data deduplicator)
 uh_add_test(test_ec PRIVATE ec)

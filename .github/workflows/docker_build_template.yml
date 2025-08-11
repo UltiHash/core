@@ -25,7 +25,7 @@ on:
       ghcr_token:
         required: true
       registry_token:
-        required: false
+        required: true
 
 jobs:
 
@@ -45,7 +45,7 @@ jobs:
       uses: docker/setup-buildx-action@v3
 
     - name: Login to ghcr.io container registry
-      uses: docker/login-action@v2
+      uses: docker/login-action@v3
       with:
         registry: ghcr.io
         username: plauth
@@ -54,8 +54,7 @@ jobs:
     - name: Login to registry.ultihash.io container registry
       env: 
         registry_token: ${{ secrets.registry_token }}
-      if: ${{ env.registry_token != '' }}
-      uses: docker/login-action@v2
+      uses: docker/login-action@v3
       with:
         registry: registry.ultihash.io
         username: github
@@ -69,7 +68,7 @@ jobs:
         tags: ${{ inputs.docker_tags }}
 
     - name: Build and push the Docker image
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       with:
         context: ${{ inputs.docker_context }}
         file: ${{ inputs.dockerfile_path }} 

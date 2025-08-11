@@ -1,0 +1,170 @@
+global:
+  image: $CORE_IMAGE
+  imagePullPolicy: Always
+  imagePullSecrets:
+  - registry-credentials
+  logLevel: DEBUG
+  telemetryExportInterval: 30000
+  ultihashSecret:
+    key: license
+    name: ultihash
+  securityContext:
+    capabilities:
+      add:
+      - SYS_PTRACE
+  policies: |
+    {
+      "Version": "2012-10-17",
+      "Statement": {
+         "Sid":  "AllowAllForAnybody",
+         "Effect": "Allow",
+         "Action": "*",
+         "Principal": "*",
+         "Resource": "*"
+       }
+    }
+
+pysparkTest:
+  nodeSelector:
+    purpose: ci
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "ci"
+      effect: "NoSchedule"
+  extraEnv:
+    - name: BUCKET_NAME
+      value: $BUCKET_NAME
+
+etcd:
+  replicaCount: 1
+  nodeSelector:
+    purpose: ci
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "ci"
+      effect: "NoSchedule"
+  persistence:
+    size: 5Gi
+    storageClass: local-path
+
+entrypoint:
+  replicas: 1
+  nodeSelector:
+    purpose: ci
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "ci"
+      effect: "NoSchedule"
+  
+  ingress:
+    enabled: false
+
+deduplicator:
+  replicas: 1
+  storageClass: local-path
+  storageSize: 2Gi
+  nodeSelector:
+    purpose: ci
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "ci"
+      effect: "NoSchedule"
+
+database:
+  primary:
+    nodeSelector:
+      purpose: ci
+    tolerations:
+      - key: "purpose"
+        operator: "Equal"
+        value: "ci"
+        effect: "NoSchedule"
+
+    persistence:
+      storageClass: local-path
+      size: 2Gi
+
+databaseInit:
+  image: $DATABASE_INIT_IMAGE
+  nodeSelector:
+    purpose: ci
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "ci"
+      effect: "NoSchedule"
+
+coordinator:
+  nodeSelector:
+    purpose: ci
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "ci"
+      effect: "NoSchedule"
+  extraEnvs:
+    - name: OTEL_RESOURCE_ATTRIBUTES
+      value: service.name=coordinator
+
+storage:
+  groups:
+    - id: 0
+      type: ROUND_ROBIN
+      storages: 1
+      storageClass: local-path
+      size: 5Gi
+      mountPath: /var/lib/uh/storage
+      nodeSelector:
+        purpose: ci
+      tolerations:
+        - key: "purpose"
+          operator: "Equal"
+          value: "ci"
+          effect: "NoSchedule"
+
+collector:
+  config:
+    exporters:
+      otlphttp/uptrace:
+        endpoint: http://uptrace-backend.uptrace.svc.cluster.local:14318
+        headers:
+          uptrace-dsn: http://${env:UH_EXPORTER_TOKEN}@uptrace-backend.uptrace.svc.cluster.local:14318
+    receivers:
+      kubeletstats: null
+      prometheus: null
+    service:
+      pipelines:
+        metrics:
+          receivers:
+            - otlp
+  extraEnvs:
+    - name: UH_POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+    - name: UH_NODE_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.hostIP
+    - name: UH_EXPORTER_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: ultihash
+          key: token
+  nodeSelector:
+    purpose: ci
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "ci"
+      effect: "NoSchedule"
+  presets:
+    kubeletMetrics:
+      enabled: false
+
+exporter:
+  enabled: false

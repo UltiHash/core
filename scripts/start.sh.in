@@ -201,7 +201,6 @@ else
     pid_entrypoint=$!
 fi
 
-
 get_running_processes() {
     ps -eo pid,cmd | grep -E '^\s*[0-9]+\s+\S*uh-cluster' | sed 's/\S*uh-cluster/uh-cluster/'
 }
