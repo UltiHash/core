@@ -12,114 +12,59 @@
 
 namespace uh::cluster::ep::http {
 
-inline std::string get_bucket_id(const std::string& path) {
-    auto segments = split(path, '/');
-    return std::string(segments.size() >= 2 ? segments[1] : "");
-}
-
-inline std::string get_object_key(const std::string& path) {
-    auto segments = split(path, '/');
-    std::string key = segments.size() >= 3
-                          ? join(std::views::counted(segments.begin() + 2,
-                                                     segments.size() - 2),
-                                 "/")
-                          : "";
-    return std::string(key);
-}
-
 class request {
 public:
     request() = default;
 
-    request(raw_request rawreq, std::unique_ptr<body> body, ep::user::user user)
-        : m_rawreq(std::move(rawreq)),
-          m_body(std::move(body)),
-          m_authenticated_user(std::move(user)),
-          m_bucket_id(get_bucket_id(m_rawreq.path)),
-          m_object_key(get_object_key(m_rawreq.path)) {}
+    request(raw_request rawreq, std::unique_ptr<body> body,
+            ep::user::user user);
 
     request(const request&) = delete;
     request& operator=(const request&) = delete;
     request(request&&) noexcept = default;
     request& operator=(request&&) noexcept = default;
 
-    verb method() const { return m_rawreq.headers.method(); }
+    verb method() const;
 
-    std::string_view target() const { return m_rawreq.headers.target(); }
-    const std::string& path() const { return m_rawreq.path; }
+    std::string_view target() const;
+    const std::string& path() const;
 
-    const std::string& bucket() const { return m_bucket_id; }
-    const std::string& object_key() const { return m_object_key; }
+    const std::string& bucket() const;
+    const std::string& object_key() const;
 
-    std::string arn() const {
-        if (m_object_key.size() != 0)
-            return "arn:aws:s3:::" + m_bucket_id + "/" + m_object_key;
-        else
-            return "arn:aws:s3:::" + m_bucket_id;
-    }
+    std::string arn() const;
 
-    const raw_request& get_raw_request() const noexcept { return m_rawreq; }
+    const raw_request& get_raw_request() const noexcept;
 
-    coro<std::size_t> read_body(std::span<char> buffer) {
-        return m_body->read(buffer);
-    }
+    coro<std::size_t> read_body(std::span<char> buffer);
 
-    std::vector<boost::asio::const_buffer> get_raw_buffer() const noexcept {
-        return m_body->get_raw_buffer();
-    }
+    std::vector<boost::asio::const_buffer> get_raw_buffer() const noexcept;
 
-    boost::asio::ip::tcp::endpoint peer() const { return m_rawreq.peer; }
+    boost::asio::ip::tcp::endpoint peer() const;
 
     /** Payload that was read while reading the request headers.
      */
-    std::size_t content_length() const {
-        return std::stoul(m_rawreq.headers.at("Content-Length"));
-    }
+    std::size_t content_length() const;
 
     /**
      * Return value of query parameter specified by `name`. Return
      * `std::nullopt` if parameter is not set.
      */
-    std::optional<std::string> query(const std::string& name) const {
-        if (auto it = m_rawreq.params.find(name); it != m_rawreq.params.end()) {
-            return it->second;
-        }
-        return std::nullopt;
-    }
+    std::optional<std::string> query(const std::string& name) const;
 
-    const std::map<std::string, std::string>& query_map() const {
-        return m_rawreq.params;
-    }
+    const std::map<std::string, std::string>& query_map() const;
 
-    void set_query_params(const std::string& query) {
-        boost::urls::url url;
-        url.set_encoded_query(query);
+    void set_query_params(const std::string& query);
 
-        std::map<std::string, std::string> params;
-        for (const auto& param : url.params()) {
-            params[param.key] = param.value;
-        }
+    bool has_query() const;
 
-        m_rawreq.params = std::move(params);
-    }
+    std::optional<std::string> header(const std::string& name) const;
 
-    bool has_query() const { return !m_rawreq.params.empty(); }
+    bool keep_alive() const;
 
-    std::optional<std::string> header(const std::string& name) const {
-        if (auto it = m_rawreq.headers.find(name);
-            it != m_rawreq.headers.end()) {
-            return it->value();
-        }
-        return {};
-    }
+    const user::user& authenticated_user() const;
 
-    bool keep_alive() const { return m_rawreq.headers.keep_alive(); }
-
-    const user::user& authenticated_user() const {
-        return m_authenticated_user;
-    }
-
-    const auto& base() const { return m_rawreq.headers; }
+    const auto& base() const;
 
 private:
     raw_request m_rawreq;
@@ -178,16 +123,6 @@ inline std::optional<bool> query<bool>(const request& req,
     return to_bool(*value);
 }
 
-inline std::ostream& operator<<(std::ostream& out, const request& req) {
-    out << req.base().method_string() << " " << req.base().target() << " ";
-
-    std::string delim;
-    for (const auto& field : req.base()) {
-        out << delim << field.name_string() << ": " << field.value();
-        delim = ", ";
-    }
-
-    return out;
-}
+std::ostream& operator<<(std::ostream& out, const request& req);
 
 } // namespace uh::cluster::ep::http
