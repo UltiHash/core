@@ -9,16 +9,36 @@
 namespace uh::cluster::deduplicator {
 
 class handler : public protocol_handler {
-
 public:
-    explicit handler(local_deduplicator& local_dedupe);
+    explicit handler(boost::asio::ip::tcp::socket&& socket,
+                     local_deduplicator& dedup)
+        : m_messenger(std::move(socket), messenger::origin::UPSTREAM),
+          m_dedup{dedup} {
+        LOG_INFO() << "session started: " << m_messenger.peer();
+    }
 
-    coro<void> handle(boost::asio::ip::tcp::socket s) override;
+    coro<void> run() override;
 
 private:
-    coro<void> handle_dedupe(const messenger::header& hdr, messenger& m);
+    messenger m_messenger;
+    local_deduplicator& m_dedup;
 
-    local_deduplicator& m_local_dedupe;
+    coro<void> handle_request(const messenger::header& hdr);
+};
+
+class handler_factory : public protocol_handler_factory {
+public:
+    explicit handler_factory(local_deduplicator& dedup)
+        : m_dedup(dedup) {}
+
+    std::unique_ptr<protocol_handler>
+    create_handler(boost::asio::ip::tcp::socket&& s) {
+        return std::make_unique<handler>(std::move(s), m_dedup);
+    }
+
+private:
+    friend class handler;
+    local_deduplicator& m_dedup;
 };
 
 } // namespace uh::cluster::deduplicator

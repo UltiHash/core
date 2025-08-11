@@ -1,6 +1,7 @@
 #pragma once
 
 #include <boost/asio.hpp>
+#include <common/coroutines/coro_util.h>
 #include <common/types/common_types.h>
 #include <entrypoint/directory.h>
 #include <storage/global/data_view.h>
@@ -20,6 +21,7 @@ private:
 
     directory& m_dir;
     storage::global::global_data_view& m_gdv;
+    coro_task m_task;
 };
 
 } // namespace uh::cluster::ep

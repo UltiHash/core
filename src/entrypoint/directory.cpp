@@ -8,28 +8,30 @@ namespace uh::cluster {
 
 namespace {
 
-const std::string GET_OBJECT_FIELD_SELECTOR = "id, name, size, last_modified, etag, mime, version, status";
+const std::string GET_OBJECT_FIELD_SELECTOR =
+    "id, name, size, last_modified, etag, mime, version, status";
 
 object row_to_object(db::row& r) {
-    return {
-        .id = *r.size_type(0),
-        .name = *r.string(1),
-        .size = *r.size_type(2),
-        .last_modified = *r.date(3),
-        .etag = r.string(4),
-        .mime = r.string(5),
-        .version = r.string(6),
-        .state = ep::to_object_state(*r.string(7))
-    };
+    return {.id = *r.size_type(0),
+            .name = *r.string(1),
+            .size = *r.size_type(2),
+            .last_modified = *r.date(3),
+            .etag = r.string(4),
+            .mime = r.string(5),
+            .version = r.string(6),
+            .state = ep::to_object_state(*r.string(7))};
 }
 
-}
+} // namespace
 
 std::string to_string(bucket_versioning versioning) {
     switch (versioning) {
-        case bucket_versioning::disabled: return "Disabled";
-        case bucket_versioning::enabled: return "Enabled";
-        case bucket_versioning::suspended: return "Suspended";
+    case bucket_versioning::disabled:
+        return "Disabled";
+    case bucket_versioning::enabled:
+        return "Enabled";
+    case bucket_versioning::suspended:
+        return "Suspended";
     }
 
     throw std::runtime_error("unsupported versioning type");
@@ -49,7 +51,8 @@ bucket_versioning to_versioning(std::string s) {
     throw std::runtime_error("unsupported versioning type: " + s);
 }
 
-coro<std::optional<std::string>> directory::put_object(const std::string& bucket, const object& obj) {
+coro<std::optional<std::string>>
+directory::put_object(const std::string& bucket, const object& obj) {
     if (!obj.addr) {
         throw std::runtime_error("put_object requires address");
     }
@@ -59,9 +62,9 @@ coro<std::optional<std::string>> directory::put_object(const std::string& bucket
 
     auto handle = co_await m_db.get();
     try {
-        auto row = co_await handle->execv("SELECT version FROM uh_put_object($1, $2, $3, $4, $5, $6)",
-                               bucket, obj.name, span, obj.addr->data_size(),
-                               obj.etag, obj.mime);
+        auto row = co_await handle->execv(
+            "SELECT version FROM uh_put_object($1, $2, $3, $4, $5, $6)", bucket,
+            obj.name, span, obj.addr->data_size(), obj.etag, obj.mime);
         co_return row->string(0);
     } catch (const std::exception& e) {
         LOG_WARN() << "cannot put object: " << e.what();
@@ -71,19 +74,22 @@ coro<std::optional<std::string>> directory::put_object(const std::string& bucket
 }
 
 coro<directory::object_lock>
-directory::get_object(const std::string& bucket,
-                      const std::string& object_id,
+directory::get_object(const std::string& bucket, const std::string& object_id,
                       std::optional<std::string> version) {
     auto handle = co_await m_db.get();
     std::optional<db::row> row;
 
     if (version) {
-        row = co_await handle->execb("SELECT address::BYTEA FROM uh_get_object_by_version($1, $2, $3)", bucket, object_id, *version);
+        row = co_await handle->execb(
+            "SELECT address::BYTEA FROM uh_get_object_by_version($1, $2, $3)",
+            bucket, object_id, *version);
         if (!row) {
             co_return object_lock{};
         }
     } else {
-        row = co_await handle->execb("SELECT address::BYTEA FROM uh_get_object($1, $2)", bucket, object_id);
+        row = co_await handle->execb(
+            "SELECT address::BYTEA FROM uh_get_object($1, $2)", bucket,
+            object_id);
     }
 
     if (!row) {
@@ -101,12 +107,15 @@ directory::get_object(const std::string& bucket,
     std::optional<db::row> metadata;
 
     if (version) {
-        metadata = co_await handle->execv("SELECT " + GET_OBJECT_FIELD_SELECTOR +
-                               " FROM uh_get_object_by_version($1, $2, $3)",
-                               bucket, object_id, *version);
+        metadata = co_await handle->execv(
+            "SELECT " + GET_OBJECT_FIELD_SELECTOR +
+                " FROM uh_get_object_by_version($1, $2, $3)",
+            bucket, object_id, *version);
     } else {
-        metadata = co_await handle->execv("SELECT " + GET_OBJECT_FIELD_SELECTOR +
-                               " FROM uh_get_object($1, $2)", bucket, object_id);
+        metadata =
+            co_await handle->execv("SELECT " + GET_OBJECT_FIELD_SELECTOR +
+                                       " FROM uh_get_object($1, $2)",
+                                   bucket, object_id);
     }
 
     auto obj = row_to_object(*metadata);
@@ -120,7 +129,7 @@ directory::get_object(const std::string& bucket,
 
     boost::asio::co_spawn(
         executor,
-        [f = std::move(f), this, id=obj.id]() mutable -> coro<void> {
+        [f = std::move(f), this, id = obj.id]() mutable -> coro<void> {
             co_await f.get();
             auto h = co_await m_db.get();
             co_await h->execv("CALL uh_dec_reference($1)", id);
@@ -140,12 +149,14 @@ coro<object> directory::head_object(const std::string& bucket,
 
     if (version) {
         metadata = co_await handle->execv(
-            "SELECT " + GET_OBJECT_FIELD_SELECTOR + " FROM uh_get_object_by_version($1, $2, $3)",
+            "SELECT " + GET_OBJECT_FIELD_SELECTOR +
+                " FROM uh_get_object_by_version($1, $2, $3)",
             bucket, object_id, *version);
     } else {
-        metadata = co_await handle->execv(
-            "SELECT " + GET_OBJECT_FIELD_SELECTOR + " FROM uh_get_object($1, $2)",
-            bucket, object_id);
+        metadata =
+            co_await handle->execv("SELECT " + GET_OBJECT_FIELD_SELECTOR +
+                                       " FROM uh_get_object($1, $2)",
+                                   bucket, object_id);
     }
 
     if (!metadata) {
@@ -199,35 +210,40 @@ coro<void> directory::delete_bucket(const std::string& bucket) {
     co_await handle->execv("CALL uh_delete_bucket($1)", bucket);
 }
 
-coro<directory::delete_result> directory::delete_object(const std::string& bucket,
-                                    const std::string& object_id,
-                                    std::optional<std::string> version) {
+coro<directory::delete_result>
+directory::delete_object(const std::string& bucket,
+                         const std::string& object_id,
+                         std::optional<std::string> version) {
 
     try {
         auto handle = co_await m_db.get();
         std::optional<db::row> row;
         if (version) {
             if (*version == "null") {
-                row = co_await handle->execv("SELECT delete_marker, version FROM uh_delete_object_null_version($1, $2)",
-                        bucket, object_id);
+                row = co_await handle->execv(
+                    "SELECT delete_marker, version FROM "
+                    "uh_delete_object_null_version($1, $2)",
+                    bucket, object_id);
             } else {
-                row = co_await handle->execv("SELECT delete_marker, version FROM uh_delete_object_version($1, $2, $3)", bucket,
-                                    object_id, *version);
+                row = co_await handle->execv(
+                    "SELECT delete_marker, version FROM "
+                    "uh_delete_object_version($1, $2, $3)",
+                    bucket, object_id, *version);
             }
         } else {
-            row = co_await handle->execv("SELECT delete_marker, version FROM uh_delete_object($1, $2)", bucket,
-                                object_id);
+            row = co_await handle->execv(
+                "SELECT delete_marker, version FROM uh_delete_object($1, $2)",
+                bucket, object_id);
         }
 
-        co_return directory::delete_result {
+        co_return directory::delete_result{
             row ? row->string(0).value_or("f") == "t" : false,
-            row ? row->string(1) : std::nullopt
-        };
+            row ? row->string(1) : std::nullopt};
     } catch (const std::exception& e) {
         LOG_WARN() << "error deleting object: " << e.what();
     }
 
-    co_return directory::delete_result { false, std::nullopt };
+    co_return directory::delete_result{false, std::nullopt};
 }
 
 coro<std::vector<std::string>> directory::list_buckets() {
@@ -290,10 +306,12 @@ coro<void> directory::set_bucket_cors(const std::string& bucket,
     co_await handle->execv("CALL uh_bucket_set_cors($1, $2)", bucket, cors);
 }
 
-coro<bucket_versioning> directory::get_bucket_versioning(const std::string& bucket) {
+coro<bucket_versioning>
+directory::get_bucket_versioning(const std::string& bucket) {
     try {
         auto handle = co_await m_db.get();
-        auto row = co_await handle->execv("SELECT status FROM uh_bucket_versioning($1)", bucket);
+        auto row = co_await handle->execv(
+            "SELECT status FROM uh_bucket_versioning($1)", bucket);
 
         co_return to_versioning(*row->string(0));
     } catch (const std::exception& e) {
@@ -303,11 +321,12 @@ coro<bucket_versioning> directory::get_bucket_versioning(const std::string& buck
 }
 
 coro<void> directory::set_bucket_versioning(const std::string& bucket,
-        bucket_versioning versioning) {
+                                            bucket_versioning versioning) {
     co_await bucket_exists(bucket);
 
     auto handle = co_await m_db.get();
-    co_await handle->execv("CALL uh_bucket_set_versioning($1, $2)", bucket, to_string(versioning));
+    co_await handle->execv("CALL uh_bucket_set_versioning($1, $2)", bucket,
+                           to_string(versioning));
 }
 
 coro<std::vector<object>>
@@ -319,9 +338,10 @@ directory::list_objects(const std::string& bucket,
     std::vector<object> rv;
 
     auto handle = co_await m_db.get();
-    auto row = co_await handle->execv(
-        "SELECT " + GET_OBJECT_FIELD_SELECTOR + " FROM uh_list_objects($1, $2, $3)",
-        bucket, prefix.value_or(""), lower_bound.value_or(""));
+    auto row = co_await handle->execv("SELECT " + GET_OBJECT_FIELD_SELECTOR +
+                                          " FROM uh_list_objects($1, $2, $3)",
+                                      bucket, prefix.value_or(""),
+                                      lower_bound.value_or(""));
 
     for (; row; row = co_await handle->next()) {
         rv.emplace_back(row_to_object(*row));
@@ -330,19 +350,18 @@ directory::list_objects(const std::string& bucket,
     co_return rv;
 }
 
-coro<std::vector<object>>
-directory::list_object_versions(const std::string& bucket,
-                                const std::optional<std::string>& prefix,
-                                const std::optional<std::string>& key_marker,
-                                const std::optional<std::string>& version_marker,
-                                std::size_t limit) {
+coro<std::vector<object>> directory::list_object_versions(
+    const std::string& bucket, const std::optional<std::string>& prefix,
+    const std::optional<std::string>& key_marker,
+    const std::optional<std::string>& version_marker, std::size_t limit) {
     co_await bucket_exists(bucket);
 
     std::vector<object> rv;
 
     auto handle = co_await m_db.get();
     auto row = co_await handle->execv(
-        "SELECT " + GET_OBJECT_FIELD_SELECTOR + " FROM uh_list_object_versions($1, $2, $3, $4, $5)",
+        "SELECT " + GET_OBJECT_FIELD_SELECTOR +
+            " FROM uh_list_object_versions($1, $2, $3, $4, $5)",
         bucket, prefix, key_marker, version_marker, limit);
 
     for (; row; row = co_await handle->next()) {
@@ -401,9 +420,9 @@ void directory::validate_bucket_name(const std::string& bucket_name) {
     }
 }
 
-coro<std::optional<std::string>> safe_put_object(directory& dir,
-                           storage::global::global_data_view& gdv,
-                           const std::string& bucket, const object& obj) {
+coro<std::optional<std::string>>
+safe_put_object(directory& dir, storage::global::global_data_view& gdv,
+                const std::string& bucket, const object& obj) {
     std::optional<std::string> rv;
     std::optional<std::exception_ptr> error;
     try {

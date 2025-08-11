@@ -1,40 +1,48 @@
-#include "common/telemetry/log.h"
-#include "common/telemetry/trace/trace.h"
-#include "common/utils/signal_handler.h"
-#include "config/configuration.h"
-#include "coordinator/service.h"
-#include "deduplicator/service.h"
-#include "entrypoint/service.h"
-#include "storage/service.h"
+#include <common/telemetry/log.h>
+#include <common/telemetry/trace/trace.h>
+#include <common/utils/service_runner.h>
+#include <common/utils/strings.h>
+#include <config/configuration.h>
+
+#include <coordinator/service.h>
+#include <deduplicator/service.h>
+#include <entrypoint/service.h>
+#include <storage/service.h>
 
 using namespace uh;
 using namespace uh::cluster;
 
-void execute_role(const config& c) {
+static std::any make_service(boost::asio::io_context& ioc, const config& c) {
+    switch (c.role) {
+    case STORAGE_SERVICE:
+        return std::make_shared<storage::service>( //
+            ioc, c.service, c.storage);
+    case DEDUPLICATOR_SERVICE:
+        return std::make_shared<deduplicator::service>( //
+            ioc, c.service, c.deduplicator);
+    case ENTRYPOINT_SERVICE:
+        return std::make_shared<ep::service>( //
+            ioc, c.service, c.entrypoint);
+    case COORDINATOR_SERVICE:
+        return std::make_shared<coordinator::service>( //
+            ioc, c.service, c.coordinator);
+    default:
+        throw std::runtime_error("unknown service role: " + serialize(c.role));
+    }
+}
 
-    signal_handler sh;
-
-    auto start_service = [&sh](auto&& service) -> void {
-        sh.add_callback([&service]() { service.stop(); });
-        service.run();
-    };
-
-    try {
-        switch (c.role) {
-        case STORAGE_SERVICE:
-            return start_service(storage::service(c.service, c.storage));
-        case DEDUPLICATOR_SERVICE:
-            return start_service(
-                deduplicator::service(c.service, c.deduplicator));
-        case ENTRYPOINT_SERVICE:
-            return start_service(ep::service(c.service, c.entrypoint));
-        case COORDINATOR_SERVICE:
-            return start_service(
-                coordinator::service(c.service, c.coordinator));
-        }
-    } catch (const std::exception& e) {
-        LOG_ERROR() << "Error in executing role: " << e.what();
-        sh.stop();
+static std::size_t get_num_threads(const config& c) {
+    switch (c.role) {
+    case STORAGE_SERVICE:
+        return c.storage.num_threads;
+    case DEDUPLICATOR_SERVICE:
+        return c.deduplicator.num_threads;
+    case ENTRYPOINT_SERVICE:
+        return c.entrypoint.num_threads;
+    case COORDINATOR_SERVICE:
+        return c.coordinator.num_threads;
+    default:
+        throw std::runtime_error("unknown service role: " + serialize(c.role));
     }
 }
 
@@ -62,8 +70,12 @@ int main(int argc, char** argv) {
             initialize_trace(PROJECT_NAME, PROJECT_VERSION,
                              config->service.telemetry_url);
         }
-
-        execute_role(*config);
+        auto runner = service_runner(
+            [&](boost::asio::io_context& ioc) {
+                return make_service(ioc, *config);
+            },
+            get_num_threads(*config));
+        runner.run();
     } catch (const std::exception& e) {
         std::cerr << "Failure during startup: " << e.what() << "\n";
     }
