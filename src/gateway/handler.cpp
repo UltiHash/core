@@ -3,7 +3,7 @@
 #include <common/utils/downstream_exception.h>
 #include <common/utils/random.h>
 #include <entrypoint/http/command_exception.h>
-#include <proxy/forward.h>
+#include <gateway/forward.h>
 
 #include <format>
 
