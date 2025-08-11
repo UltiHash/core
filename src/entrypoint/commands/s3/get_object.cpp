@@ -65,6 +65,9 @@ public:
         co_return buffer_size;
     }
 
+    std::vector<boost::asio::const_buffer> get_raw_buffer() const override {
+        throw std::runtime_error("not implemented");
+    }
 private:
     void report_stats() {
         const std::chrono::duration<double> duration = m_timer.passed();

@@ -54,9 +54,10 @@ coro<ep::http::response> forward_command::handle(ep::http::request& r) {
     LOG_INFO() << r.peer() << ": done reading body";
     beast::http::response_parser<beast::http::empty_body> pr;
     pr.body_limit((std::numeric_limits<std::uint64_t>::max)());
-    beast::flat_buffer b;
+    std::vector<char> b;
+    auto buf = boost::asio::dynamic_buffer(b);
 
-    co_await beast::http::async_read_header(m_to, b, pr);
+    co_await beast::http::async_read_header(m_to, buf, pr);
 
     auto m = pr.release();
     std::size_t len = 0;
