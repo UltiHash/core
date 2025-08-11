@@ -12,7 +12,8 @@ dedupe_array::dedupe_array(boost::asio::io_context& ioc, etcd_manager& etcd,
           {m_dedupe_load_balancer}) {}
 
 coro<dedupe_response> dedupe_array::deduplicate(std::string_view data) {
-    return m_dedupe_load_balancer.get().second->deduplicate(data);
+    auto [dedup_id, client] = m_dedupe_load_balancer.get();
+    co_return co_await client->deduplicate(data);
 }
 
 } // namespace uh::cluster

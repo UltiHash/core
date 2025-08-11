@@ -1,7 +1,7 @@
 #include "utils.h"
 
-#include "common/telemetry/log.h"
 #include "namespace.h"
+#include <common/telemetry/log.h>
 #include <format>
 #include <stdexcept>
 
@@ -36,7 +36,8 @@ std::shared_ptr<etcd::SyncClient> create_client(const etcd_config& cfg) {
             }
 
             if (!client->head().is_ok()) {
-                LOG_DEBUG() << "cannot connect to etcd. trying to reconnect";
+                LOG_DEBUG() << "cannot connect to etcd. trying to reconnect: "
+                            << client->head().error_code();
                 std::this_thread::sleep_for(1s);
                 continue;
             }
