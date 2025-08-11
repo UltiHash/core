@@ -24,9 +24,9 @@ static std::any make_service(boost::asio::io_context& ioc, const config& c) {
     case ENTRYPOINT_SERVICE:
         return std::make_shared<ep::service>( //
             ioc, c.service, c.entrypoint);
-    case PROXY_SERVICE:
-        return std::make_shared<proxy::service>( //
-            ioc, c.service, c.proxy);
+    case GATEWAY_SERVICE:
+        return std::make_shared<gateway::service>( //
+            ioc, c.service, c.gateway);
     case COORDINATOR_SERVICE:
         return std::make_shared<coordinator::service>( //
             ioc, c.service, c.coordinator);
@@ -43,8 +43,8 @@ static std::size_t get_num_threads(const config& c) {
         return c.deduplicator.num_threads;
     case ENTRYPOINT_SERVICE:
         return c.entrypoint.num_threads;
-    case PROXY_SERVICE:
-        return c.proxy.num_threads;
+    case GATEWAY_SERVICE:
+        return c.gateway.num_threads;
     case COORDINATOR_SERVICE:
         return c.coordinator.num_threads;
     default:

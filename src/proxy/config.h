@@ -7,7 +7,7 @@
 
 namespace uh::cluster {
 
-struct proxy_config {
+struct gateway_config {
     std::size_t num_threads = 4;
 
     server_config server = {

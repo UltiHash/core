@@ -8,7 +8,7 @@
 
 using namespace uh::cluster::ep;
 
-namespace uh::cluster::proxy {
+namespace uh::cluster::gateway {
 
 class handler_factory;
 
@@ -28,7 +28,6 @@ private:
 
     coro<void> handle_request(boost::asio::ip::tcp::socket& endpoint,
                               const std::string& id);
-    coro<void> proxy_raw_request(http::raw_request& rawreq);
 };
 
 class handler_factory : public protocol_handler_factory {
@@ -50,4 +49,4 @@ private:
     std::unique_ptr<policy::module> m_policy;
     std::unique_ptr<cors::module> m_cors;
 };
-} // namespace uh::cluster::proxy
+} // namespace uh::cluster::gateway

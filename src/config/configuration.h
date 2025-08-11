@@ -21,7 +21,7 @@ struct config {
     uh::log::config log;
 
     entrypoint_config entrypoint;
-    proxy_config proxy;
+    gateway_config gateway;
     storage_config storage;
     deduplicator_config deduplicator;
     coordinator_config coordinator;

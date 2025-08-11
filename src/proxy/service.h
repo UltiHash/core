@@ -18,16 +18,16 @@
 
 using namespace uh::cluster::ep;
 
-namespace uh::cluster::proxy {
+namespace uh::cluster::gateway {
 
 class service {
 public:
     service(boost::asio::io_context& ioc, const service_config& sc,
-            proxy_config config);
+            gateway_config config);
     ~service();
 
 private:
-    proxy_config m_config;
+    gateway_config m_config;
     etcd_manager m_etcd;
     std::size_t m_service_id;
 
@@ -47,4 +47,4 @@ private:
     coro_task m_task;
 };
 
-} // namespace uh::cluster::proxy
+} // namespace uh::cluster::gateway
