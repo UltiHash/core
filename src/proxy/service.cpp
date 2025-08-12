@@ -32,9 +32,9 @@ std::unique_ptr<boost::beast::tcp_stream> socket_factory(
 service::service(boost::asio::io_context& ioc, const config& c)
     : m_ioc(ioc),
       m_server(c.server, std::make_unique<handler>(
-        std::make_unique<command_factory>(),
         std::make_unique<request_factory>(),
-        [this, c]{ return socket_factory(m_ioc, c.downstream_host, c.downstream_port); }),
+        [this, c]{ return socket_factory(m_ioc, c.downstream_host, c.downstream_port); },
+        c.buffer_size),
               m_ioc) {
 }
 

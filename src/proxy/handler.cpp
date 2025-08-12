@@ -9,12 +9,12 @@ using namespace uh::cluster::proxy::http;
 
 namespace uh::cluster::proxy {
 
-handler::handler(std::unique_ptr<command_factory> comm_factory,
-                 std::unique_ptr<request_factory> factory,
-                 std::function<std::unique_ptr<boost::beast::tcp_stream>()> sf)
-    : m_command_factory(std::move(comm_factory)),
-      m_factory(std::move(factory)),
-      m_sf(std::move(sf)) {}
+handler::handler(std::unique_ptr<request_factory> factory,
+                 std::function<std::unique_ptr<boost::beast::tcp_stream>()> sf,
+                 std::size_t buffer_size)
+    : m_factory(std::move(factory)),
+      m_sf(std::move(sf)),
+      m_buffer_size(buffer_size) {}
 
 coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     auto downstream = m_sf();
@@ -86,7 +86,7 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
     span->set_attribute("request-bucket", req->bucket());
     span->set_attribute("request-key", req->object_key());
 
-    auto cmd = std::make_unique<forward_command>(ds);
+    auto cmd = std::make_unique<forward_command>(ds, m_buffer_size);
 
     span->set_name(cmd->action_id());
     span->set_attribute("request-id", id);
