@@ -7,46 +7,31 @@
 
 namespace uh::cluster::storage {
 
-class handler_factory;
-
 class handler : public protocol_handler {
 public:
-    explicit handler(boost::asio::ip::tcp::socket&& socket,
-                     local_storage& storage)
-        : m_messenger(std::move(socket), messenger::origin::UPSTREAM),
-          m_storage{storage} {
-        LOG_INFO() << "session started: " << m_messenger.peer();
-    }
+    explicit handler(local_storage& storage);
 
-    coro<void> run() override;
+    coro<void> handle(boost::asio::ip::tcp::socket s) override;
 
 private:
-    messenger m_messenger;
-    local_storage& m_storage;
+    coro<void> handle_iteration(const messenger::header& hdr, messenger& m);
 
-    coro<void> handle_request(const messenger::header& hdr);
-    coro<void> handle_write(const messenger::header& h);
-    coro<void> handle_read(const messenger::header& h);
-    coro<void> handle_read_address(const messenger::header& h);
-    coro<void> handle_link(const messenger::header& h);
-    coro<void> handle_unlink(const messenger::header& h);
-    coro<void> handle_get_refcounts(const messenger::header& h);
-    coro<void> handle_get_used(const messenger::header&);
-    coro<void> handle_allocate(const messenger::header&);
-};
+    coro<void> handle_write(messenger& m, const messenger::header& h);
 
-class handler_factory : public protocol_handler_factory {
-public:
-    explicit handler_factory(local_storage& storage)
-        : m_storage(storage) {}
+    coro<void> handle_read(messenger& m, const messenger::header& h);
 
-    std::unique_ptr<protocol_handler>
-    create_handler(boost::asio::ip::tcp::socket&& s) {
-        return std::make_unique<handler>(std::move(s), m_storage);
-    }
+    coro<void> handle_read_address(messenger& m, const messenger::header& h);
 
-private:
-    friend class handler;
+    coro<void> handle_link(messenger& m, const messenger::header& h);
+
+    coro<void> handle_unlink(messenger& m, const messenger::header& h);
+
+    coro<void> handle_get_refcounts(messenger& m, const messenger::header& h);
+
+    coro<void> handle_get_used(messenger& m, const messenger::header&);
+
+    coro<void> handle_allocate(messenger& m, const messenger::header&);
+
     local_storage& m_storage;
 };
 
