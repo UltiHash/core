@@ -19,6 +19,8 @@ handler::handler(command_factory&& comm_factory, request_factory&& factory,
 coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     std::optional<std::string> failed_request_id{std::nullopt};
 
+    // TODO create tcp stream (socket + buffer)
+
     auto state = co_await boost::asio::this_coro::cancellation_state;
     while (state.cancelled() == boost::asio::cancellation_type::none) {
         // Note: lifetime of response must not exceed lifetime of request.
@@ -32,8 +34,10 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 metric<success>::increase(1);
 
             } catch (const boost::system::system_error& e) {
+                LOG_ERROR() << s.remote_endpoint() << ": error: " << e.what();
                 throw;
             } catch (const downstream_exception& e) {
+                LOG_WARN() << s.remote_endpoint() << ": error: " << e.what();
                 if (e.code() == boost::asio::error::operation_aborted) {
                     throw e.original_exception();
                 } else if (e.code() == boost::beast::error::timeout) {
@@ -43,10 +47,13 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                         command_exception(error::internal_network_error));
                 }
             } catch (const command_exception& e) {
+                LOG_WARN() << s.remote_endpoint() << ": error: " << e.what();
                 resp = make_response(e);
             } catch (const error_exception& e) {
+                LOG_WARN() << s.remote_endpoint() << ": error: " << e.what();
                 resp = make_response(command_exception(*e.error()));
             } catch (const std::exception& e) {
+                LOG_WARN() << s.remote_endpoint() << ": error: " << e.what();
                 resp = make_response(command_exception());
             }
 

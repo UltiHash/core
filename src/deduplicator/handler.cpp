@@ -25,7 +25,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
             try {
                 std::tie(hdr, context) = co_await m.recv_header_with_context();
-                LOG_DEBUG() << remote.str() << " received "
+                LOG_INFO() << remote.str() << " received "
                             << magic_enum::enum_name(hdr.type);
 
                 boost::asio::context::set_pointer(context, "peer", &peer);

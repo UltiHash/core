@@ -1,5 +1,6 @@
 #include "chunked_body.h"
 
+#include <common/telemetry/log.h>
 #include <algorithm>
 #include <charconv>
 
@@ -17,6 +18,8 @@ chunked_body::chunked_body(boost::asio::ip::tcp::socket& sock, raw_request& req,
     asio::buffer_copy(asio::buffer(m_buffer),
                       asio::buffer(req.get_remained_buffer().data(),
                                    req.get_remained_buffer().size()));
+
+    LOG_DEBUG() << sock.remote_endpoint() << ": initialize chunked-body with " << m_buffer.size() << " bytes";
 }
 
 std::optional<std::size_t> chunked_body::length() const { return {}; }
@@ -25,6 +28,9 @@ coro<std::size_t> chunked_body::read(std::span<char> dest) {
     if (m_end) {
         co_return 0;
     }
+
+    LOG_DEBUG() << m_socket.remote_endpoint() << ": reading up to " << dest.size() << " bytes of data, read position: " << m_read_position << ", buffer size: " << m_buffer.size()
+        << ", chunk bytes leftovers: " << m_chunk_bytes_left;
 
     m_buffer.erase(m_buffer.begin(), m_buffer.begin() + m_read_position);
     m_read_position = 0;
@@ -94,7 +100,6 @@ coro<void> chunked_body::read_nl() {
     }
 
     if (offset < sizeof(nl)) {
-        // When does this happen?
         co_await asio::async_read(
             m_socket, asio::buffer(&nl[offset], sizeof(nl) - offset));
     }
@@ -112,10 +117,12 @@ std::size_t chunked_body::find_nl() const {
         return m_read_position + pos + 2;
     }
 
+    LOG_DEBUG() << m_socket.remote_endpoint() << ": could not find nl in buffer of size: " << m_buffer.size() << ", starting read at " << m_read_position << ", buffer: " << sv.substr(0, 32);
     throw std::runtime_error("newline required");
 }
 
 coro<chunked_body::chunk_header> chunked_body::read_chunk_header() {
+    LOG_DEBUG() << m_socket.remote_endpoint() << ": reading chunk header: starting read at " << m_read_position;
     // TODO: use return value of async_read_until rather than using find_nl()
     co_await asio::async_read_until(m_socket, asio::dynamic_buffer(m_buffer),
                                     "\r\n");
@@ -127,6 +134,7 @@ coro<chunked_body::chunk_header> chunked_body::read_chunk_header() {
     auto [next, ec] = std::from_chars(&m_buffer[m_read_position],
                                       &m_buffer[pos], hdr.size, 16);
     if (ec != std::errc()) {
+        LOG_DEBUG() << m_socket.remote_endpoint() << ": size=" << m_buffer.size() << ", read_position=" << m_read_position;
         throw std::runtime_error("from_chars failed: " +
                                  make_error_condition(ec).message());
     }
