@@ -186,6 +186,10 @@ export OTEL_RESOURCE_ATTRIBUTES="service.name=entrypoint"
 $UH_CLUSTER entrypoint &> $log_dir/entrypoint.log &
 pid_entrypoint=$!
 
+export OTEL_RESOURCE_ATTRIBUTES="service.name=proxy"
+$UH_CLUSTER --downstream-port 8080 --downstream-host localhost proxy &> $log_dir/proxy.log &
+pid_proxy=$!
+
 get_running_processes() {
     ps -eo pid,cmd | grep -E '^\s*[0-9]+\s+\S*uh-cluster' | sed 's/\S*uh-cluster/uh-cluster/'
 }
@@ -298,6 +302,9 @@ kill_in_order=false
 
 if $kill_in_order; then
     echo "Killing all spawned processes in order..."
+    kill "$pid_proxy"
+    wait "$pid_proxy"
+
     kill "$pid_entrypoint"
     wait "$pid_entrypoint"
 
