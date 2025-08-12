@@ -71,6 +71,8 @@ public:
 private:
     void create_session(std::string name, boost::asio::io_context& ioc,
                         coro<void> handle) {
+        LOG_INFO() << name << ": new connection";
+
         std::lock_guard<std::mutex> lock(m_sessions_mutex);
 
         auto [it, inserted] =
