@@ -15,7 +15,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.PAT }}
-          submodules: recursive
       
       - name: Install AWS CLI
         uses: unfor19/install-aws-cli-action@v1
@@ -75,7 +74,7 @@ jobs:
         run: |
           helm repo add bitnami https://charts.bitnami.com/bitnami
           helm repo update bitnami
-          helm install minio bitnami/minio -n ${{ env.ENVIRONMENT_NAME }} --values testing/performance/large/minio-helm-values.yaml --version 14.6.22 --wait --timeout 60m
+          helm install minio bitnami/minio -n ${{ env.ENVIRONMENT_NAME }} --values testing/performance/large/minio-helm-values.yaml --wait --timeout 30m
 
       - name: Execute the performance test against MinIO
         run: |
