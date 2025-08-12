@@ -19,6 +19,10 @@ coro<std::size_t> mock_body::read(std::span<char>) { co_return 0ull; }
 
 std::optional<std::size_t> mock_body::length() const { return {}; }
 
+std::vector<boost::asio::const_buffer> mock_body::get_raw_buffer() const {
+    throw std::runtime_error("not implemented");
+}
+
 ep::http::request make_request(const std::string& code,
                                const std::string& principal) {
     boost::beast::http::request_parser<boost::beast::http::empty_body> parser;
@@ -26,7 +30,7 @@ ep::http::request make_request(const std::string& code,
 
     parser.put(boost::asio::buffer(code), ec);
 
-    return request(raw_request::from_string(parser.release(), {}, {}),
+    return request(raw_request::from_string(parser.release(), {}, {}, {}),
                    std::make_unique<mock_body>(), user{.arn = principal});
 }
 

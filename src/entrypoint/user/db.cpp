@@ -18,7 +18,7 @@ static const std::string SALT_CHARACTERS =
 }
 
 db::db(boost::asio::io_context& ioc, const uh::cluster::db::config& cfg)
-    : m_db(ioc, connection_factory(ioc, cfg, cfg.users), cfg.users.count),
+    : m_db(connection_factory(ioc, cfg, cfg.users), cfg.users.count),
       m_crypt({}) {}
 
 coro<user> db::find_by_key(std::string key) {

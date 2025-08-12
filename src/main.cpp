@@ -8,6 +8,7 @@
 #include <deduplicator/service.h>
 #include <entrypoint/service.h>
 #include <storage/service.h>
+#include <proxy/service.h>
 
 using namespace uh;
 using namespace uh::cluster;
@@ -26,6 +27,8 @@ static std::any make_service(boost::asio::io_context& ioc, const config& c) {
     case COORDINATOR_SERVICE:
         return std::make_shared<coordinator::service>( //
             ioc, c.service, c.coordinator);
+    case PROXY_SERVICE:
+        return std::make_shared<proxy::service>(ioc, c.proxy);
     default:
         throw std::runtime_error("unknown service role: " + serialize(c.role));
     }
@@ -41,6 +44,8 @@ static std::size_t get_num_threads(const config& c) {
         return c.entrypoint.num_threads;
     case COORDINATOR_SERVICE:
         return c.coordinator.num_threads;
+    case PROXY_SERVICE:
+        return c.proxy.num_threads;
     default:
         throw std::runtime_error("unknown service role: " + serialize(c.role));
     }

@@ -10,7 +10,7 @@ namespace uh::cluster {
 
 multipart_state::multipart_state(boost::asio::io_context& ioc,
                                  const db::config& cfg)
-    : m_db(ioc, connection_factory(ioc, cfg, cfg.multipart),
+    : m_db(connection_factory(ioc, cfg, cfg.multipart),
            cfg.multipart.count) {}
 
 coro<multipart_state::lock>

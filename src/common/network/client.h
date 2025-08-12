@@ -14,15 +14,13 @@ public:
 
     client(boost::asio::io_context& ioc, const std::string& address,
            const std::uint16_t port, const int connections)
-        : m_ioc(ioc),
-          m_messenger_factory{[&ioc, address, port]() {
+        : m_messenger_factory{[&ioc, address, port]() {
               auto endpoint = resolve(address, port).back();
               return std::make_unique<messenger>(
                   ioc, endpoint.address().to_string(), port,
                   messenger::origin::DOWNSTREAM);
           }},
-          m_pool(
-              m_ioc, [this]() { return m_messenger_factory(); }, connections) {}
+          m_pool([this]() { return m_messenger_factory(); }, connections) {}
 
     client(client&&) = default;
 
@@ -37,7 +35,6 @@ public:
     }
 
 private:
-    boost::asio::io_context& m_ioc;
     std::function<std::unique_ptr<messenger>()> m_messenger_factory;
     pool<messenger> m_pool;
 };

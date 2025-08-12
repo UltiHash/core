@@ -47,9 +47,8 @@ void log_raised_message(void* arg, const char* message) {
 } // namespace
 
 connection::connection(boost::asio::io_context& ioc, const connstr& cs)
-    : m_ioc(ioc),
-      m_ptr(PQconnectdb(cs), PQfinish),
-      m_fd(m_ioc, PQsocket(m_ptr.get())) {
+    : m_ptr(PQconnectdb(cs), PQfinish),
+      m_fd(ioc, PQsocket(m_ptr.get())) {
     if (PQstatus(m_ptr.get()) != CONNECTION_OK) {
         throw std::runtime_error("cannot connect: " + cs.printable());
     }

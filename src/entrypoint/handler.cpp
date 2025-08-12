@@ -24,13 +24,11 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
         // Note: lifetime of response must not exceed lifetime of request.
         std::string id = generate_unique_id();
 
-        raw_request rawreq;
-        response resp;
+        std::optional<response> resp;
 
         try {
             try {
-                rawreq = co_await raw_request::read(s);
-                resp = co_await handle_request(s, rawreq, id).start_trace();
+                resp = co_await handle_request(s, id).start_trace();
                 metric<success>::increase(1);
 
             } catch (const boost::system::system_error& e) {
@@ -52,7 +50,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 resp = make_response(command_exception());
             }
 
-            co_await write(s, std::move(resp), id);
+            co_await write(s, std::move(*resp), id);
 
         } catch (const boost::system::system_error& e) {
             if (e.code() == boost::asio::error::operation_aborted) {
@@ -78,10 +76,8 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 }
 
 coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
-                                       raw_request& rawreq,
                                        const std::string& id) {
-    std::unique_ptr<request> req;
-    req = co_await m_factory.create(s, rawreq);
+    std::unique_ptr<request> req = co_await m_factory.create(s);
     LOG_INFO() << req->peer() << ": read request, id=" << id << ": " << *req;
 
     auto span = co_await boost::asio::this_coro::span;

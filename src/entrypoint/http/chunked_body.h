@@ -7,6 +7,7 @@
 #include <map>
 #include <span>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace uh::cluster::ep::http {
@@ -29,6 +30,11 @@ public:
     std::optional<std::size_t> length() const override;
     coro<std::size_t> read(std::span<char> dest) override;
 
+    std::vector<boost::asio::const_buffer>
+    get_raw_buffer() const override {
+        return m_raw_buffers;
+    }
+
     virtual void on_chunk_header(const chunk_header&);
     virtual void on_chunk_data(std::span<char>);
     virtual void on_chunk_done();
@@ -45,8 +51,10 @@ private:
     boost::asio::ip::tcp::socket& m_socket;
     std::vector<char> m_buffer;
     trailing_headers m_trailing;
+    std::size_t m_read_position = 0;
     std::size_t m_chunk_bytes_left = 0ull;
     bool m_end = false;
+    std::vector<boost::asio::const_buffer> m_raw_buffers;
 };
 
 } // namespace uh::cluster::ep::http

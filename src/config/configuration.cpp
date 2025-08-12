@@ -245,6 +245,20 @@ CLI::App* sub_coordinator(CLI::App& app, coordinator_config& cfg) {
     return rv;
 }
 
+CLI::App* sub_proxy(CLI::App& app, proxy::config& cfg) {
+    auto* rv = app.add_subcommand("proxy", "S3 proxy server");
+    app.add_option("--downstream-host", cfg.downstream_host, "downstream host")
+        ->envname(ENV_CFG_DOWNSTREAM_HOST);
+    app.add_option("--downstream-port", cfg.downstream_port, "downstream port")
+        ->envname(ENV_CFG_DOWNSTREAM_PORT);
+    app.add_option("--connections", cfg.connections, "number of connections")
+        ->envname(ENV_CFG_DOWNSTREAM_CONNECTIONS);
+
+    register_server(*rv, cfg.server);
+
+    return rv;
+}
+
 } // namespace
 
 std::optional<config> read_config(int argc, char** argv) {
@@ -257,6 +271,7 @@ std::optional<config> read_config(int argc, char** argv) {
     auto sub_ep = sub_entrypoint(app, rv.entrypoint);
     auto sub_dd = sub_deduplicator(app, rv.deduplicator);
     auto sub_rk = sub_coordinator(app, rv.coordinator);
+    auto sub_px = sub_proxy(app, rv.proxy);
 
     auto sub_dd_str =
         sub_storage(*sub_dd, rv.deduplicator.m_attached_storage.emplace());
@@ -304,7 +319,8 @@ std::optional<config> read_config(int argc, char** argv) {
             throw std::invalid_argument("Either a test license or backend "
                                         "configuration must be provided.");
         }
-
+    } else if (sub_px->parsed()) {
+        rv.role = PROXY_SERVICE;
     } else {
         throw std::runtime_error("unsupported sub command given");
     }

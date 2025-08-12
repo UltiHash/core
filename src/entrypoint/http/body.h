@@ -19,6 +19,12 @@ public:
      * bytes written.
      */
     virtual coro<std::size_t> read(std::span<char>) = 0;
+
+    /*
+     * Return a raw buffer from the previous read call.
+     */
+    virtual std::vector<boost::asio::const_buffer>
+    get_raw_buffer() const = 0;
 };
 
 } // namespace uh::cluster::ep::http

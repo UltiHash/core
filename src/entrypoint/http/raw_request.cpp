@@ -1,39 +1,47 @@
 #include "raw_request.h"
 
 #include "command_exception.h"
-#include "common/utils/strings.h"
+
+#include <boost/asio/buffer.hpp>
+#include <common/telemetry/log.h>
+#include <common/utils/strings.h>
+#include <sstream>
 
 using namespace boost;
 
 namespace uh::cluster::ep::http {
 
 coro<raw_request> raw_request::read(asio::ip::tcp::socket& sock) {
+    auto [buffer, header_length] = co_await read_header_data(sock);
 
     beast::http::request_parser<beast::http::empty_body> parser;
-    beast::flat_buffer buffer;
     parser.body_limit((std::numeric_limits<std::uint64_t>::max)());
 
-    co_await beast::http::async_read_header(sock, buffer, parser,
-                                            asio::use_awaitable);
+    beast::error_code ec;
+    parser.put(asio::buffer(buffer), ec);
 
-    co_return from_string(parser.release(), std::move(buffer),
-                          sock.remote_endpoint());
+    if (!parser.is_header_done()) {
+        throw std::runtime_error("Incomplete HTTP header");
+    }
+
+    co_return from_string(parser.release(), sock.remote_endpoint(),
+                          std::move(buffer), header_length);
 }
 
 raw_request
 raw_request::from_string(beast::http::request<beast::http::empty_body> headers,
-                         beast::flat_buffer buffer,
-                         boost::asio::ip::tcp::endpoint peer) {
-
+                         boost::asio::ip::tcp::endpoint peer,
+                         std::vector<char>&& buffer, size_t header_length) {
     raw_request rv;
 
     rv.headers = std::move(headers);
-    if (rv.headers.base().version() != 11) {
+    if (rv.headers.version() != 11) {
         throw std::runtime_error(
             "bad http version. support exists only for HTTP 1.1.\n");
     }
 
-    rv.buffer = std::move(buffer);
+    rv.m_buffer = std::move(buffer);
+    rv.m_read_position = header_length;
     rv.peer = peer;
 
     const auto& target = rv.headers.target();
@@ -59,22 +67,18 @@ raw_request::from_string(beast::http::request<beast::http::empty_body> headers,
 
 std::optional<std::string>
 raw_request::optional(const std::string& name) const {
-
-    if (auto header = headers.find(name); header != headers.end()) {
-        return header->value();
+    if (auto iter = headers.find(name); iter != headers.end()) {
+        return iter->value();
     }
-
     return {};
 }
 
 std::string raw_request::require(const std::string& name) const {
-
-    auto header = headers.find(name);
-    if (header == headers.end()) {
+    auto iter = headers.find(name);
+    if (iter == headers.end()) {
         throw std::runtime_error(name + " not found");
     }
-
-    return header->value();
+    return iter->value();
 }
 
 std::map<std::string_view, std::string_view>

@@ -15,6 +15,8 @@ class response {
 public:
     response();
     response(http::status status);
+    response(beast::http::response<beast::http::empty_body> res,
+             std::unique_ptr<http::body> body);
 
     void set_body(std::unique_ptr<http::body>&& body) noexcept;
 
