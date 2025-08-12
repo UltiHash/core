@@ -90,7 +90,7 @@ jobs:
 
       - name: Delete the testing environment if exists
         run: |
-          helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait
+          helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait --ignore-not-found
           kubectl delete pods -n ${{ env.ENVIRONMENT_NAME }} --all --force
           kubectl delete pvc -n ${{ env.ENVIRONMENT_NAME }} --all --force
           kubectl delete secrets -n ${{ env.ENVIRONMENT_NAME }} --all --force
