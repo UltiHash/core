@@ -2,6 +2,7 @@
 
 dedup=1
 storage_cfg='[{"id":0,"type":"ROUND_ROBIN","storages":1}]'
+# storage_cfg='[{"id":0,"type":"ERASURE_CODING","storages":3,"data_shards":2,"parity_shards":1,"stripe_size_kib":64}]'
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -24,6 +25,7 @@ UH_LICENSE=$(<@PROJECT_SOURCE_DIR@/data/licenses/UltiHash-Test-1PB.lic)
 BUILD_DIR=@PROJECT_BINARY_DIR@
 UH_DATA=${UH_DATA:-/var/lib/uh}
 export UH_LOG_LEVEL=DEBUG
+export ASAN_OPTIONS=fast_unwind_on_malloc=0
 UH_CLUSTER=$<TARGET_FILE:uh-cluster>
 log_dir=$BUILD_DIR/logs
 if [[ -d "$log_dir" ]]; then
@@ -31,14 +33,14 @@ if [[ -d "$log_dir" ]]; then
 fi
 mkdir -p $log_dir
 
-declare -A process_map
+declare -A storage_pids
 declare -A storage_state
 declare -A new_storage_provisioned
 
 _create() {
     local port=$((9300 + group_id + 10 + id))
     UH_STORAGE_GROUP_ID=$group_id UH_STORAGE_INSTANCE_ID="$id" $UH_CLUSTER --workdir "$data_path" storage --port "$port" &> "$log_dir/storage-$group_id-$id.log" &
-    process_map["$group_id-$id"]=$!
+    storage_pids["$group_id-$id"]=$!
 }
 
 print_error_message() {
@@ -70,14 +72,14 @@ deactivate() {
     local group_id="$1"
     local id="$2"
     echo "- Deactivating storage $id on group $group_id"
-    local pid="${process_map[$group_id-$id]}"
+    local pid="${storage_pids[$group_id-$id]}"
 
     if [[ -z "$pid" ]]; then
         print_error_message "- Storage $id is not active."
         return
     fi
 
-    kill "$pid" && unset process_map["$group_id-$id"]
+    kill "$pid" && unset storage_pids["$group_id-$id"]
     storage_state["$group_id-$id"]="." # Mark as deactivated
 }
 
@@ -85,14 +87,14 @@ deactivate_force() {
     local group_id="$1"
     local id="$2"
     echo "- Killing storage $id on group $group_id"
-    local pid="${process_map[$group_id-$id]}"
+    local pid="${storage_pids[$group_id-$id]}"
 
     if [[ -z "$pid" ]]; then
         print_error_message "- Storage $id is not active."
         return
     fi
 
-    kill -9 "$pid" && unset process_map["$group_id-$id"]
+    kill -9 "$pid" && unset storage_pids["$group_id-$id"]
     storage_state["$group_id-$id"]="." # Mark as deactivated
 }
 
@@ -170,15 +172,19 @@ export UH_STORAGE_GROUPS="$storage_cfg"
 
 export OTEL_RESOURCE_ATTRIBUTES="service.name=coordinator"
 $UH_CLUSTER coordinator &> $log_dir/coordinator.log &
+pid_coordinator=$!
 
 export OTEL_RESOURCE_ATTRIBUTES="service.name=deduplicator"
+pid_deduplicators=()
 for ((id = 0; id < $dedup; ++id)); do
     mkdir -p $UH_DATA/deduplicator-$id
     $UH_CLUSTER --workdir $UH_DATA/deduplicator-$id deduplicator --port $((9200 + id)) &> $log_dir/deduplicator-$id.log &
+    pid_deduplicators+=($!)
 done
 
 export OTEL_RESOURCE_ATTRIBUTES="service.name=entrypoint"
 $UH_CLUSTER entrypoint &> $log_dir/entrypoint.log &
+pid_entrypoint=$!
 
 get_running_processes() {
     ps -eo pid,cmd | grep -E '^\s*[0-9]+\s+\S*uh-cluster' | sed 's/\S*uh-cluster/uh-cluster/'
@@ -288,10 +294,35 @@ while true; do
     fi
 done
 
-echo "Killing all spawned processes. It can take more than 5 seconds."
-pkill uh-cluster
+kill_in_order=false
 
-sleep 0.3 
+if $kill_in_order; then
+    echo "Killing all spawned processes in order..."
+    kill "$pid_entrypoint"
+    wait "$pid_entrypoint"
+
+    for pid in "${pid_deduplicators[@]}"; do
+        kill $pid
+    done
+    for pid in "${pid_deduplicators[@]}"; do
+        wait $pid
+    done
+
+    for pid in "${storage_pids[@]}"; do
+        kill "$pid"
+    done
+    for pid in "${storage_pids[@]}"; do
+        wait $pid
+    done
+
+    kill "$pid_coordinator"
+    wait "$pid_coordinator"
+else
+    echo "Killing all spawned processes at once..."
+    pkill uh-cluster
+    sleep 0.3
+fi
+
 
 timeout=7
 interval=0.2

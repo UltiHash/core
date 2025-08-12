@@ -4,6 +4,7 @@
 #include <ranges>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 namespace uh::cluster {
@@ -194,35 +195,27 @@ concept HasCreate = requires(const std::string& str) {
     { T::create(str) } -> std::same_as<T>;
 };
 
-template <typename T>
-concept Serializable = HasToString<T> && HasCreate<T>;
-
-template <typename T>
-requires Serializable<T>
-std::ostream& operator<<(std::ostream& os, const T& value) {
-    os << value.to_string();
-    return os;
+template <HasToString T> std::string serialize(const T& value) {
+    return value.to_string();
 }
 
-template <typename T>
-requires Serializable<T>
-std::istream& operator>>(std::istream& is, T& value) {
-    std::string input;
-    is >> input;
-
+template <HasCreate T> T deserialize(auto&& str) {
     try {
-        value = T::create(input);
+        return T::create(str);
     } catch (const std::exception& e) {
-        is.setstate(std::ios::failbit);
+        return T{};
     }
-    return is;
 }
+
+template <typename T>
+concept NotEnum = !std::is_enum_v<T>;
 
 template <typename T>
 std::string serialize(const T& value)
-requires requires(std::ostream& os, const T& v) {
-    { os << v } -> std::same_as<std::ostream&>;
-}
+requires(!HasToString<T>) &&
+        requires(std::ostream& os, const T& v) {
+            { os << v } -> std::same_as<std::ostream&>;
+        } && NotEnum<T>
 {
     std::ostringstream oss;
     oss << value;
@@ -231,9 +224,10 @@ requires requires(std::ostream& os, const T& v) {
 
 template <typename T>
 T deserialize(auto&& str)
-requires requires(std::istream& is, T& v) {
-    { is >> v } -> std::same_as<std::istream&>;
-}
+requires(!HasCreate<T>) &&
+        requires(std::istream& is, T& v) {
+            { is >> v } -> std::same_as<std::istream&>;
+        } && NotEnum<T>
 {
     std::istringstream iss(std::forward<decltype(str)>(str));
     T value;

@@ -2,7 +2,6 @@
 #include "handler.h"
 
 #include <common/telemetry/metrics.h>
-#include <common/utils/scope_guard.h>
 #include <deduplicator/interfaces/dedupe_array.h>
 #include <deduplicator/interfaces/noop_deduplicator.h>
 #include <format>
@@ -19,7 +18,8 @@ coro<void> update_limits(uh::cluster::directory& directory, limits& l) {
     std::atomic<std::size_t> size = co_await directory.data_size();
     l.set_storage_size(size);
 
-    while (true) {
+    auto state = co_await boost::asio::this_coro::cancellation_state;
+    while (state.cancelled() == boost::asio::cancellation_type::none) {
         timer.expires_after(LIMITS_UPDATE_INTERVAL);
         co_await timer.async_wait(boost::asio::use_awaitable);
 
@@ -52,49 +52,40 @@ make_deduplicator(const entrypoint_config& config,
 
 } // namespace
 
-service::service(const service_config& sc, entrypoint_config config)
+service::service(boost::asio::io_context& ioc, const service_config& sc,
+                 entrypoint_config config)
     : m_config(std::move(config)),
-      m_ioc(boost::asio::io_context(m_config.server.threads)),
       m_etcd{sc.etcd_config},
       m_service_id(get_service_id(
           m_etcd, get_service_string(ENTRYPOINT_SERVICE), sc.working_dir)),
-      m_gdv{m_ioc, m_etcd, config.global_data_view},
-      m_cache(m_ioc, m_gdv, config.global_data_view.read_cache_capacity_l2),
+      m_gdv{ioc, m_etcd, config.global_data_view},
+      m_cache(ioc, m_gdv, config.global_data_view.read_cache_capacity_l2),
 
-      m_dedupe(make_deduplicator(m_config, m_gdv, m_cache, m_ioc, m_etcd)),
+      m_dedupe(make_deduplicator(m_config, m_gdv, m_cache, ioc, m_etcd)),
 
-      m_directory(m_ioc, m_config.database),
-      m_uploads(m_ioc, m_config.database),
-      m_users(m_ioc, m_config.database),
+      m_directory(ioc, m_config.database),
+      m_uploads(ioc, m_config.database),
+      m_users(ioc, m_config.database),
       m_license_watcher(m_etcd),
       m_limits(m_license_watcher),
-      m_server(m_config.server,
-               std::make_unique<handler>(
-                   command_factory(m_ioc, *m_dedupe, m_directory, m_uploads,
-                                   m_config, m_gdv, m_limits, m_users,
-                                   m_license_watcher),
-                   http::request_factory(m_users),
-                   std::make_unique<policy::module>(m_directory),
-                   std::make_unique<cors::module>(cors::config{}, m_directory)),
-               m_ioc),
+      m_server(
+          m_config.server,
+          std::make_unique<handler>(
+              command_factory(ioc, *m_dedupe, m_directory, m_uploads, m_config,
+                              m_gdv, m_limits, m_users, m_license_watcher),
+              http::request_factory(m_users),
+              std::make_unique<policy::module>(m_directory),
+              std::make_unique<cors::module>(cors::config{}, m_directory)),
+          ioc),
       // TODO: add support for non-persistent service_id
       m_service_registry(m_etcd, ns::root.entrypoint.hostports[m_service_id],
                          m_config.server.port),
 
-      m_gc(m_ioc, m_directory, m_gdv) {
+      m_gc(ioc, m_directory, m_gdv),
+      m_task{"update storage metrics", ioc} {
 
-    co_spawn(m_ioc, update_limits(m_directory, m_limits).start_trace(),
-             [](std::exception_ptr e) {
-                 try {
-                     std::rethrow_exception(e);
-                 } catch (const std::exception& e) {
-                     LOG_ERROR()
-                         << "metrics monitor stopped working: " << e.what();
-                 }
-             });
-}
+    m_task.spawn(update_limits(m_directory, m_limits).start_trace());
 
-void service::run() {
     metric<entrypoint_original_data_volume_gauge, byte, int64_t>::
         register_gauge_callback(
             [this]() { return m_limits.get_storage_size(); },
@@ -104,19 +95,11 @@ void service::run() {
                 label.push_back({"service_id", std::to_string(m_service_id)});
                 return label;
             });
-
-    auto g = scope_guard([]() {
-        metric<entrypoint_original_data_volume_gauge, byte,
-               int64_t>::remove_gauge_callback();
-    });
-
-    m_server.run();
 }
 
-void service::stop() {
-    LOG_INFO() << "stopping entrypoint " << m_service_id;
-
-    m_server.stop();
+service::~service() {
+    metric<entrypoint_original_data_volume_gauge, byte,
+           int64_t>::remove_gauge_callback();
 }
 
 } // namespace uh::cluster::ep

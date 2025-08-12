@@ -21,11 +21,6 @@ static constexpr const char* etcd_global_lock_key =
 static constexpr const char* etcd_current_id_prefix_key =
     "/" NAMESPACE "/config/class/cluster/current_id/";
 
-static constexpr const char* etcd_storage_lock_key =
-    "/" NAMESPACE "/config/class/storage/lock";
-static constexpr const char* etcd_registered_storage_ids_prefix_key =
-    "/" NAMESPACE "/config/class/storage/registered_ids/";
-
 static constexpr const char* etcd_license_key = "/" NAMESPACE "/config/license";
 
 enum class etcd_action : uint8_t {

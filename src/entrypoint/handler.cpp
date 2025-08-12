@@ -17,11 +17,11 @@ handler::handler(command_factory&& comm_factory, request_factory&& factory,
       m_cors(std::move(cors)) {}
 
 coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
-    for (;;) {
+    std::optional<std::string> failed_request_id{std::nullopt};
 
-        /*
-         * Note: lifetime of response must not exceed lifetime of request.
-         */
+    auto state = co_await boost::asio::this_coro::cancellation_state;
+    while (state.cancelled() == boost::asio::cancellation_type::none) {
+        // Note: lifetime of response must not exceed lifetime of request.
         std::string id = generate_unique_id();
 
         raw_request rawreq;
@@ -36,8 +36,9 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             } catch (const boost::system::system_error& e) {
                 throw;
             } catch (const downstream_exception& e) {
-                if (e.code() == boost::asio::error::operation_aborted or
-                    e.code() == boost::beast::error::timeout) {
+                if (e.code() == boost::asio::error::operation_aborted) {
+                    throw e.original_exception();
+                } else if (e.code() == boost::beast::error::timeout) {
                     resp = make_response(command_exception(error::busy));
                 } else {
                     resp = make_response(
@@ -48,15 +49,17 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             } catch (const error_exception& e) {
                 resp = make_response(command_exception(*e.error()));
             } catch (const std::exception& e) {
-                LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
                 resp = make_response(command_exception());
             }
 
             co_await write(s, std::move(resp), id);
 
         } catch (const boost::system::system_error& e) {
-            if (e.code() == boost::beast::http::error::end_of_stream or
-                e.code() == boost::asio::error::eof) {
+            if (e.code() == boost::asio::error::operation_aborted) {
+                failed_request_id = id;
+                break;
+            } else if (e.code() == boost::beast::http::error::end_of_stream or
+                       e.code() == boost::asio::error::eof) {
                 LOG_INFO() << s.remote_endpoint() << " disconnected";
                 break;
             }
@@ -64,8 +67,14 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
         }
     }
 
-    s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
-    s.close();
+    if (failed_request_id) {
+        co_await boost::asio::this_coro::reset_cancellation_state(
+            boost::asio::disable_cancellation());
+
+        auto resp =
+            make_response(command_exception(error::service_unavailable));
+        co_await write(s, std::move(resp), *failed_request_id);
+    }
 }
 
 coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,

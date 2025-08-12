@@ -1,5 +1,6 @@
 add_library(entrypoint
             garbage_collector.cpp
+            object.cpp
             limits.cpp
             cors/parser.cpp
             cors/module.cpp
@@ -17,6 +18,7 @@ add_library(entrypoint
             commands/uh/get_metrics.cpp
             commands/s3/put_bucket_cors.cpp
             commands/s3/list_objects.cpp
+            commands/s3/list_object_versions.cpp
             commands/s3/get_bucket_policy.cpp
             commands/s3/put_object.cpp
             commands/s3/get_bucket_cors.cpp

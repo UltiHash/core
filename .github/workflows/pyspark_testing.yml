@@ -1,4 +1,4 @@
-name: PySpark Testing On Premise
+name: PySpark Testing
 
 on:
   workflow_call:
@@ -24,7 +24,9 @@ on:
         required: true
       registry_token:
         required: true
-      kubeconfig:
+      aws_access_key_id:
+        required: true
+      aws_secret_access_key:
         required: true
       uh_license:
         required: true
@@ -40,24 +42,32 @@ jobs:
         with:
           token: ${{ secrets.ghcr_token }}
 
-      - uses: azure/setup-kubectl@v3
+      - name: Install AWS CLI
+        uses: unfor19/install-aws-cli-action@v1
         with:
-          version: v1.28.7
+          version: 2
+          arch: arm64
+
+      - name: Setup the AWS credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.aws_access_key_id }}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.aws_secret_access_key }}" >> $GITHUB_ENV
+          echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
+
+      - uses: azure/setup-kubectl@v4
 
       - name: Download Kubeconfig
         run: |
           mkdir ~/.kube
-          echo '${{ secrets.kubeconfig }}' > ~/.kube/config
+          aws eks update-kubeconfig --name aws-core
 
-      - uses: azure/setup-helm@v4.0.0
-        with:
-         version: v3.14.0
+      - uses: azure/setup-helm@v4.3.0
 
       - name: Generate Helm values
-        uses: danielr1996/envsubst-action@1.0.0
+        uses: danielr1996/envsubst-action@1.1.0
         env:
-          CORE_IMAGE: ghcr.io/ultihash/cluster:${{ inputs.docker_image_tag }}
-          DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ inputs.docker_image_tag }}
+          CORE_IMAGE: registry.ultihash.io/dev/core:${{ inputs.docker_image_tag }}
+          DATABASE_INIT_IMAGE: registry.ultihash.io/dev/database-init:${{ inputs.docker_image_tag }}
           BUCKET_NAME: datasets
         with:
           input: ${{ inputs.helm_values }}
@@ -65,7 +75,7 @@ jobs:
 
       - name: Delete the testing environment if exists
         run: |
-          helm uninstall ${{ inputs.env_name }} -n ${{ inputs.env_name }} --wait
+          helm uninstall ${{ inputs.env_name }} -n ${{ inputs.env_name }} --wait --ignore-not-found
           kubectl delete pvc -n ${{ inputs.env_name }} --all
           kubectl delete secrets -n ${{ inputs.env_name }} --all --force
           kubectl delete ns ${{ inputs.env_name }}
@@ -77,7 +87,7 @@ jobs:
           kubectl create secret docker-registry registry-credentials -n ${{ inputs.env_name }} --docker-server='${{ inputs.docker_registry }}' --docker-username='${{ secrets.docker_registry_username }}' --docker-password='${{ secrets.docker_registry_password }}'
           kubectl create secret generic ultihash -n ${{ inputs.env_name }} --from-literal=license='${{ secrets.uh_license }}' --from-literal=token='${{ secrets.monitoring_token }}'
           echo '${{ secrets.registry_token }}' | helm registry login registry.ultihash.io -u github --password-stdin
-          helm install ${{ inputs.env_name }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ inputs.env_name }} --values helm-values.yaml --wait --timeout 15m
+          helm install ${{ inputs.env_name }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ inputs.env_name }} --values helm-values.yaml --wait --timeout 60m
 
       - name: Run PySpark test
         run: |
@@ -89,18 +99,26 @@ jobs:
     if: ${{ always() }}
     steps:
 
-      - uses: azure/setup-kubectl@v3
+      - name: Install AWS CLI
+        uses: unfor19/install-aws-cli-action@v1
         with:
-          version: v1.28.7
+          version: 2
+          arch: arm64
+
+      - name: Setup the AWS credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.aws_access_key_id }}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.aws_secret_access_key }}" >> $GITHUB_ENV
+          echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
+
+      - uses: azure/setup-kubectl@v4
 
       - name: Download Kubeconfig
         run: |
           mkdir ~/.kube
-          echo '${{ secrets.kubeconfig }}' > ~/.kube/config
+          aws eks update-kubeconfig --name aws-core
     
-      - uses: azure/setup-helm@v4.0.0
-        with:
-         version: v3.14.0
+      - uses: azure/setup-helm@v4.3.0
 
       - name: Environment cleanup
         run: |

@@ -33,8 +33,15 @@ coro<response> copy_object::handle(request& req) {
 
     auto src_bucket = get_bucket_id(url.path());
     auto src_key = get_object_key(url.path());
+    std::optional<std::string> version;
+    for (const auto& param : url.params()) {
+        if (param.key == "versionId") {
+            version = param.value;
+            break;
+        }
+    }
 
-    auto obj = co_await m_dir.get_object(src_bucket, src_key);
+    auto obj = co_await m_dir.get_object(src_bucket, src_key, version);
 
     if (auto ifmatch = req.header("x-amz-copy-source-if-match");
         ifmatch && *ifmatch != obj->etag) {
@@ -55,7 +62,7 @@ coro<response> copy_object::handle(request& req) {
     }
 
     obj->name = req.object_key();
-    co_await safe_put_object(m_dir, m_gdv, req.bucket(), *obj);
+    auto new_version = co_await safe_put_object(m_dir, m_gdv, req.bucket(), *obj);
 
     boost::property_tree::ptree pt;
     put(pt, "CopyObjectResult.LastModified", iso8601_date(obj->last_modified));
@@ -63,6 +70,9 @@ coro<response> copy_object::handle(request& req) {
 
     response res;
     res << pt;
+
+    res.set("X-Amz-Copy-Source-Version-Id", version);
+    res.set("X-Amz-Version-Id", new_version);
 
     co_return res;
 }

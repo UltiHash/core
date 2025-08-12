@@ -18,20 +18,22 @@ struct local_storage : public storage_interface {
           m_data_store(
               std::make_unique<default_data_store>(config, path, index)) {}
 
-    coro<address> write(allocation_t allocation,
-                        const std::vector<std::span<const char>>& buffers,
-                        std::span<const std::size_t> offsets) override {
-        co_return m_data_store->write(allocation, buffers, offsets);
+    coro<void> write(allocation_t allocation,
+                     const std::vector<std::span<const char>>& buffers,
+                     const std::vector<refcount_t>& refcounts) override {
+        m_data_store->write(allocation, buffers, refcounts);
+        co_return;
     }
 
-    coro<shared_buffer<>> read(const uint128_t& pointer, size_t size) override {
+    coro<shared_buffer<>> read(const storage_pointer& pointer,
+                               size_t size) override {
         shared_buffer<> buf(size);
         auto read_size = m_data_store->read(pointer, buf.span());
         buf.resize(read_size);
         co_return buf;
     }
 
-    coro<void> read_address(const address& addr, std::span<char> buffer,
+    coro<void> read_address(const storage_address& addr, std::span<char> buffer,
                             const std::vector<size_t>& offsets) override {
         LOG_DEBUG() << "read addr start";
 
@@ -49,11 +51,12 @@ struct local_storage : public storage_interface {
         co_return;
     }
 
-    coro<address> link(const address& addr) override {
-        auto p = std::make_shared<std::promise<address>>();
-        boost::asio::post(m_threads, [this, p, &addr]() {
+    coro<std::vector<refcount_t>>
+    link(const std::vector<refcount_t>& refcounts) override {
+        auto p = std::make_shared<std::promise<std::vector<refcount_t>>>();
+        boost::asio::post(m_threads, [this, p, &refcounts]() {
             try {
-                p->set_value(m_data_store->link(addr));
+                p->set_value(m_data_store->link(refcounts));
             } catch (const std::exception&) {
                 p->set_exception(std::current_exception());
             }
@@ -61,16 +64,22 @@ struct local_storage : public storage_interface {
         co_return p->get_future().get();
     }
 
-    coro<std::size_t> unlink(const address& addr) override {
+    coro<std::size_t>
+    unlink(const std::vector<refcount_t>& refcounts) override {
         auto p = std::make_shared<std::promise<std::size_t>>();
-        boost::asio::post(m_threads, [this, p, &addr]() {
+        boost::asio::post(m_threads, [this, p, &refcounts]() {
             try {
-                p->set_value(m_data_store->unlink(addr));
+                p->set_value(m_data_store->unlink(refcounts));
             } catch (const std::exception&) {
                 p->set_exception(std::current_exception());
             }
         });
         co_return p->get_future().get();
+    }
+
+    coro<std::vector<refcount_t>>
+    get_refcounts(const std::vector<std::size_t>& stripe_ids) override {
+        co_return m_data_store->get_refcounts(stripe_ids);
     }
 
     std::size_t get_used_space_func() { return m_data_store->get_used_space(); }

@@ -13,7 +13,7 @@ jobs:
     with:
       docker_context: .
       dockerfile_path: Dockerfile
-      docker_images: ghcr.io/ultihash/cluster
+      docker_images: registry.ultihash.io/dev/core
       docker_tags: performance-testing-large-amd64
       platforms: linux/amd64
     secrets:
@@ -24,7 +24,7 @@ jobs:
     with:
       docker_context: .
       dockerfile_path: tools/database-init/Dockerfile
-      docker_images: ghcr.io/ultihash/database-init
+      docker_images: registry.ultihash.io/dev/database-init
       docker_tags: performance-testing-large-amd64
       platforms: linux/amd64
     secrets:
@@ -45,7 +45,7 @@ jobs:
         uses: unfor19/install-aws-cli-action@v1
         with:
           version: 2
-          arch: amd64
+          arch: arm64
 
       - name: Setup the AWS credentials
         run: |
@@ -53,22 +53,18 @@ jobs:
           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_KEY}}" >> $GITHUB_ENV
           echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
 
-      - uses: azure/setup-kubectl@v3
-        with:
-          version: v1.28.7
+      - uses: azure/setup-kubectl@v4
 
       - name: Download Kubeconfig
         run: |
           mkdir ~/.kube
           aws eks update-kubeconfig --name aws-core
     
-      - uses: azure/setup-helm@v4.0.0
-        with:
-         version: v3.14.0
+      - uses: azure/setup-helm@v4.3.0
 
       - name: Delete the testing environment if exists
         run: |
-          helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait || true
+          helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait --ignore-not-found || true
           kubectl delete pods --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete pvc --all -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete secrets --all -n ${{ env.ENVIRONMENT_NAME }} || true
@@ -82,7 +78,7 @@ jobs:
           kubectl create secret generic ultihash -n ${{ env.ENVIRONMENT_NAME }} --from-literal=license='${{ secrets.UH_LICENSE_JSON }}' --from-literal=token='${{ secrets.MONITORING_TOKEN_AWS }}'
 
       - name: Generate the performance tester manifest for UltiHash
-        uses: danielr1996/envsubst-action@1.0.0
+        uses: danielr1996/envsubst-action@1.1.0
         env:
           TEST_NAME: "large_performance_test_ultihash"
           AMOUNT_GiB: "100"
@@ -100,10 +96,10 @@ jobs:
           output: performance-tester-ultihash.yaml
 
       - name: Generate Helm values for UltiHash
-        uses: danielr1996/envsubst-action@1.0.0
+        uses: danielr1996/envsubst-action@1.1.0
         env:
-          CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
-          DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
+          CORE_IMAGE: registry.ultihash.io/dev/core:${{ env.ENVIRONMENT_NAME }}
+          DATABASE_INIT_IMAGE: registry.ultihash.io/dev/database-init:${{ env.ENVIRONMENT_NAME }}
         with:
           input: testing/performance/large/ultihash-helm-values.yaml
           output: ultihash-helm-values.yaml
@@ -111,7 +107,7 @@ jobs:
       - name: Install the UltiHash cluster
         run: |
           echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
-          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values ultihash-helm-values.yaml --wait --timeout 15m
+          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values ultihash-helm-values.yaml --wait --timeout 60m
 
       - name: Execute the performance test against UltiHash
         run: |
@@ -127,7 +123,7 @@ jobs:
         uses: unfor19/install-aws-cli-action@v1
         with:
           version: 2
-          arch: amd64
+          arch: arm64
 
       - name: Setup the AWS credentials
         run: |
@@ -135,18 +131,14 @@ jobs:
           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_KEY}}" >> $GITHUB_ENV
           echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
 
-      - uses: azure/setup-kubectl@v3
-        with:
-          version: v1.28.7
+      - uses: azure/setup-kubectl@v4
 
       - name: Download Kubeconfig
         run: |
           mkdir ~/.kube
           aws eks update-kubeconfig --name aws-core
     
-      - uses: azure/setup-helm@v4.0.0
-        with:
-         version: v3.14.0
+      - uses: azure/setup-helm@v4.3.0
 
       - name: Environment cleanup
         run: |

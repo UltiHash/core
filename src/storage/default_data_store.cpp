@@ -6,7 +6,6 @@
 #include <common/utils/io.h>
 #include <common/utils/pointer_traits.h>
 
-#include <mutex>
 #include <set>
 
 namespace uh::cluster {
@@ -86,7 +85,6 @@ default_data_store::default_data_store(data_store_config conf,
 
 std::size_t default_data_store::read(std::size_t local_pointer,
                                      std::span<char> buffer) {
-    std::shared_lock lock(m_mutex);
     std::size_t rv = 0ull;
 
     while (rv < buffer.size()) {
@@ -103,8 +101,11 @@ std::size_t default_data_store::read(std::size_t local_pointer,
     return rv;
 }
 
-void default_data_store::sync() {
-    m_files.back().sync();
+void default_data_store::sync(
+    std::vector<std::reference_wrapper<data_file>> dirty_files) {
+    for (auto file : dirty_files) {
+        file.get().sync();
+    }
 
     write_metadata();
     int md_rv = fsync(m_meta_fd);
@@ -115,17 +116,15 @@ void default_data_store::sync() {
 }
 
 std::size_t default_data_store::fetch_used_space() const {
-    std::unique_lock lock(m_mutex);
+    std::unique_lock lock(m_file_mutex);
     return std::accumulate(
         m_files.begin(), m_files.end(), 0ull,
         [](auto acc, const auto& it) { return acc + it.used_space(); });
 }
 
-address
-default_data_store::write(const allocation_t allocation,
-                          const std::vector<std::span<const char>>& buffers,
-                          std::span<const std::size_t> offsets) {
-    std::unique_lock lock(m_mutex);
+void default_data_store::write(
+    allocation_t allocation, const std::vector<std::span<const char>>& buffers,
+    const std::vector<refcount_t>& refcounts) {
     std::size_t local_pointer = allocation.offset;
     allocate_files(local_pointer, allocation.size);
 
@@ -138,6 +137,7 @@ default_data_store::write(const allocation_t allocation,
                                  std::to_string(allocation.size));
     }
 
+    std::vector<std::reference_wrapper<data_file>> dirty_files;
     for (const auto& data : buffers) {
         std::size_t written = 0ull;
         while (written < data.size()) {
@@ -147,6 +147,7 @@ default_data_store::write(const allocation_t allocation,
             if (count == 0) {
                 break;
             }
+            dirty_files.emplace_back(loc.file);
 
             local_pointer += count;
             written += count;
@@ -157,25 +158,25 @@ default_data_store::write(const allocation_t allocation,
     }
 
     m_used_space += allocation.size;
-    m_write_offset =
-        std::max(m_write_offset, allocation.offset + allocation.size);
-    sync();
+    std::size_t expected = m_write_offset.load();
+    std::size_t desired = allocation.offset + allocation.size;
+    while (desired > expected &&
+           !m_write_offset.compare_exchange_weak(expected, desired)) {
+        desired = std::max(desired, expected);
+    }
+    sync(dirty_files);
 
-    maintain_refcount(allocation.offset, allocation.size, offsets);
-
-    address rv;
-    rv.emplace_back(allocation.offset, allocation.size);
-    return rv;
+    m_refcounter.increment(refcounts, false);
 }
 
-address default_data_store::link(const address& addr) {
-    std::unique_lock lock(m_mutex);
-    return m_refcounter.increment(addr);
+std::vector<refcount_t>
+default_data_store::link(const std::vector<refcount_t>& refcounts) {
+    return m_refcounter.increment(refcounts);
 }
 
-size_t default_data_store::unlink(const address& addr) {
-    std::unique_lock lock(m_mutex);
-    return m_refcounter.decrement(addr);
+std::size_t
+default_data_store::unlink(const std::vector<refcount_t>& refcounts) {
+    return m_refcounter.decrement(refcounts);
 }
 
 default_data_store::~default_data_store() {
@@ -201,6 +202,7 @@ void default_data_store::allocate_files(std::size_t offset, std::size_t size) {
         return;
     }
 
+    std::unique_lock lock(m_file_mutex);
     while (m_file_count < required_file_count) {
         m_files.emplace_back(
             data_file::create(m_root / base_name(m_files.size()), m_filesize));
@@ -236,18 +238,14 @@ std::size_t default_data_store::get_available_space() const noexcept {
 }
 
 std::size_t default_data_store::get_write_offset() const noexcept {
-    std::shared_lock lock(m_mutex);
     return m_write_offset;
 }
 
 void default_data_store::set_write_offset(std::size_t val) noexcept {
-    std::shared_lock lock(m_mutex);
     m_write_offset = val;
 }
 
 allocation_t default_data_store::allocate(size_t size, std::size_t alignment) {
-    std::unique_lock lock(m_mutex);
-
     if (alignment == 0) {
         throw std::invalid_argument("alignment must be larger than zero");
     }
@@ -256,81 +254,60 @@ allocation_t default_data_store::allocate(size_t size, std::size_t alignment) {
         throw std::invalid_argument("allocation size must be larger than zero");
     }
 
-    if (m_write_offset % alignment != 0) {
-        auto adjustment = alignment - (m_write_offset % alignment);
+    std::size_t current_offset = m_write_offset.load();
+    std::size_t new_offset;
+    std::size_t allocation_start;
 
-        if (m_conf.max_data_store_size - m_write_offset < adjustment) {
-            throw std::runtime_error("satisfying alignment adjustment (" +
-                                     std::to_string(adjustment) +
-                                     " bytes) "
-                                     "exceeds maximum data store size");
+    do {
+        allocation_start = current_offset;
+
+        if (allocation_start % alignment != 0) {
+            allocation_start += alignment - (allocation_start % alignment);
         }
-        m_write_offset += adjustment;
-    }
 
-    if (m_conf.max_data_store_size - m_write_offset < size) {
-        throw std::runtime_error("datastore cannot store additional " +
-                                 std::to_string(size) + " bytes");
-    }
+        if (m_conf.max_data_store_size - allocation_start < size) {
+            throw std::runtime_error("datastore cannot store additional " +
+                                     std::to_string(size) + " bytes");
+        }
 
-    allocation_t rv = {.offset = m_write_offset, .size = size};
-    m_write_offset += size;
-    return rv;
-}
+        new_offset = allocation_start + size;
 
-void default_data_store::maintain_refcount(
-    const std::size_t local_pointer, const std::size_t size,
-    std::span<const std::size_t> offsets) {
-    std::deque<reference_counter::refcount_cmd> refcount_commands;
+    } while (!m_write_offset.compare_exchange_weak(current_offset, new_offset));
 
-    if (offsets.empty()) {
-        refcount_commands.emplace_back(reference_counter::INCREMENT,
-                                       local_pointer, size);
-        m_refcounter.execute(refcount_commands);
-        return;
-    }
-
-    for (auto it = offsets.begin(); it != offsets.end(); it++) {
-        auto next_different =
-            std::find_if(std::next(it), offsets.end(),
-                         [it](const std::size_t& val) { return val != *it; });
-        std::size_t frag_size = next_different == offsets.end()
-                                    ? size - *it
-                                    : *next_different - *it;
-        refcount_commands.emplace_back(reference_counter::INCREMENT,
-                                       local_pointer + *it, frag_size);
-    }
-
-    m_refcounter.execute(refcount_commands);
+    return {.offset = allocation_start, .size = size};
 }
 
 std::size_t default_data_store::internal_delete(std::size_t offset,
                                                 std::size_t size) {
-    if (offset >= m_write_offset) {
+    std::size_t current_write_offset = m_write_offset.load();
+    if (offset >= current_write_offset) {
         LOG_WARN() << "attempted to delete data at the out-of-bounds offset="
-                   << offset << ", with m_write_offset=" << m_write_offset;
+                   << offset
+                   << ", with m_write_offset=" << current_write_offset;
         throw std::out_of_range("pointer for delete operation is out of range");
     }
 
-    std::size_t adjusted_size = std::min(size, m_write_offset - offset);
+    std::size_t adjusted_size = std::min(size, current_write_offset - offset);
 
     LOG_DEBUG() << "page " << offset / m_conf.page_size
                 << " dropped to 0, deleting page (offset=" << offset
                 << ", size=" << adjusted_size << ")";
 
-    std::size_t rv = 0ull;
-    while (rv < adjusted_size) {
+    std::size_t bytes_released = 0ull;
+    while (bytes_released < adjusted_size) {
         // it seems pointer of of range is coming from here
-        auto loc = file_location(offset + rv);
-        auto count = loc.file.release(loc.offset, adjusted_size - rv);
+        auto loc = file_location(offset + bytes_released);
+        auto count =
+            loc.file.release(loc.offset, adjusted_size - bytes_released);
         if (count == 0) {
             break;
         }
-        rv += count;
+        bytes_released += count;
     }
 
-    m_used_space -= rv;
-    return rv;
+    m_used_space -= bytes_released;
+
+    return bytes_released;
 }
 
 int default_data_store::open_metadata(const std::filesystem::path& path) {
@@ -374,6 +351,10 @@ void default_data_store::write_metadata() {
                 std::span<const char>(reinterpret_cast<const char*>(&md),
                                       sizeof(metadata)),
                 0);
+}
+std::vector<refcount_t>
+default_data_store::get_refcounts(const std::vector<std::size_t>& stripe_ids) {
+    return m_refcounter.get_refcounts(stripe_ids);
 }
 
 } // end namespace uh::cluster

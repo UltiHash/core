@@ -13,8 +13,7 @@ public:
     virtual coro<address> write(std::span<const char> data,
                                 const std::vector<std::size_t>& offsets) = 0;
 
-    virtual coro<shared_buffer<>> read(const uint128_t& pointer,
-                                       size_t size) = 0;
+    virtual coro<shared_buffer<>> read(const pointer& pointer, size_t size) = 0;
 
     virtual coro<std::size_t> read_address(const address& addr,
                                            std::span<char> buffer) = 0;

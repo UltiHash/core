@@ -94,6 +94,7 @@ coro<response> complete_multipart::handle(request& req) {
     upload_info info;
     std::string id = *req.query("uploadId");
     std::string etag;
+    std::optional<std::string> version;
 
     {
         auto instance = co_await m_uploads.get();
@@ -116,7 +117,7 @@ coro<response> complete_multipart::handle(request& req) {
                    .mime = info.mime.value_or(ep::DEFAULT_OBJECT_CONTENT_TYPE)};
 
         if (!info.completed) {
-            co_await m_dir.put_object(req.bucket(), obj);
+            version = co_await m_dir.put_object(req.bucket(), obj);
             co_await instance.remove_upload(id);
         }
     }
@@ -125,6 +126,7 @@ coro<response> complete_multipart::handle(request& req) {
 
     response res;
     res.set("ETag", etag);
+    res.set("X-Amz-Version-Id", version);
     res.set_original_size(info.data_size);
     res.set_effective_size(info.effective_size);
 

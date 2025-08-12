@@ -76,11 +76,6 @@ void register_service(CLI::App& app, service_config& cfg) {
 void register_server(CLI::App& app, server_config& cfg) {
     auto group = app.add_option_group("server", "server network configuration");
 
-    group
-        ->add_option("--server-threads", cfg.threads,
-                     "threads handling incoming connections")
-        ->default_val(cfg.threads);
-
     group->add_option("--port,-p", cfg.port, "server listening port")
         ->default_val(cfg.port);
 
@@ -109,6 +104,10 @@ void register_global_data_view(CLI::App& app, global_data_view_config& cfg) {
 CLI::App* sub_storage(CLI::App& app, storage_config& cfg) {
     auto* rv = app.add_subcommand("storage", "Run as storage service");
 
+    rv->add_option("--server-threads", cfg.num_threads,
+                   "threads handling incoming connections")
+        ->default_val(cfg.num_threads);
+
     register_server(*rv, cfg.server);
     register_global_data_view(*rv, cfg.global_data_view);
 
@@ -136,6 +135,10 @@ CLI::App* sub_storage(CLI::App& app, storage_config& cfg) {
 CLI::App* sub_entrypoint(CLI::App& app, entrypoint_config& cfg) {
 
     auto* rv = app.add_subcommand("entrypoint", "Run as entrypoint service");
+
+    rv->add_option("--server-threads", cfg.num_threads,
+                   "threads handling incoming connections")
+        ->default_val(cfg.num_threads);
 
     register_server(*rv, cfg.server);
     register_global_data_view(*rv, cfg.global_data_view);
@@ -166,6 +169,10 @@ CLI::App* sub_deduplicator(CLI::App& app, deduplicator_config& cfg) {
     auto* rv =
         app.add_subcommand("deduplicator", "Run as deduplicator service");
 
+    rv->add_option("--server-threads", cfg.num_threads,
+                   "threads handling incoming connections")
+        ->default_val(cfg.num_threads);
+
     register_server(*rv, cfg.server);
     register_global_data_view(*rv, cfg.global_data_view);
 
@@ -190,44 +197,46 @@ CLI::App* sub_deduplicator(CLI::App& app, deduplicator_config& cfg) {
 
 CLI::App* sub_coordinator(CLI::App& app, coordinator_config& cfg) {
     auto* rv = app.add_subcommand("coordinator", "Run as coordinator service");
-    rv->add_option("--thread-count", cfg.thread_count, "number of threads")
-        ->default_val(cfg.thread_count);
 
-    app.add_option(
-           "--license,-L",
-           [&cfg](CLI::results_t res) {
-               try {
-                   cfg.license = license::create(res[0]);
-               } catch (const std::exception& e) {
-                   return false;
-               }
-               return true;
-           },
-           "UltiHash license json-string")
+    rv->add_option("--server-threads", cfg.num_threads,
+                   "threads handling incoming connections")
+        ->default_val(cfg.num_threads);
+
+    rv->add_option(
+          "--license,-L",
+          [&cfg](CLI::results_t res) {
+              try {
+                  cfg.license = license::create(res[0]);
+              } catch (const std::exception& e) {
+                  return false;
+              }
+              return true;
+          },
+          "UltiHash license json-string")
         ->envname(ENV_CFG_LICENSE)
         ->default_val(cfg.license);
 
-    app.add_option(
-           "--storage-groups,-G",
-           [&cfg](CLI::results_t res) {
-               try {
-                   cfg.storage_groups = storage::group_configs::create(res[0]);
-               } catch (const std::exception& e) {
-                   return false;
-               }
-               return true;
-           },
-           "UltiHash storage group configuration")
+    rv->add_option(
+          "--storage-groups,-G",
+          [&cfg](CLI::results_t res) {
+              try {
+                  cfg.storage_groups = storage::group_configs::create(res[0]);
+              } catch (const std::exception& e) {
+                  return false;
+              }
+              return true;
+          },
+          "UltiHash storage group configuration")
         ->envname(ENV_CFG_STORAGE_GROUPS)
         ->default_val(cfg.storage_groups);
 
-    app.add_option("--backend-host", cfg.backend_config.backend_host,
+    rv->add_option("--backend-host", cfg.backend_config.backend_host,
                    "backend host")
         ->envname(ENV_CFG_BACKEND_HOST);
-    app.add_option("--customer-id", cfg.backend_config.customer_id,
+    rv->add_option("--customer-id", cfg.backend_config.customer_id,
                    "customer ID required to connect to the backend")
         ->envname(ENV_CFG_CUSTOMER_ID);
-    app.add_option("--access-token", cfg.backend_config.access_token,
+    rv->add_option("--access-token", cfg.backend_config.access_token,
                    "access token required to connect to the backend")
         ->envname(ENV_CFG_ACCESS_TOKEN);
 

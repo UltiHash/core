@@ -8,7 +8,7 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
 #ifdef __clang__
-# pragma GCC diagnostic ignored "-Wdeprecated-builtins"
+#pragma GCC diagnostic ignored "-Wdeprecated-builtins"
 #endif
 
 #include <opentelemetry/metrics/meter.h>
@@ -44,6 +44,7 @@ enum metric_type {
     storage_unlink_req,
     storage_used_req,
     storage_allocate_req,
+    storage_get_refcounts_req,
     deduplicator_req,
     entrypoint_abort_multipart_req,
     entrypoint_complete_multipart_req,

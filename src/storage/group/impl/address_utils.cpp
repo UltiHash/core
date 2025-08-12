@@ -5,12 +5,12 @@
 
 namespace uh::cluster {
 
-std::unordered_map<std::size_t, address_info> extract_node_address_map(
+std::unordered_map<std::size_t, storage_address_info> extract_node_address_map(
     const address& addr,
-    std::function<std::pair<std::size_t, uint64_t>(uint128_t)>
+    std::function<std::pair<std::size_t, storage_pointer>(uint128_t)>
         get_storage_pointer) {
 
-    std::unordered_map<std::size_t, address_info> addr_map;
+    std::unordered_map<std::size_t, storage_address_info> addr_map;
     size_t offset = 0;
     for (size_t i = 0; i < addr.size(); ++i) {
         auto frag = addr.get(i);
@@ -26,11 +26,10 @@ std::unordered_map<std::size_t, address_info> extract_node_address_map(
                             "pointer: {:X}, size: {}",
                             id, last_id, frag.pointer, frag.size));
         }
-        frag.pointer = storage_ptr;
-
+        auto new_frag = storage_fragment(storage_ptr, frag.size);
         auto& node_pos = addr_map[id];
         auto& node_address = node_pos.addr;
-        node_address.push(frag);
+        node_address.push(new_frag);
         node_pos.pointer_offsets.emplace_back(offset);
         offset += frag.size;
     }

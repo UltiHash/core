@@ -68,12 +68,9 @@ public:
           m_repairing_size{repairing_size},
 
           m_storages{std::move(storages)},
-          m_storage_states{std::move(storage_states)} {
-
-        LOG_DEBUG() << "Repairer created for group " << m_config.id;
-        boost::asio::co_spawn(
-            ioc, [this]() -> coro<void> { co_await repair(); },
-            boost::asio::detached);
+          m_storage_states{std::move(storage_states)},
+          m_task{"repairing", ioc} {
+        m_task.spawn(repair().start_trace());
     }
 
     ~repairer() {
@@ -89,10 +86,12 @@ private:
 
     std::vector<std::shared_ptr<storage_interface>> m_storages;
     std::vector<storage_state> m_storage_states;
+    coro_task m_task;
 
     coro<void> repair() {
         LOG_DEBUG() << "Repairing started for group " << m_config.id;
 
+        auto state = co_await boost::asio::this_coro::cancellation_state;
         try {
             std::size_t m_chunk_size = m_config.get_stripe_unit_size();
             std::size_t num_stripes = m_repairing_size / m_chunk_size;
@@ -113,10 +112,12 @@ private:
                     stripe.span().subspan(m_chunk_size * i, m_chunk_size);
                 shards.push_back(shard);
             }
-            for (auto i = 0ul; i < num_stripes; ++i) {
-                LOG_DEBUG() << "start repairing for stripe " << i;
-                (void)m_chunk_size;
-                address addr;
+            for (auto i = 0ul;
+                 i < num_stripes and
+                 state.cancelled() == boost::asio::cancellation_type::none;
+                 ++i) {
+                LOG_DEBUG() << "start repairing data for stripe " << i;
+                storage_address addr;
                 addr.emplace_back(i * m_chunk_size, m_chunk_size);
                 {
                     auto v_succeeded = co_await run_for_all<
@@ -169,6 +170,31 @@ private:
                 LOG_DEBUG() << "[read_address] call recover";
                 m_rs.recover(shards, stats);
 
+                LOG_DEBUG() << "recovering reference count data";
+                auto stripe_refcounts =
+                    co_await run_for_all<std::size_t,
+                                         std::shared_ptr<storage_interface>>(
+                        m_ioc,
+                        [&](std::size_t id,
+                            const std::shared_ptr<storage_interface>& storage)
+                            -> coro<std::size_t> {
+                            if (m_storage_states[id] == storage_state::NEW) {
+                                co_return 0;
+                            }
+                            auto refcounts =
+                                co_await storage->get_refcounts({i});
+                            co_return refcounts.front().count;
+                        },
+                        m_storages);
+
+                refcount_t max_stripe_refcount = {
+                    .stripe_id = i,
+                    .count = std::accumulate(
+                        stripe_refcounts.begin(), stripe_refcounts.end(), 0ull,
+                        [](std::size_t acc, std::size_t count) {
+                            return std::max(acc, count);
+                        })};
+
                 {
                     auto alloc = allocation_t{i * m_chunk_size, m_chunk_size};
                     auto v_succeeded = co_await run_for_all<
@@ -186,8 +212,7 @@ private:
                                 }
                                 LOG_DEBUG() << "write to storage " << id;
                                 co_await storage->write(alloc, {shards[id]},
-                                                        {0});
-                                // TODO: Call link!
+                                                        {max_stripe_refcount});
                                 LOG_DEBUG()
                                     << "write to storage " << id << " done";
                                 co_return true;

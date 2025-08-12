@@ -2,11 +2,10 @@
 
 #include "subscriber_observer.h"
 
-#include <common/utils/strings.h>
-
 namespace uh::cluster {
 
-template <typename T> class sync_vector_observer : public subscriber_observer {
+template <Serializable T>
+class sync_vector_observer : public subscriber_observer {
 public:
     using callback_t = std::function<void(std::size_t index, T& value)>;
     sync_vector_observer(std::string expected_parent_key,

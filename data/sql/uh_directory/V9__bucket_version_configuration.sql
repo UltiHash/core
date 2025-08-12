@@ -13,10 +13,10 @@ ALTER TABLE buckets ADD COLUMN
 -- uh_bucket_versioning(bucket): return configured versioning
 -- for the given bucket
 --
-CREATE OR REPLACE PROCEDURE uh_bucket_set_versioning(bucket TEXT, status versioning_type)
+CREATE OR REPLACE PROCEDURE uh_bucket_set_versioning(bucket TEXT, vt versioning_type)
 LANGUAGE plpgsql AS $$
 BEGIN
-    UPDATE buckets SET versioning = status WHERE name = bucket;
+    UPDATE buckets SET versioning = vt WHERE name = bucket;
 
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Bucket "%s" does not exist in buckets table', bucket;

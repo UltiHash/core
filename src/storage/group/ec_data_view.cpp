@@ -25,52 +25,6 @@ ec_data_view::ec_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
     LOG_DEBUG() << "[ec_data_view] group state is ready for group " << group_id;
 }
 
-std::vector<std::vector<std::size_t>>
-ec_data_view::prepare_stripe_offsets(const std::vector<std::size_t>& offsets,
-                                     std::size_t stripe_index,
-                                     std::size_t stripe_data_size) const {
-    auto base_offset = stripe_index * m_chunk_size;
-    auto stripe_offsets = std::vector<std::vector<std::size_t>>(
-        m_config.data_shards + m_config.parity_shards);
-
-    // translate offsets into chunk-local offsets for each stripe.
-    const std::size_t stripe_offset = stripe_index * m_stripe_size;
-    auto current_offset =
-        std::lower_bound(offsets.begin(), offsets.end(), stripe_offset);
-
-    for (size_t j = 0; j < m_config.data_shards; ++j) {
-        const std::size_t chunk_offset = stripe_offset + j * m_chunk_size;
-        if (stripe_data_size > j * m_chunk_size) {
-            // if chunk actually contains user data, and if so add a zero
-            // offset to denote the start of the chunk and thus a new
-            // fragment, as fragments may not span across chunks
-            stripe_offsets[j].push_back(0 + base_offset);
-        }
-        while (current_offset != offsets.end() &&
-               *current_offset < chunk_offset + m_chunk_size) {
-            auto local_offset = *current_offset - chunk_offset;
-            if (local_offset != 0) {
-                stripe_offsets[j].push_back(local_offset + base_offset);
-            }
-            ++current_offset;
-        }
-    }
-
-    std::size_t num_fragments = std::accumulate(
-        stripe_offsets.begin(), stripe_offsets.end(), 0ul,
-        [](std::size_t acc, const std::vector<std::size_t>& chunk_offsets) {
-            return acc + chunk_offsets.size();
-        });
-
-    // goal: stripe_offsets[p].size() for any p == num_fragments
-    for (std::size_t p = m_config.data_shards;
-         p < m_config.data_shards + m_config.parity_shards; ++p) {
-        for (std::size_t o = 0; o < num_fragments; ++o) {
-            stripe_offsets[p].push_back(0 + base_offset);
-        }
-    }
-    return stripe_offsets;
-}
 coro<address> ec_data_view::write(std::span<const char> data,
                                   const std::vector<std::size_t>& offsets) {
 
@@ -119,11 +73,8 @@ coro<address> ec_data_view::write(std::span<const char> data,
         storage_buffers_view[m_config.data_shards + i].push_back(parities[i]);
     }
 
-    std::vector<std::vector<std::size_t>> storage_offsets;
-    storage_offsets.reserve(m_config.storages);
-    for (size_t i = 0; i < m_config.storages; ++i) {
-        storage_offsets.emplace_back();
-    }
+    std::vector<std::size_t> stripe_refcounts;
+    stripe_refcounts.reserve(num_stripes);
 
     std::optional<unique_buffer<>> last_stripe;
 
@@ -161,28 +112,35 @@ coro<address> ec_data_view::write(std::span<const char> data,
         }
 
         m_rs.encode(data_view, parity_view);
-
-        auto stripe_offsets =
-            prepare_stripe_offsets(offsets, i, data_view_size);
-        for (size_t j = 0; j < m_config.data_shards; ++j) {
-            storage_offsets[j].insert(storage_offsets[j].end(),
-                                      stripe_offsets[j].begin(),
-                                      stripe_offsets[j].end());
-        }
     }
+
+    address addr = compute_address(offsets, data.size_bytes(), allocation);
+    // WARNING: this is a group address and won't work with multiple storage
+    // groups
+    auto refcounts = extract_refcounts(addr);
 
     co_await run_for_all<void, std::shared_ptr<storage_interface>>(
         m_ioc,
         [&](size_t i, auto storage) -> coro<void> {
-            auto storage_addr = co_await storage->write(
-                allocation, storage_buffers_view[i], storage_offsets[i]);
+            co_await storage->write(allocation, storage_buffers_view[i],
+                                    refcounts);
         },
         storages);
 
+    co_return addr;
+}
+address ec_data_view::compute_address(const std::vector<std::size_t>& offsets,
+                                      const std::size_t data_size,
+                                      const allocation_t& allocation) const {
     address rv;
-    rv.emplace_back(allocation.offset * m_config.data_shards,
-                    data.size_bytes());
-    co_return rv;
+    std::size_t base_offset = allocation.offset * m_config.data_shards;
+    for (auto it = offsets.begin(); it != offsets.end(); it++) {
+        auto next = std::next(it);
+        std::size_t frag_size =
+            next == offsets.end() ? data_size - *it : *next - *it;
+        rv.emplace_back(base_offset + *it, frag_size);
+    }
+    return rv;
 }
 
 address ec_data_view::split_fragment(const uint128_t& pointer,
@@ -217,13 +175,14 @@ coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
 }
 
 coro<std::unordered_map<std::size_t, bool>> ec_data_view::read_from_storages(
-    std::unordered_map<std::size_t, address_info> addr_info_map,
+    std::unordered_map<std::size_t, storage_address_info> addr_info_map,
     std::span<char> buffer) {
     co_return co_await run_for_all<bool>(
         m_ioc,
         // NOTE: doesn't check storage_states, since unassigned storages will
         // throw exception
-        [this, buffer](std::size_t id, const address_info& info) -> coro<bool> {
+        [this, buffer](std::size_t id,
+                       const storage_address_info& info) -> coro<bool> {
             try {
                 auto storage = m_externals.get_storage_service(id);
                 auto state = m_externals.get_storage_states().at(id);
@@ -259,7 +218,7 @@ coro<std::unordered_map<std::size_t, bool>> ec_data_view::read_from_storages(
 
 std::unordered_map<uint64_t, std::vector<std::pair<fragment, std::size_t>>>
 ec_data_view::get_stripe_ids(
-    std::unordered_map<std::size_t, address_info> addr_info_map,
+    std::unordered_map<std::size_t, storage_address_info> addr_info_map,
     std::unordered_map<std::size_t, bool> success_map) {
     std::unordered_map<uint64_t, std::vector<std::pair<fragment, std::size_t>>>
         rv;
@@ -283,11 +242,7 @@ ec_data_view::get_stripe_ids(
 
 coro<std::size_t> ec_data_view::read_address(const address& addr,
                                              std::span<char> buffer) {
-    auto aligned_addr = address{};
-    for (auto& frag : addr.fragments) {
-        auto a = split_fragment(frag.pointer, frag.size);
-        aligned_addr.append(a);
-    }
+    address aligned_addr = get_aligned_address(addr);
     auto addr_info_map = extract_node_address_map(
         aligned_addr, [this](uint128_t pointer) -> auto {
             return get_storage_pointer(pointer);
@@ -349,7 +304,7 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
     }
 
     for (auto& [stripe_id, frags_and_offsets] : stripe_map) {
-        address _addr;
+        storage_address _addr;
         _addr.emplace_back(m_chunk_size * stripe_id, m_chunk_size);
 
         LOG_DEBUG() << "[read_address] call run_for_all for a stripe "
@@ -415,6 +370,14 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
 
     co_return addr.data_size();
 }
+address ec_data_view::get_aligned_address(const address& addr) const {
+    address aligned_addr;
+    for (auto& frag : addr.fragments) {
+        auto a = split_fragment(frag.pointer, frag.size);
+        aligned_addr.append(a);
+    }
+    return aligned_addr;
+}
 
 coro<std::size_t> ec_data_view::get_used_space() {
     auto storages = m_externals.get_storage_services();
@@ -436,10 +399,97 @@ coro<std::size_t> ec_data_view::get_used_space() {
     co_return used_space;
 }
 
-[[nodiscard]] coro<address> ec_data_view::link(const address& addr) {
-    co_return address{};
+std::vector<refcount_t>
+ec_data_view::extract_refcounts(const address& addr) const {
+    std::map<std::size_t, std::size_t> refcount_by_stripe;
+
+    for (const auto& frag : addr.fragments) {
+        auto group_pointer = pointer_traits::get_group_pointer(frag.pointer);
+        std::size_t first_stripe = group_pointer / m_stripe_size;
+        std::size_t last_stripe =
+            (group_pointer + frag.size - 1) / m_stripe_size;
+        for (size_t stripe_id = first_stripe; stripe_id <= last_stripe;
+             stripe_id++) {
+            refcount_by_stripe[stripe_id]++;
+        }
+    }
+
+    std::vector<refcount_t> refcounts;
+    refcounts.reserve(refcount_by_stripe.size());
+    for (const auto& [stripe_id, count] : refcount_by_stripe) {
+        refcounts.emplace_back(stripe_id, count);
+    }
+    return refcounts;
 }
 
-coro<std::size_t> ec_data_view::unlink(const address& addr) { co_return 0; }
+address ec_data_view::compute_rejected_address(
+    const std::vector<std::vector<refcount_t>>& rejected_refcounts,
+    const address& original_addr) {
+    std::unordered_set<std::size_t> rejected_stripes;
+    for (const auto& refcount : rejected_refcounts) {
+        for (const auto& rc : refcount) {
+            rejected_stripes.insert(rc.stripe_id);
+        }
+    }
+
+    if (rejected_stripes.empty()) {
+        return {};
+    }
+
+    address rv;
+    for (const auto& frag : original_addr.fragments) {
+        auto group_pointer = pointer_traits::get_group_pointer(frag.pointer);
+        std::size_t first_stripe = group_pointer / m_stripe_size;
+        std::size_t last_stripe =
+            (group_pointer + frag.size - 1) / m_stripe_size;
+        bool has_overlap = false;
+        for (size_t stripe_id = first_stripe; stripe_id <= last_stripe;
+             stripe_id++) {
+            if (rejected_stripes.contains(stripe_id)) {
+                has_overlap = true;
+            }
+        }
+        if (has_overlap) {
+            rv.push(frag);
+        }
+    }
+
+    return rv;
+}
+
+[[nodiscard]] coro<address> ec_data_view::link(const address& addr) {
+    auto refcounts = extract_refcounts(addr);
+    auto storages = m_externals.get_storage_services();
+    auto link_rvs = co_await run_for_all<std::vector<refcount_t>,
+                                         std::shared_ptr<storage_interface>>(
+        m_ioc,
+        [&](size_t i, auto storage) -> coro<std::vector<refcount_t>> {
+            co_return co_await storage->link(refcounts);
+        },
+        storages);
+
+    co_return compute_rejected_address(link_rvs, addr);
+}
+
+coro<std::size_t> ec_data_view::unlink(const address& addr) {
+    auto refcounts = extract_refcounts(addr);
+    auto storages = m_externals.get_storage_services();
+
+    auto unlink_rvs =
+        co_await run_for_all<std::size_t, std::shared_ptr<storage_interface>>(
+            m_ioc,
+            [&](size_t i, auto storage) -> coro<std::size_t> {
+                std::size_t freed = co_await storage->unlink(refcounts);
+                if (i >= m_config.data_shards) {
+                    co_return 0;
+                }
+                co_return freed;
+            },
+            storages);
+
+    auto freed_bytes =
+        std::accumulate(unlink_rvs.begin(), unlink_rvs.end(), 0ul);
+    co_return freed_bytes;
+}
 
 } // namespace uh::cluster::storage

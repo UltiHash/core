@@ -50,7 +50,7 @@ jobs:
         uses: unfor19/install-aws-cli-action@v1
         with:
           version: 2
-          arch: amd64
+          arch: arm64
 
       - name: Setup the AWS credentials
         run: |
@@ -58,21 +58,17 @@ jobs:
           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_KEY}}" >> $GITHUB_ENV
           echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
 
-      - uses: azure/setup-kubectl@v3
-        with:
-          version: v1.28.7
+      - uses: azure/setup-kubectl@v4
 
       - name: Download Kubeconfig
         run: |
           mkdir ~/.kube
           aws eks update-kubeconfig --name aws-core
     
-      - uses: azure/setup-helm@v4.0.0
-        with:
-         version: v3.14.0
+      - uses: azure/setup-helm@v4.3.0
 
       - name: Generate the Karpenter node pools
-        uses: danielr1996/envsubst-action@1.0.0
+        uses: danielr1996/envsubst-action@1.1.0
         env:
           EC2_INSTANCE_TYPE: "${{ github.event.inputs.ec2_instance_type }}"
           TESTER_EC2_INSTANCE_TYPE: "${{ github.event.inputs.tester_ec2_instance_type }}"
@@ -81,7 +77,7 @@ jobs:
           output: karpenter-node-pools.yaml
 
       - name: Generate Helm values
-        uses: danielr1996/envsubst-action@1.0.0
+        uses: danielr1996/envsubst-action@1.1.0
         env:
           HDFS_BLOCK_SIZE: "${{ github.event.inputs.hdfs_block_size }}"
           TEST_FILE_COUNT: "${{ github.event.inputs.test_file_count }}"
@@ -104,7 +100,7 @@ jobs:
       - name: Install the HDFS cluster
         run: |
           echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
-          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/staging/hdfs -n ${{ env.ENVIRONMENT_NAME }} --values helm-values.yaml --wait --timeout 25m
+          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/staging/hdfs -n ${{ env.ENVIRONMENT_NAME }} --values helm-values.yaml --wait --timeout 60m
           sleep 120
       
       - name: Execute performance test against HDFS
@@ -121,7 +117,7 @@ jobs:
         uses: unfor19/install-aws-cli-action@v1
         with:
           version: 2
-          arch: amd64
+          arch: arm64
 
       - name: Setup the AWS credentials
         run: |
@@ -129,18 +125,14 @@ jobs:
           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_KEY}}" >> $GITHUB_ENV
           echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
 
-      - uses: azure/setup-kubectl@v3
-        with:
-          version: v1.28.7
+      - uses: azure/setup-kubectl@v4
 
       - name: Download Kubeconfig
         run: |
           mkdir ~/.kube
           aws eks update-kubeconfig --name aws-core
     
-      - uses: azure/setup-helm@v4.0.0
-        with:
-         version: v3.14.0
+      - uses: azure/setup-helm@v4.3.0
 
       - name: Environment cleanup
         run: |

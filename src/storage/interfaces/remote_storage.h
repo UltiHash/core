@@ -13,20 +13,20 @@ struct remote_storage : public storage_interface {
     explicit remote_storage(client storage_service)
         : m_storage_service(std::move(storage_service)) {}
 
-    coro<address> write(allocation_t allocation,
-                        const std::vector<std::span<const char>>& buffers,
-                        std::span<const std::size_t> offsets) override {
+    coro<void> write(allocation_t allocation,
+                     const std::vector<std::span<const char>>& buffers,
+                     const std::vector<refcount_t>& refcounts) override {
         auto m = co_await m_storage_service.acquire_messenger();
-        write_request_view req = {
-            .allocation = allocation, .buffers = buffers, .offsets = offsets};
+        write_request_view req = {.allocation = allocation,
+                                  .buffers = buffers,
+                                  .refcounts = refcounts};
 
         co_await m->send_write(req);
-        const auto h =
-            co_await m->recv_header(time_settings::instance().storage_timeout);
-        co_return co_await m->recv_address(h);
+        co_await m->recv_header(time_settings::instance().storage_timeout);
     }
 
-    coro<shared_buffer<>> read(const uint128_t& pointer, size_t size) override {
+    coro<shared_buffer<>> read(const storage_pointer& pointer,
+                               size_t size) override {
         auto m = co_await m_storage_service.acquire_messenger();
         co_await m->send_fragment(STORAGE_READ_REQ, {pointer, size});
         const auto h =
@@ -37,7 +37,7 @@ struct remote_storage : public storage_interface {
         co_return buffer;
     }
 
-    coro<void> read_address(const address& addr, std::span<char> buffer,
+    coro<void> read_address(const storage_address& addr, std::span<char> buffer,
                             const std::vector<size_t>& offsets) override {
         auto m = co_await m_storage_service.acquire_messenger();
 
@@ -55,17 +55,19 @@ struct remote_storage : public storage_interface {
         co_await m->recv_buffers(h);
     }
 
-    coro<address> link(const address& addr) override {
+    coro<std::vector<refcount_t>>
+    link(const std::vector<refcount_t>& refcounts) override {
         auto m = co_await m_storage_service.acquire_messenger();
-        co_await m->send_address(STORAGE_LINK_REQ, addr);
+        co_await m->send_refcounts(STORAGE_LINK_REQ, refcounts);
         const auto h =
             co_await m->recv_header(time_settings::instance().storage_timeout);
-        co_return co_await m->recv_address(h);
+        co_return co_await m->recv_refcounts(h);
     }
 
-    coro<std::size_t> unlink(const address& addr) override {
+    coro<std::size_t>
+    unlink(const std::vector<refcount_t>& refcounts) override {
         auto m = co_await m_storage_service.acquire_messenger();
-        co_await m->send_address(STORAGE_UNLINK_REQ, addr);
+        co_await m->send_refcounts(STORAGE_UNLINK_REQ, refcounts);
         const auto h =
             co_await m->recv_header(time_settings::instance().storage_timeout);
         co_return co_await m->recv_primitive<size_t>(h);
@@ -88,6 +90,16 @@ struct remote_storage : public storage_interface {
         const auto h =
             co_await m->recv_header(time_settings::instance().storage_timeout);
         co_return co_await m->recv_allocation(h);
+    }
+
+    coro<std::vector<refcount_t>>
+    get_refcounts(const std::vector<std::size_t>& stripe_ids) override {
+        auto m = co_await m_storage_service.acquire_messenger();
+        m->register_write_buffer(stripe_ids);
+        co_await m->send_buffers(STORAGE_GET_REFCOUNTS_REQ);
+        const auto h =
+            co_await m->recv_header(time_settings::instance().storage_timeout);
+        co_return co_await m->recv_refcounts(h);
     }
 
 private:

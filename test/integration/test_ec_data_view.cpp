@@ -1,5 +1,6 @@
 #define BOOST_TEST_MODULE "ec tests"
 
+#include <algorithm>
 #include <common/ec/reedsolomon_c.h>
 #include <common/telemetry/log.h>
 #include <common/types/common_types.h>
@@ -790,6 +791,69 @@ BOOST_AUTO_TEST_CASE(repairs_when_new_storage_is_introduced) {
     });
 }
 
+BOOST_AUTO_TEST_CASE(repairs_refcount) {
+    auto config = get_group_config();
+    auto gdv = get_data_view();
+    auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
+    LOG_DEBUG() << "start writing...";
+    address addr;
+    BOOST_REQUIRE_NO_THROW({
+        addr = boost::asio::co_spawn(get_executor(),
+                                     gdv->write(buffer.string_view(), {0}),
+                                     boost::asio::use_future)
+                   .get();
+    });
+
+    deactivate_storage(1);
+    deactivate_storage(5);
+    get_etcd_manager().wait(
+        ns::root.storage_groups[get_group_config().id].group_state,
+        serialize(storage::group_state::DEGRADED));
+    introduce_new_storage(1);
+    introduce_new_storage(5);
+    get_etcd_manager().wait(
+        ns::root.storage_groups[get_group_config().id].group_state,
+        serialize(storage::group_state::REPAIRING));
+    get_etcd_manager().wait(
+        ns::root.storage_groups[get_group_config().id].group_state,
+        serialize(storage::group_state::HEALTHY));
+
+    {
+        auto read_buffer = shared_buffer<char>(buffer.size());
+        std::size_t read_size;
+        BOOST_REQUIRE_NO_THROW({
+            read_size =
+                boost::asio::co_spawn(
+                    get_executor(), gdv->read_address(addr, read_buffer.span()),
+                    boost::asio::use_future)
+                    .get();
+        });
+        BOOST_TEST(buffer.size() == read_size);
+        BOOST_TEST(buffer == read_buffer);
+    }
+
+    BOOST_REQUIRE_NO_THROW({
+        boost::asio::co_spawn(get_executor(), gdv->unlink(addr),
+                              boost::asio::use_future)
+            .get();
+    });
+
+    {
+        auto read_buffer = shared_buffer<char>(buffer.size());
+        std::size_t read_size;
+        BOOST_REQUIRE_NO_THROW({
+            read_size =
+                boost::asio::co_spawn(
+                    get_executor(), gdv->read_address(addr, read_buffer.span()),
+                    boost::asio::use_future)
+                    .get();
+        });
+        BOOST_TEST(buffer.size() == read_size);
+        BOOST_TEST(std::all_of(read_buffer.begin(), read_buffer.end(),
+                               [](auto c) { return c == 0; }));
+    }
+}
+
 BOOST_AUTO_TEST_CASE(
     preserves_data_after_killing_and_reviving_storages_and_writing) {
     auto config = get_group_config();
@@ -805,15 +869,21 @@ BOOST_AUTO_TEST_CASE(
                      .get();
     });
 
-    for (auto i = 0ul; i < config.storages; ++i) {
-        LOG_DEBUG() << "kill storage " << i;
-        deactivate_storage(i);
-    }
+    LOG_DEBUG() << "kill storage 1";
+    deactivate_storage(1);
 
-    for (auto i = 0ul; i < config.storages; ++i) {
-        LOG_DEBUG() << "revive storage " << i;
-        activate_storage(i);
-    }
+    LOG_DEBUG() << "kill storage 5";
+    deactivate_storage(5);
+
+    get_etcd_manager().wait(
+        ns::root.storage_groups[get_group_config().id].group_state,
+        serialize(storage::group_state::DEGRADED));
+
+    LOG_DEBUG() << "introduce new storage as storage 1";
+    introduce_new_storage(1);
+
+    LOG_DEBUG() << "introduce new storage as storage 5";
+    introduce_new_storage(5);
 
     get_etcd_manager().wait(
         ns::root.storage_groups[get_group_config().id].group_state,

@@ -4,8 +4,9 @@
 
 namespace uh::cluster {
 
-coro<address> messenger::recv_address(const header& message_header) {
-    address addr(address::allocated_elements(message_header.size));
+coro<storage_address> messenger::recv_address(const header& message_header) {
+    storage_address addr(
+        storage_address::allocated_elements(message_header.size));
     LOG_DEBUG() << "messenge_header.size: "
                 << std::to_string(message_header.size);
     register_read_buffer(addr.fragments);
@@ -27,6 +28,14 @@ coro<allocation_t> messenger::recv_allocation(const header& message_header) {
     co_return allocation;
 }
 
+coro<std::vector<refcount_t>>
+messenger::recv_refcounts(const header& message_header) {
+    std::vector<refcount_t> refcounts(message_header.size / sizeof(refcount_t));
+    register_read_buffer(refcounts);
+    co_await recv_buffers(message_header);
+    co_return refcounts;
+}
+
 coro<dedupe_response>
 messenger::recv_dedupe_response(const header& message_header) {
     dedupe_response dedupe_resp;
@@ -41,12 +50,12 @@ messenger::recv_dedupe_response(const header& message_header) {
 coro<void> messenger::send_write(const write_request_view& req) {
     register_write_buffer(req.allocation);
 
-    std::size_t num_offsets = req.offsets.size();
-    register_write_buffer(num_offsets);
+    std::size_t num_refcounts = req.refcounts.size();
+    register_write_buffer(num_refcounts);
     std::size_t num_buffers = req.buffers.size();
     register_write_buffer(num_buffers);
 
-    register_write_buffer(req.offsets);
+    register_write_buffer(req.refcounts);
 
     auto buffer_sizes_view =
         req.buffers |
@@ -65,21 +74,23 @@ coro<void> messenger::send_write(const write_request_view& req) {
 coro<write_request_store> messenger::recv_write(const header& message_header) {
     allocation_t allocation;
     register_read_buffer(allocation);
-    std::size_t num_offsets;
-    register_read_buffer(num_offsets);
+    std::size_t num_refcounts;
+    register_read_buffer(num_refcounts);
     std::size_t num_buffers;
     register_read_buffer(num_buffers);
     unique_buffer<char> buffer(message_header.size - sizeof(allocation) -
-                               sizeof(num_buffers) - sizeof(num_offsets));
+                               sizeof(num_buffers) - sizeof(num_refcounts));
     register_read_buffer(buffer);
 
     co_await recv_buffers(message_header);
 
     auto p = buffer.begin();
 
-    auto offsets = std::span<const std::size_t>((std::size_t*)p, num_offsets);
+    std::vector<refcount_t> refcounts = std::vector<refcount_t>(
+        reinterpret_cast<refcount_t*>(p),
+        reinterpret_cast<refcount_t*>(p) + num_refcounts);
 
-    p += offsets.size_bytes();
+    p += num_refcounts * sizeof(refcount_t);
 
     auto buffer_sizes =
         std::span<const std::size_t>((std::size_t*)p, num_buffers);
@@ -95,12 +106,12 @@ coro<write_request_store> messenger::recv_write(const header& message_header) {
 
     co_return write_request_store{.allocation = std::move(allocation),
                                   .buffers = std::move(buffers),
-                                  .offsets = std::move(offsets),
+                                  .refcounts = std::move(refcounts),
                                   .backing_buffer = std::move(buffer)};
 }
 
 coro<void> messenger::send_address(const message_type type,
-                                   const address& addr) {
+                                   const storage_address& addr) {
     register_write_buffer(addr.fragments);
     co_await send_buffers(type);
 }
@@ -115,6 +126,12 @@ coro<void> messenger::send_allocation(const message_type type,
                                       const allocation_t& allocation) {
     register_write_buffer(allocation.offset);
     register_write_buffer(allocation.size);
+    co_await send_buffers(type);
+}
+
+coro<void> messenger::send_refcounts(const message_type type,
+                                     const std::vector<refcount_t>& refcounts) {
+    register_write_buffer(refcounts);
     co_await send_buffers(type);
 }
 

@@ -26,6 +26,8 @@ private:
 
     coro<void> handle_unlink(messenger& m, const messenger::header& h);
 
+    coro<void> handle_get_refcounts(messenger& m, const messenger::header& h);
+
     coro<void> handle_get_used(messenger& m, const messenger::header&);
 
     coro<void> handle_allocate(messenger& m, const messenger::header&);

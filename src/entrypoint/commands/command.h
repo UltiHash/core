@@ -1,7 +1,9 @@
 #pragma once
 
-#include "entrypoint/http/request.h"
-#include "entrypoint/http/response.h"
+#include <common/telemetry/metrics.h>
+
+#include <entrypoint/http/request.h>
+#include <entrypoint/http/response.h>
 
 namespace uh::cluster {
 

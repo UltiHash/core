@@ -19,14 +19,16 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
     messenger m(std::move(s), messenger::origin::UPSTREAM);
 
-    for (;;) {
-        messenger_core::header hdr;
-        opentelemetry::context::Context context;
-
-        std::optional<error> err;
-
+    auto state = co_await boost::asio::this_coro::cancellation_state;
+    while (state.cancelled() == boost::asio::cancellation_type::none) {
         try {
+            messenger_core::header hdr;
+            opentelemetry::context::Context context;
+
+            std::optional<error> err;
+
             try {
+                LOG_DEBUG() << remote.str() << " waiting for request";
                 std::tie(hdr, context) = co_await m.recv_header_with_context();
                 LOG_DEBUG() << remote.str() << " received "
                             << magic_enum::enum_name(hdr.type);
@@ -37,8 +39,9 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             } catch (const boost::system::system_error& e) {
                 throw;
             } catch (const downstream_exception& e) {
-                if (e.code() == boost::asio::error::operation_aborted or
-                    e.code() == boost::beast::error::timeout) {
+                if (e.code() == boost::asio::error::operation_aborted) {
+                    throw e.original_exception();
+                } else if (e.code() == boost::beast::error::timeout) {
                     err = error(error::busy, e.what());
                 } else {
                     err = error(error::internal_network_error, e.what());
@@ -56,13 +59,16 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             }
 
         } catch (const boost::system::system_error& e) {
-            if (e.code() == boost::asio::error::eof) {
-                LOG_INFO() << s.remote_endpoint() << " disconnected";
+            if (e.code() == boost::asio::error::operation_aborted) {
+                break;
+            } else if (e.code() == boost::asio::error::eof) {
+                LOG_INFO() << m.peer() << " disconnected";
                 break;
             }
             throw;
         }
     };
+    LOG_INFO() << m.peer() << " expired";
 }
 
 coro<void> handler::handle_iteration(const messenger::header& hdr,
@@ -83,6 +89,9 @@ coro<void> handler::handle_iteration(const messenger::header& hdr,
     case STORAGE_UNLINK_REQ:
         co_await handle_unlink(m, hdr);
         break;
+    case STORAGE_GET_REFCOUNTS_REQ:
+        co_await handle_get_refcounts(m, hdr);
+        break;
     case STORAGE_USED_REQ:
         co_await handle_get_used(m, hdr);
         break;
@@ -97,10 +106,8 @@ coro<void> handler::handle_iteration(const messenger::header& hdr,
 coro<void> handler::handle_write(messenger& m, const messenger::header& h) {
     auto req = co_await m.recv_write(h);
 
-    // Use buffers directly from the write_request
-    auto addr =
-        co_await m_storage.write(req.allocation, req.buffers, req.offsets);
-    co_await m.send_address(SUCCESS, addr);
+    co_await m_storage.write(req.allocation, req.buffers, req.refcounts);
+    co_await m.send(SUCCESS, {});
 }
 
 coro<void> handler::handle_read(messenger& m, const messenger::header& h) {
@@ -131,18 +138,28 @@ coro<void> handler::handle_read_address(messenger& m,
 
 coro<void> handler::handle_link(messenger& m, const messenger::header& h) {
 
-    const auto addr = co_await m.recv_address(h);
-    auto rejected_addr = co_await m_storage.link(addr);
+    const auto refcounts = co_await m.recv_refcounts(h);
+    auto rejected_stripes = co_await m_storage.link(refcounts);
 
-    co_await m.send_address(SUCCESS, rejected_addr);
+    co_await m.send_refcounts(SUCCESS, rejected_stripes);
 }
 
 coro<void> handler::handle_unlink(messenger& m, const messenger::header& h) {
 
-    const auto addr = co_await m.recv_address(h);
+    const auto addr = co_await m.recv_refcounts(h);
     std::size_t freed_bytes = co_await m_storage.unlink(addr);
 
     co_await m.send_primitive<size_t>(SUCCESS, freed_bytes);
+}
+
+coro<void> handler::handle_get_refcounts(uh::cluster::messenger& m,
+                                         const messenger::header& h) {
+    std::vector<std::size_t> stripe_ids(h.size / sizeof(std::size_t));
+    m.register_read_buffer(stripe_ids);
+    co_await m.recv_buffers(h);
+
+    auto refcounts = co_await m_storage.get_refcounts(stripe_ids);
+    co_await m.send_refcounts(SUCCESS, refcounts);
 }
 
 coro<void> handler::handle_get_used(messenger& m, const messenger::header&) {

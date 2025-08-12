@@ -34,7 +34,7 @@ list_buckets::list_buckets(directory& dir)
 
 bool list_buckets::can_handle(const request& req) {
     return req.method() == verb::get && req.bucket().empty() &&
-           req.object_key().empty();
+           req.object_key().empty() && !req.query("versions");
 }
 
 coro<response> list_buckets::handle(request& req) {

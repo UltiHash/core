@@ -1,20 +1,18 @@
 #pragma once
 
-#include "common/db/db.h"
-#include "common/network/messenger_core.h"
-#include "common/types/common_types.h"
-#include "common/utils/scope_guard.h"
-#include "storage/global/data_view.h"
+#include <common/db/db.h>
+#include <common/utils/scope_guard.h>
+#include <storage/global/data_view.h>
+
+#include "object.h"
 
 #include <functional>
 
 namespace uh::cluster {
 
-enum class bucket_versioning {
-    disabled,
-    enabled,
-    suspended
-};
+using ep::object;
+
+enum class bucket_versioning { disabled, enabled, suspended };
 
 std::string to_string(bucket_versioning versioning);
 bucket_versioning to_versioning(std::string s);
@@ -22,8 +20,8 @@ bucket_versioning to_versioning(std::string s);
 class directory {
 public:
     directory(boost::asio::io_context& ioc, const db::config& cfg)
-        : m_db(ioc, connection_factory(ioc, cfg, cfg.directory),
-               cfg.directory.count) {}
+        : m_db{ioc, connection_factory(ioc, cfg, cfg.directory),
+               cfg.directory.count} {}
 
     struct unref {
         promise<void> p;
@@ -33,13 +31,16 @@ public:
 
     using object_lock = value_guard<object, unref>;
 
-    coro<void> put_object(const std::string& bucket, const object& obj);
+    coro<std::optional<std::string>> put_object(const std::string& bucket,
+                                                const object& obj);
 
-    coro<object_lock> get_object(const std::string& bucket,
-                                 const std::string& object_id);
+    coro<object_lock>
+    get_object(const std::string& bucket, const std::string& object_id,
+               std::optional<std::string> version = std::nullopt);
 
     coro<object> head_object(const std::string& bucket,
-                             const std::string& object_id);
+                             const std::string& object_id,
+                             std::optional<std::string> version = std::nullopt);
 
     coro<void> put_bucket(const std::string& bucket);
 
@@ -47,8 +48,13 @@ public:
 
     coro<void> delete_bucket(const std::string& bucket);
 
-    coro<void> delete_object(const std::string& bucket,
-                             const std::string& object_id);
+    struct delete_result {
+        bool is_delete_marker;
+        std::optional<std::string> version;
+    };
+    coro<delete_result>
+    delete_object(const std::string& bucket, const std::string& object_id,
+                  std::optional<std::string> version = std::nullopt);
 
     coro<std::vector<std::string>> list_buckets();
 
@@ -65,12 +71,17 @@ public:
 
     coro<bucket_versioning> get_bucket_versioning(const std::string& bucket);
     coro<void> set_bucket_versioning(const std::string& bucket,
-            bucket_versioning versioning);
+                                     bucket_versioning versioning);
 
     coro<std::vector<object>>
     list_objects(const std::string& bucket,
                  const std::optional<std::string>& prefix,
                  const std::optional<std::string>& lower_bound);
+
+    coro<std::vector<object>> list_object_versions(
+        const std::string& bucket, const std::optional<std::string>& prefix,
+        const std::optional<std::string>& key_marker,
+        const std::optional<std::string>& version_marker, std::size_t limit);
 
     struct to_delete {
         std::size_t id;
@@ -94,8 +105,8 @@ private:
 };
 
 /**
- * Convenience function to safely put an object. Returns the amount of reclaimed
- * memory.
+ * Convenience function to safely put an object. Returns the version of the
+ * object if versions are enabled for the bucket.
  *
  * Before writing the new object data it will retrieve data already stored. This
  * data will be freed be unlinking it.
@@ -103,16 +114,13 @@ private:
  * If there is any error during execution, the function will unlink the object's
  * address data and set it to empty.
  *
- * @param ctx the request context
  * @param dir a directory
  * @param gdv reference to the global data view
  * @param bucket name of the bucket to work in
  * @param obj object specification to write, including object name
- *
- * @return number of bytes reclaimed
  */
-coro<void> safe_put_object(directory& dir,
-                           storage::global::global_data_view& gdv,
-                           const std::string& bucket, const object& obj);
+coro<std::optional<std::string>>
+safe_put_object(directory& dir, storage::global::global_data_view& gdv,
+                const std::string& bucket, const object& obj);
 
 } // namespace uh::cluster

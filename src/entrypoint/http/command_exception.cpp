@@ -1,7 +1,8 @@
 #include "command_exception.h"
 
-#include "common/telemetry/metrics.h"
-#include "entrypoint/utils.h"
+#include <common/telemetry/log.h>
+#include <common/telemetry/metrics.h>
+#include <entrypoint/utils.h>
 
 using namespace uh::cluster::ep::http;
 
@@ -24,11 +25,6 @@ const char* command_exception::what() const noexcept {
 }
 
 response make_response(const command_exception& e) noexcept {
-    if (static_cast<unsigned>(e.get_status()) >= 500) {
-        LOG_WARN() << e.what();
-    } else {
-        LOG_INFO() << e.what();
-    }
     return error_response(e.m_status, e.m_code, e.m_reason);
 }
 
@@ -87,6 +83,11 @@ command_exception::command_exception(const error::type& e) {
         m_status = status::service_unavailable;
         m_code = "SlowDown";
         m_reason = "Please reduce your request rate.";
+        break;
+    case error::service_unavailable:
+        m_status = status::service_unavailable;
+        m_code = "ServiceUnavailable";
+        m_reason = "Service is unable to handle request.";
         break;
     default:
         m_status = status::internal_server_error;

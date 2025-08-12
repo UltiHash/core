@@ -1,5 +1,6 @@
 #pragma once
 
+#include <common/coroutines/coro_util.h>
 #include <common/etcd/namespace.h>
 #include <common/etcd/utils.h>
 #include <common/license/backend_client.h>
@@ -18,7 +19,12 @@ public:
                     T&& client)
         : m_ioc{ioc},
           m_etcd{etcd},
-          m_backend_client{std::make_unique<T>(std::forward<T>(client))} {}
+          m_backend_client{std::make_unique<T>(std::forward<T>(client))},
+          m_task{"periodic license update", ioc} {
+        m_task.spawn(
+            periodic_update(time_settings::instance().license_fetch_period)
+                .start_trace());
+    }
 
     void start_update() {}
 
@@ -57,7 +63,9 @@ public:
     }
 
     coro<void> periodic_update(std::chrono::steady_clock::duration interval) {
-        while (true) {
+        auto state = co_await boost::asio::this_coro::cancellation_state;
+        while (state.cancelled() == boost::asio::cancellation_type::none) {
+
             auto start_time = std::chrono::steady_clock::now();
 
             co_await update();
@@ -80,6 +88,7 @@ private:
     etcd_manager& m_etcd;
     std::unique_ptr<backend_client> m_backend_client;
     std::atomic<std::shared_ptr<license>> m_license;
+    coro_task m_task;
 };
 
 } // namespace uh::cluster

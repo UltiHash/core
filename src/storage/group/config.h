@@ -1,5 +1,6 @@
 #pragma once
 
+#include <common/utils/common.h>
 #include <magic_enum/magic_enum.hpp>
 #include <nlohmann/json.hpp>
 #include <string_view>
@@ -13,11 +14,11 @@ struct group_config {
     enum type_t { ROUND_ROBIN, ERASURE_CODING, REPLICA };
 
     std::size_t id;
-    type_t type;
-    std::size_t storages;
-    std::size_t data_shards;
-    std::size_t parity_shards;
-    std::size_t stripe_size_kib;
+    type_t type = ROUND_ROBIN;
+    std::size_t storages = 1;
+    std::size_t data_shards = 1;
+    std::size_t parity_shards = 0;
+    std::size_t stripe_size_kib = DEFAULT_PAGE_SIZE / KIBI_BYTE;
 
     std::size_t get_stripe_size() const { //
         return stripe_size_kib * KiB;

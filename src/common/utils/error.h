@@ -21,6 +21,7 @@ public:
         bucket_already_exists = 7,
         internal_network_error = 8,
         busy = 9,
+        service_unavailable = 10,
     };
 
     error(type t = unknown, const std::string& message = "");

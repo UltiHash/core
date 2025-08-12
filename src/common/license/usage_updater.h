@@ -2,6 +2,7 @@
 
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
+#include <common/coroutines/coro_util.h>
 #include <common/etcd/namespace.h>
 #include <common/etcd/utils.h>
 #include <common/license/backend_client.h>
@@ -23,9 +24,9 @@ public:
         : m_ioc{ioc},
           m_usage{usage},
           m_license(license),
-          m_backend_client{std::make_unique<T>(std::forward<T>(client))} {
-        boost::asio::co_spawn(m_ioc, hourly_update().start_trace(),
-                              boost::asio::detached);
+          m_backend_client{std::make_unique<T>(std::forward<T>(client))},
+          m_task{"usage update", ioc} {
+        m_task.spawn(hourly_update().start_trace());
     }
 
     coro<void>
@@ -51,7 +52,8 @@ public:
         std::shared_ptr<license> lic = m_license.current();
         license::type last_type = lic ? lic->license_type : license::NONE;
 
-        while (true) {
+        auto state = co_await boost::asio::this_coro::cancellation_state;
+        while (state.cancelled() == boost::asio::cancellation_type::none) {
             auto next_full_hour = std::chrono::ceil<std::chrono::hours>(
                 std::chrono::system_clock::now());
             auto now = std::chrono::system_clock::now();
@@ -81,6 +83,7 @@ private:
     usage& m_usage;
     license_updater& m_license;
     std::unique_ptr<backend_client> m_backend_client;
+    coro_task m_task;
 
     coro<std::string> generate_json(const utc_time& interval_infimum,
                                     const utc_time& interval_supremum) {

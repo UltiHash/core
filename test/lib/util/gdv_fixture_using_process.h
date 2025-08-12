@@ -1,8 +1,14 @@
 #pragma once
 
+#define BOOST_PROCESS_VERSION 1
+
 #include "test_config.h"
 
-#include <boost/process.hpp>
+#include <boost/process/v1/args.hpp>
+#include <boost/process/v1/child.hpp>
+#include <boost/process/v1/environment.hpp>
+#include <boost/process/v1/env.hpp>
+
 #include <common/etcd/service.h>
 #include <common/etcd/service_discovery/service_maintainer.h>
 #include <common/etcd/utils.h>

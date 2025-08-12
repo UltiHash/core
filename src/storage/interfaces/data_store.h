@@ -16,16 +16,20 @@ struct data_store_config {
 struct data_store {
     virtual allocation_t allocate(size_t size, std::size_t alignment = 1) = 0;
 
-    virtual address write(const allocation_t allocation,
-                          const std::vector<std::span<const char>>& buffers,
-                          std::span<const std::size_t> offsets) = 0;
+    virtual void write(const allocation_t allocation,
+                       const std::vector<std::span<const char>>& buffers,
+                       const std::vector<refcount_t>& refcounts = {}) = 0;
 
-    virtual std::size_t read(const std::size_t local_pointer,
+    virtual std::size_t read(const storage_pointer local_pointer,
                              std::span<char> buffer) = 0;
 
-    virtual address link(const address& addr) = 0;
+    virtual std::vector<refcount_t>
+    link(const std::vector<refcount_t>& refcounts) = 0;
 
-    virtual std::size_t unlink(const address& addr) = 0;
+    virtual std::size_t unlink(const std::vector<refcount_t>& refcounts) = 0;
+
+    virtual std::vector<refcount_t>
+    get_refcounts(const std::vector<std::size_t>& stripe_ids) = 0;
 
     virtual std::size_t get_used_space() const noexcept = 0;
 

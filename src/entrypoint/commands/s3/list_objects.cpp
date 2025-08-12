@@ -12,21 +12,6 @@ namespace uh::cluster {
 
 namespace {
 
-std::string ident(const std::string& s) noexcept { return s; }
-
-auto get_encoder(std::optional<std::string> encoding_type) {
-    if (!encoding_type) {
-        return ident;
-    }
-
-    if (*encoding_type != "url") {
-        throw command_exception(status::bad_request, "InvalidArgument",
-                                "Encountered unexpected query parameter.");
-    }
-
-    return url_encode;
-}
-
 response get_response(const std::vector<object>& objects, const request& req) {
 
     const auto prefix = req.query("prefix");
@@ -37,7 +22,7 @@ response get_response(const std::vector<object>& objects, const request& req) {
     }
 
     auto encoding_type = req.query("encoding-type");
-    auto encode = get_encoder(encoding_type);
+    auto encode = encoder(encoding_type);
 
     std::size_t max_keys = query<std::size_t>(req, "max-keys").value_or(1000);
 
@@ -59,7 +44,7 @@ response get_response(const std::vector<object>& objects, const request& req) {
         for (const auto& object : collapsed_objs) {
             if (object._prefix) {
                 auto& node = common_prefixes_nodes.emplace_back();
-                put(node, "Prefix", encode(*object._prefix));
+                put(node, "Prefix", encode(object._prefix));
                 common_prefix_last = true;
                 ++common_prefixes_counter;
             } else if (object._object) {

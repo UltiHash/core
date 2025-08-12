@@ -71,8 +71,7 @@ std::optional<::config> read_config(int argc, char** argv) {
 }
 
 uh::cluster::coro<void> read_addr(uh::cluster::storage_interface& svc,
-                                  uh::cluster::uint128_t ptr,
-                                  std::size_t length,
+                                  uint128_t ptr, std::size_t length,
                                   std::optional<std::string> outfile,
                                   bool no_output) {
     timer t;
@@ -121,7 +120,21 @@ uh::cluster::coro<void> write_file(uh::cluster::storage_interface& svc,
 
     timer t;
     auto alloc = co_await svc.allocate(buffer.size());
-    auto addr = co_await svc.write(alloc, {buffer}, {0});
+
+    std::size_t first_stripe = alloc.offset / DEFAULT_PAGE_SIZE;
+    std::size_t last_stripe =
+        (alloc.offset + alloc.size - 1) / DEFAULT_PAGE_SIZE;
+    std::vector<refcount_t> refcounts;
+    refcounts.reserve(last_stripe - first_stripe);
+    for (size_t stripe_id = first_stripe; stripe_id <= last_stripe;
+         stripe_id++) {
+        refcounts.emplace_back(stripe_id, 1);
+    }
+
+    co_await svc.write(alloc, {buffer}, refcounts);
+    address addr;
+    addr.push({alloc.offset, buffer.size()});
+
     auto time = t.passed();
 
     auto mb = buffer.size() / MEBI_BYTE;
@@ -150,11 +163,11 @@ int main(int argc, char** argv) {
 
         switch (cfg->cmd) {
         case ::config::command::read:
-            boost::asio::co_spawn(
-                executor,
-                read_addr(storage, uh::cluster::uint128_t(cfg->offset),
-                          cfg->length, cfg->output_file, cfg->no_output),
-                handler);
+            boost::asio::co_spawn(executor,
+                                  read_addr(storage, uint128_t(cfg->offset),
+                                            cfg->length, cfg->output_file,
+                                            cfg->no_output),
+                                  handler);
             break;
         case ::config::command::write:
             boost::asio::co_spawn(executor, write_file(storage, cfg->file),

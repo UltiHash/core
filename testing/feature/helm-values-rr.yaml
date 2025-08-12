@@ -23,27 +23,51 @@ global:
          "Resource": "*"
        }
     }
+    
 
 featureTests:
   nodeSelector:
-    kubernetes.io/hostname: $KUBERNETES_NODE
+    purpose: ci
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "ci"
+      effect: "NoSchedule"
+
+coordinator:
+  nodeSelector:
+    purpose: ci
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "ci"
+      effect: "NoSchedule"
+  extraEnvs:
+    - name: OTEL_RESOURCE_ATTRIBUTES
+      value: service.name=coordinator
 
 etcd:
   replicaCount: 1
   nodeSelector:
-    kubernetes.io/hostname: $KUBERNETES_NODE
+    purpose: ci
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "ci"
+      effect: "NoSchedule"
   persistence:
     size: 5Gi
     storageClass: local-path
 
-coordinator:
-  nodeSelector:
-    kubernetes.io/hostname: $KUBERNETES_NODE
-
 entrypoint:
   replicas: 1
   nodeSelector:
-    kubernetes.io/hostname: $KUBERNETES_NODE
+    purpose: ci
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "ci"
+      effect: "NoSchedule"
   
   ingress:
     enabled: false
@@ -53,12 +77,22 @@ deduplicator:
   storageClass: local-path
   storageSize: 2Gi
   nodeSelector:
-    kubernetes.io/hostname: $KUBERNETES_NODE
+    purpose: ci
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "ci"
+      effect: "NoSchedule"
 
 database:
   primary:
     nodeSelector:
-      kubernetes.io/hostname: $KUBERNETES_NODE
+      purpose: ci
+    tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "ci"
+      effect: "NoSchedule"
 
     persistence:
       storageClass: local-path
@@ -67,29 +101,36 @@ database:
 databaseInit:
   image: $DATABASE_INIT_IMAGE
   nodeSelector:
-    kubernetes.io/hostname: $KUBERNETES_NODE
+    purpose: ci
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "ci"
+      effect: "NoSchedule"
 
 storage:
   groups:
     - id: 0
-      type: ERASURE_CODING
-      storages: 3
-      data_shards: 2
-      parity_shards: 1
-      stripe_size_kib: 256
+      type: ROUND_ROBIN
+      storages: 1
       storageClass: local-path
       size: 5Gi
       mountPath: /var/lib/uh/storage
       nodeSelector:
-        kubernetes.io/hostname: $KUBERNETES_NODE
+        purpose: ci
+      tolerations:
+        - key: "purpose"
+          operator: "Equal"
+          value: "ci"
+          effect: "NoSchedule"
 
 collector:
   config:
     exporters:
       otlphttp/uptrace:
-        endpoint: http://opm-k8s-worker-04.ultihash.io
+        endpoint: http://uptrace-backend.uptrace.svc.cluster.local:14318
         headers:
-          uptrace-dsn: http://${env:UH_EXPORTER_TOKEN}@opm-k8s-worker-04.ultihash.io
+          uptrace-dsn: http://${env:UH_EXPORTER_TOKEN}@uptrace-backend.uptrace.svc.cluster.local:14318
     receivers:
       kubeletstats: null
       prometheus: null
@@ -113,7 +154,12 @@ collector:
         name: ultihash
         key: token
   nodeSelector:
-    kubernetes.io/hostname: $KUBERNETES_NODE
+    purpose: ci
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "ci"
+      effect: "NoSchedule"
   presets:
     kubeletMetrics:
       enabled: false

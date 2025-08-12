@@ -1,6 +1,6 @@
 #pragma once
 
-#include "entrypoint/directory.h"
+#include <entrypoint/directory.h>
 #include <entrypoint/commands/command.h>
 
 namespace uh::cluster {
