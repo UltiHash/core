@@ -136,13 +136,9 @@ private:
             boost::asio::ip::tcp::socket s =
                 co_await acceptor.async_accept(boost::asio::use_awaitable);
 
-            std::string name = [&s]() {
-                const auto conn_address =
-                    s.remote_endpoint().address().to_string();
-                const auto conn_port = s.remote_endpoint().port();
-
-                return std::format("session {}:{}", conn_address, conn_port);
-            }();
+            std::string name = std::format("session {}:{}",
+                s.remote_endpoint().address().to_string(),
+                s.remote_endpoint().port());
 
             create_session(name, m_ioc, m_handler->handle(std::move(s)));
         }
