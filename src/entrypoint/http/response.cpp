@@ -20,6 +20,13 @@ response::response(http::status status)
     : m_res(status, 11),
       m_body(std::make_unique<string_body>("")) {}
 
+response::response(beast::http::response<beast::http::empty_body> res,
+                   std::unique_ptr<http::body> body)
+    :  m_res(std::move(res)),
+       m_body(std::move(body))
+{
+}
+
 void response::set_body(std::unique_ptr<http::body>&& body) noexcept {
     m_body = std::move(body);
 }

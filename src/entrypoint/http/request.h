@@ -1,11 +1,11 @@
 #pragma once
 
-#include "command_exception.h"
-#include "common/types/common_types.h"
-#include "common/utils/strings.h"
-#include "entrypoint/http/body.h"
-#include "entrypoint/user/user.h"
-#include "raw_request.h"
+#include <common/types/common_types.h>
+#include <common/utils/strings.h>
+#include <entrypoint/http/body.h>
+#include <entrypoint/http/command_exception.h>
+#include <entrypoint/http/raw_request.h>
+#include <entrypoint/user/user.h>
 
 #include <map>
 #include <span>
@@ -15,7 +15,14 @@ namespace uh::cluster::ep::http {
 class request {
 public:
     request() = default;
-    request(raw_request req, std::unique_ptr<body> body, ep::user::user user);
+
+    request(raw_request rawreq, std::unique_ptr<body> body,
+            ep::user::user user);
+
+    request(const request&) = delete;
+    request& operator=(const request&) = delete;
+    request(request&&) noexcept = default;
+    request& operator=(request&&) noexcept = default;
 
     verb method() const;
 
@@ -24,49 +31,48 @@ public:
 
     const std::string& bucket() const;
     const std::string& object_key() const;
+
     std::string arn() const;
+
+    const raw_request& get_raw_request() const noexcept;
 
     coro<std::size_t> read_body(std::span<char> buffer);
 
-    boost::asio::ip::tcp::endpoint peer() const { return m_peer; }
+    std::vector<boost::asio::const_buffer> get_raw_buffer() const;
+
+    boost::asio::ip::tcp::endpoint peer() const;
 
     /** Payload that was read while reading the request headers.
      */
-    std::size_t content_length() const {
-        return std::stoul(m_req.at("Content-Length"));
-    }
+    std::size_t content_length() const;
 
     /**
      * Return value of query parameter specified by `name`. Return
      * `std::nullopt` if parameter is not set.
      */
     std::optional<std::string> query(const std::string& name) const;
+
     const std::map<std::string, std::string>& query_map() const;
 
     void set_query_params(const std::string& query);
-
-    const boost::beast::http::fields& header() const;
 
     bool has_query() const;
 
     std::optional<std::string> header(const std::string& name) const;
 
-    bool keep_alive() const { return m_req.keep_alive(); }
+    bool keep_alive() const;
 
     const user::user& authenticated_user() const;
 
-private:
-    friend std::ostream& operator<<(std::ostream& out, const request& req);
+    const beast::http::request<beast::http::empty_body>& base() const;
 
-    boost::beast::http::request<boost::beast::http::empty_body> m_req;
+private:
+    raw_request m_rawreq;
     std::unique_ptr<body> m_body;
     user::user m_authenticated_user;
-    boost::asio::ip::tcp::endpoint m_peer;
 
     std::string m_bucket_id{};
     std::string m_object_key{};
-    std::map<std::string, std::string> m_params;
-    std::string m_path;
 };
 
 std::string get_bucket_id(const std::string& path);

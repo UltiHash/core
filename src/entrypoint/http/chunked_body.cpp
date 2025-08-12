@@ -1,5 +1,6 @@
 #include "chunked_body.h"
 
+#include <algorithm>
 #include <charconv>
 
 using namespace boost;
@@ -12,17 +13,22 @@ chunked_body::chunked_body(boost::asio::ip::tcp::socket& sock, raw_request& req,
       m_buffer(),
       m_trailing(trailing) {
     m_buffer.reserve(BUFFER_SIZE);
-    m_buffer.resize(req.buffer.size());
+    m_buffer.resize(req.get_remained_buffer().size());
     asio::buffer_copy(asio::buffer(m_buffer),
-                      asio::buffer(req.buffer.data(), req.buffer.size()));
+                      asio::buffer(req.get_remained_buffer().data(),
+                                   req.get_remained_buffer().size()));
 }
 
 std::optional<std::size_t> chunked_body::length() const { return {}; }
 
 coro<std::size_t> chunked_body::read(std::span<char> dest) {
     if (m_end) {
-        throw std::runtime_error("trying to read past end of data");
+        co_return 0;
     }
+
+    m_buffer.erase(m_buffer.begin(), m_buffer.begin() + m_read_position);
+    m_read_position = 0;
+    m_raw_buffers.clear();
 
     std::size_t rv = 0ull;
 
@@ -42,9 +48,11 @@ coro<std::size_t> chunked_body::read(std::span<char> dest) {
              * Note: processing of trailing headers is not implemented yet.
              */
             if (m_trailing == trailing_headers::read) {
-                co_await asio::async_read_until(
-                    m_socket, asio::dynamic_buffer(m_buffer), "\r\n\r\n",
-                    asio::use_awaitable);
+                auto byte_size = co_await asio::async_read_until(
+                    m_socket, asio::dynamic_buffer(m_buffer), "\r\n\r\n");
+                m_raw_buffers.push_back(
+                    {m_buffer.data() + m_read_position, byte_size});
+                m_read_position += byte_size;
             }
 
             break;
@@ -78,16 +86,17 @@ coro<void> chunked_body::read_nl() {
     std::size_t offset = 0;
 
     if (!m_buffer.empty()) {
-        auto count = std::min(m_buffer.size(), sizeof(nl));
-        memcpy(nl, &m_buffer[0], count);
-        m_buffer.erase(m_buffer.begin(), m_buffer.begin() + count);
+        auto count = std::min(m_buffer.size() - m_read_position, sizeof(nl));
+        memcpy(nl, m_buffer.data() + m_read_position, count);
+        m_raw_buffers.push_back({m_buffer.data() + m_read_position, count});
+        m_read_position += count;
         offset += count;
     }
 
     if (offset < sizeof(nl)) {
+        // When does this happen?
         co_await asio::async_read(
-            m_socket, asio::buffer(&nl[offset], sizeof(nl) - offset),
-            asio::use_awaitable);
+            m_socket, asio::buffer(&nl[offset], sizeof(nl) - offset));
     }
 
     if (nl[0] != '\r' || nl[1] != '\n') {
@@ -96,25 +105,27 @@ coro<void> chunked_body::read_nl() {
 }
 
 std::size_t chunked_body::find_nl() const {
-    std::string_view sv(&m_buffer[0], m_buffer.size());
+    std::string_view sv(&m_buffer[m_read_position],
+                        m_buffer.size() - m_read_position);
 
     if (auto pos = sv.find("\r\n"); pos != std::string_view::npos) {
-        return pos + 2;
+        return m_read_position + pos + 2;
     }
 
     throw std::runtime_error("newline required");
 }
 
 coro<chunked_body::chunk_header> chunked_body::read_chunk_header() {
+    // TODO: use return value of async_read_until rather than using find_nl()
     co_await asio::async_read_until(m_socket, asio::dynamic_buffer(m_buffer),
-                                    "\r\n", asio::use_awaitable);
+                                    "\r\n");
 
     auto pos = find_nl();
 
     chunk_header hdr;
 
-    auto [next, ec] =
-        std::from_chars(&m_buffer[0], &m_buffer[pos], hdr.size, 16);
+    auto [next, ec] = std::from_chars(&m_buffer[m_read_position],
+                                      &m_buffer[pos], hdr.size, 16);
     if (ec != std::errc()) {
         throw std::runtime_error("from_chars failed: " +
                                  make_error_condition(ec).message());
@@ -126,25 +137,29 @@ coro<chunked_body::chunk_header> chunked_body::read_chunk_header() {
         hdr.extensions = parse_values_string(hdr.extensions_string, ';');
     }
 
-    m_buffer.erase(m_buffer.begin(), m_buffer.begin() + pos);
+    m_raw_buffers.push_back(
+        {m_buffer.data() + m_read_position, pos - m_read_position});
+    m_read_position = pos;
     co_return hdr;
 }
 
 coro<std::size_t> chunked_body::read_data(std::span<char> buffer) {
     std::size_t offs = 0ull;
 
-    if (m_buffer.size() > 0) {
-        auto count = std::min(m_buffer.size(), buffer.size());
-        memcpy(buffer.data(), m_buffer.data(), count);
+    if (m_read_position < m_buffer.size()) {
+        auto count = std::min(m_buffer.size() - m_read_position, buffer.size());
+        memcpy(buffer.data(), m_buffer.data() + m_read_position, count);
 
-        m_buffer.erase(m_buffer.begin(), m_buffer.begin() + count);
+        m_raw_buffers.push_back({m_buffer.data() + m_read_position, count});
+        m_read_position += count;
         offs += count;
     }
 
     if (offs < buffer.size()) {
-        offs += co_await asio::async_read(
-            m_socket, asio::buffer(buffer.data() + offs, buffer.size() - offs),
-            asio::use_awaitable);
+        auto read_bytes = co_await asio::async_read(
+            m_socket, asio::buffer(buffer.data() + offs, buffer.size() - offs));
+        m_raw_buffers.push_back({buffer.data() + offs, read_bytes});
+        offs += read_bytes;
     }
 
     co_return offs;

@@ -41,7 +41,8 @@ enum role : uint8_t {
     STORAGE_SERVICE,
     DEDUPLICATOR_SERVICE,
     ENTRYPOINT_SERVICE,
-    COORDINATOR_SERVICE
+    COORDINATOR_SERVICE,
+    PROXY_SERVICE
 };
 
 inline role global_service_role;
@@ -88,6 +89,9 @@ constexpr const char* ENV_CFG_ETCD_PASSWORD = "UH_ETCD_PASSWORD";
 constexpr const char* ENV_CFG_NO_DEDUPE = "UH_NO_DEDUPE";
 constexpr const char* ENV_CFG_STORAGE_SERVICE_ID = "UH_STORAGE_INSTANCE_ID";
 constexpr const char* ENV_CFG_STORAGE_GROUP_ID = "UH_STORAGE_GROUP_ID";
+constexpr const char* ENV_CFG_DOWNSTREAM_HOST = "UH_DOWNSTREAM_HOST";
+constexpr const char* ENV_CFG_DOWNSTREAM_PORT = "UH_DOWNSTREAM_PORT";
+constexpr const char* ENV_CFG_DOWNSTREAM_CONNECTIONS = "UH_DOWNSTREAM_CONNECTIONS";
 
 constexpr const char* RESERVED_BUCKET_NAME = "ultihash";
 

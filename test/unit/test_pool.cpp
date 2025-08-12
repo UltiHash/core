@@ -18,7 +18,7 @@ BOOST_AUTO_TEST_CASE(get) {
 
     int id = 5;
     uh::cluster::pool<int> p(
-        ioc, [&]() { return std::make_unique<int>(id++); }, 3);
+        [&]() { return std::make_unique<int>(id++); }, 3);
 
     co_spawn(
         ioc,
@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE(block) {
 
     int id = 5;
     uh::cluster::pool<int> p(
-        ioc, [&]() { return std::make_unique<int>(id++); }, 1);
+        [&]() { return std::make_unique<int>(id++); }, 1);
 
     std::unique_ptr<uh::cluster::pool<int>::handle> handle;
 

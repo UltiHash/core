@@ -20,8 +20,8 @@ bucket_versioning to_versioning(std::string s);
 class directory {
 public:
     directory(boost::asio::io_context& ioc, const db::config& cfg)
-        : m_db{ioc, connection_factory(ioc, cfg, cfg.directory),
-               cfg.directory.count} {}
+        : m_db(connection_factory(ioc, cfg, cfg.directory),
+               cfg.directory.count) {}
 
     struct unref {
         promise<void> p;
