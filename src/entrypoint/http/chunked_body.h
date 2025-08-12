@@ -16,6 +16,7 @@ class chunked_body : public ep::http::body {
 public:
     enum class trailing_headers { none, read };
 
+    // TODO pass TCP stream, remove raw request
     chunked_body(boost::asio::ip::tcp::socket& sock, raw_request& req,
                  trailing_headers trailing = trailing_headers::none);
 
@@ -24,8 +25,6 @@ public:
         std::map<std::string_view, std::string_view> extensions;
         std::string extensions_string;
     };
-
-    virtual ~chunked_body() = default;
 
     std::optional<std::size_t> length() const override;
     coro<std::size_t> read(std::span<char> dest) override;
