@@ -51,21 +51,6 @@ coro<ep::http::response> forward_command::handle(ep::http::request& r) {
         co_await boost::asio::async_write(m_to, raw_buffer);
     } while (count == m_buffer_size);
 
-    /*
-    std::size_t transferred = co_await r.read_body(buffer);
-
-    while (transferred != 0) {
-
-        // FIXME chunked transfer
-        co_await boost::asio::async_write(m_to, boost::asio::buffer(buffer.data(), transferred));
-        LOG_DEBUG() << r.peer() << ": wrote " << transferred << " bytes to downstream";
-        transferred = co_await r.read_body(buffer);
-        LOG_DEBUG() << r.peer() << ": read " << transferred << " bytes from client";
-    }
-
-    LOG_INFO() << r.peer() << ": done reading body";
-    */
-
     beast::http::response_parser<beast::http::empty_body> pr;
     pr.body_limit((std::numeric_limits<std::uint64_t>::max)());
     std::vector<char> b;
