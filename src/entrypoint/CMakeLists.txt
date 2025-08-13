@@ -46,6 +46,7 @@ add_library(entrypoint
             multipart_state.cpp
             directory.cpp
             service.cpp
+            http/stream.cpp
             http/range.cpp
             http/raw_body.cpp
             http/string_body.cpp
