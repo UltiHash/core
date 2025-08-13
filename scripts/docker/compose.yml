@@ -4,7 +4,7 @@ services:
     environment:
       POSTGRESQL_PASSWORD: uh
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -15,7 +15,7 @@ services:
       ALLOW_NONE_AUTHENTICATION: yes
 
   database-init:
-    image: registry.ultihash.io/stable/database-init:1.2.0
+    image: registry.ultihash.io/stable/database-init:1.6.0
     depends_on:
       - database
     environment:
@@ -30,35 +30,71 @@ services:
       DB_PORT: 5432
       PGPASSWORD: uh
 
-  storage:
-    image: registry.ultihash.io/stable/core:1.2.0
+  coordinator:
+    image: registry.ultihash.io/stable/core:1.6.0
     depends_on:
-       - etcd
+      - etcd
     environment:
       UH_LICENSE: ${UH_LICENSE_STRING}
       UH_LOG_LEVEL: INFO
       UH_OTEL_ENDPOINT: http://otel:4317
       UH_TRACES_ENABLED: 1
-    command: ["/usr/bin/bash", "-l", "-c", "sleep 10 && uh-cluster --registry etcd:2379 storage"]
+      UH_DB_HOSTPORT: database:5432
+      UH_DB_USER: postgres
+      UH_DB_PASS: uh
+      UH_STORAGE_GROUPS: '[{"id":0,"type":"ROUND_ROBIN","storages":1}]'
+    command:
+      [
+        "/usr/bin/bash",
+        "-l",
+        "-c",
+        "sleep 10 && uh-cluster --registry etcd:2379 coordinator",
+      ]
+
+  storage:
+    image: registry.ultihash.io/stable/core:1.6.0
+    depends_on:
+      - etcd
+      - coordinator
+    environment:
+      UH_LICENSE: ${UH_LICENSE_STRING}
+      UH_LOG_LEVEL: INFO
+      UH_OTEL_ENDPOINT: http://otel:4317
+      UH_TRACES_ENABLED: 1
+    command:
+      [
+        "/usr/bin/bash",
+        "-l",
+        "-c",
+        "sleep 10 && uh-cluster --registry etcd:2379 storage",
+      ]
 
   deduplicator:
-    image: registry.ultihash.io/stable/core:1.2.0
+    image: registry.ultihash.io/stable/core:1.6.0
     depends_on:
       - etcd
       - storage
+      - coordinator
     environment:
       UH_LICENSE: ${UH_LICENSE_STRING}
       UH_LOG_LEVEL: INFO
       UH_OTEL_ENDPOINT: http://otel:4317
       UH_TRACES_ENABLED: 1
-    command: ["/usr/bin/bash", "-l", "-c", "sleep 10 && uh-cluster --registry etcd:2379 deduplicator"]
+    command:
+      [
+        "/usr/bin/bash",
+        "-l",
+        "-c",
+        "sleep 10 && uh-cluster --registry etcd:2379 deduplicator",
+      ]
 
   entrypoint:
-    image: registry.ultihash.io/stable/core:1.2.0
+    image: registry.ultihash.io/stable/core:1.6.0
     depends_on:
       - etcd
       - storage
       - deduplicator
+      - coordinator
     environment:
       UH_LICENSE: ${UH_LICENSE_STRING}
       UH_LOG_LEVEL: INFO
@@ -69,7 +105,13 @@ services:
       UH_DB_PASS: uh
     volumes:
       - ./policies.json:/etc/uh/policies.json
-    command: ["/usr/bin/bash", "-l", "-c", "sleep 15 && uh-cluster --registry etcd:2379 entrypoint"]
+    command:
+      [
+        "/usr/bin/bash",
+        "-l",
+        "-c",
+        "sleep 15 && uh-cluster --registry etcd:2379 entrypoint",
+      ]
     ports:
       - 8080:8080
 
@@ -79,22 +121,22 @@ services:
     environment:
       CLICKHOUSE_DB: uptrace
     healthcheck:
-      test: ['CMD', 'wget', '--spider', '-q', 'localhost:8123/ping']
+      test: ["CMD", "wget", "--spider", "-q", "localhost:8123/ping"]
       interval: 1s
       timeout: 1s
       retries: 30
     ports:
-      - '8123:8123'
-      - '9000:9000'
+      - "8123:8123"
+      - "9000:9000"
 
   uptrace:
-    image: 'uptrace/uptrace:1.7.7'
+    image: "uptrace/uptrace:1.7.7"
     restart: on-failure
     volumes:
       - ./uptrace.yml:/etc/uptrace/uptrace.yml
     ports:
-      - '14317:14317'
-      - '14318:14318'
+      - "14317:14317"
+      - "14318:14318"
     depends_on:
       - clickhouse
       - database
@@ -105,10 +147,10 @@ services:
     volumes:
       - ./otel-collector.yaml:/etc/otelcol-contrib/config.yaml
     ports:
-      - '4317:4317'
-      - '4318:4318'
+      - "4317:4317"
+      - "4318:4318"
     extra_hosts:
-      - 'host.docker.internal:host-gateway'
+      - "host.docker.internal:host-gateway"
     depends_on:
       - uptrace
 
@@ -116,9 +158,9 @@ services:
     image: quay.io/prometheus/node-exporter:latest
     container_name: node_exporter
     command:
-      - '--path.rootfs=/host'
+      - "--path.rootfs=/host"
     network_mode: host
     pid: host
     restart: unless-stopped
     volumes:
-      - '/:/host:ro,rslave'
+      - "/:/host:ro,rslave"
