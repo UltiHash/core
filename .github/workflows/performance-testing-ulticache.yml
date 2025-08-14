@@ -1,0 +1,119 @@
+name: Unit Tests (Linux, GCC, aarch64)
+
+on:
+  schedule:
+    - cron: '0 0 * * MON-FRI'
+  workflow_dispatch:
+
+jobs:
+  build-core:
+    uses: ./.github/workflows/docker_build_template.yml
+    with:
+      docker_context: .
+      dockerfile_path: Dockerfile
+      docker_build_args: |
+        BuildType=Release
+      docker_images: registry.ultihash.io/dev/core
+      docker_tags: ulticache-nightly-build
+      platforms: linux/arm64
+    secrets:
+      ghcr_token: ${{ secrets.PAT }}
+      registry_token: ${{ secrets.REGISTRY_USER }}
+  build-database-init:
+    uses: ./.github/workflows/docker_build_template.yml
+    needs:
+      - build-core
+    with:
+      docker_context: .
+      dockerfile_path: tools/database-init/Dockerfile
+      docker_images: registry.ultihash.io/dev/database-init
+      docker_tags: ulticache-nightly-build
+      platforms: linux/arm64
+    secrets:
+      ghcr_token: ${{ secrets.PAT }}
+      registry_token: ${{ secrets.REGISTRY_USER }}
+
+  provision-runner:
+    needs:
+      - build-core
+      - build-database-init
+    runs-on: lightweight-generic-jobs
+    steps:
+      - name: Install AWS CLI
+        uses: unfor19/install-aws-cli-action@v1
+        with:
+          version: 2
+          arch: arm64
+
+      - name: Setup the AWS credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY}}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_KEY}}" >> $GITHUB_ENV
+          echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
+
+#      - name: Provision runner instance
+#        run: |
+#          aws ec2 run-instances \
+#            --count 1 \
+#            --image-id ${{ vars.S3EXPRESS_RUNNER_AMI }} \
+#            --instance-type m8g.8xlarge \
+#            --key-name github-runner-s3express \
+#            --security-group-ids sg-0675ace1fa0e5bb77 \
+#            --subnet-id subnet-04014f24fe45247f4 \
+#            --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=github-runner-s3express}]' \
+#            --instance-initiated-shutdown-behavior terminate \
+#            --associate-public-ip-address \
+#            --region eu-north-1 \
+#            --block-device-mappings '[{"DeviceName":"/dev/sda1","Ebs":{"VolumeSize":50}}]'
+
+  setup:
+    needs: provision-runner
+    runs-on: github-runner-s3express
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+
+      - name: Login to registry.ultihash.io container registry
+        env:
+          registry_token: ${{ secrets.REGISTRY_USER }}
+        uses: docker/login-action@v3
+        with:
+          registry: registry.ultihash.io
+          username: github
+          password: ${{ secrets.REGISTRY_USER }}
+
+      - name: Start Docker Compose
+        env:
+          UH_LICENSE: ${{ secrets.UH_LICENSE_JSON }}
+          UH_MONITORING_TOKEN: ${{ secrets.MONITORING_TOKEN_AWS }}
+        run: |
+          docker-compose -f testing/performance/ulticache/docker-compose.yml up -d
+
+
+  teardown:
+    needs: setup
+    runs-on: github-runner-s3express
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+
+      - name: Stop Docker Compose
+        if: always()
+        run: |
+          docker-compose -f testing/performance/ulticache/docker-compose.yml down -v
+          echo "Docker Compose services have been shut down"
+        continue-on-error: true
+
+      - name: Clean up Docker resources
+        if: always()
+        run: |
+          docker system prune -af
+        continue-on-error: true
+
+#      - name: Terminate runner instance
+#        if: always()
+#        run: |
+#          aws ec2 terminate-instances --instance-ids $(aws ec2 describe-instances --filters "Name=tag:Name,Values=github-runner-s3express" --query "Reservations[].Instances[].InstanceId" --output text) --region eu-north-1te-instances --instance-ids $(aws ec2 describe-instances --filters "Name=tag:Name,Values=github-runner-s3express" --query "Reservations[].Instances[].InstanceId" --output text) --region eu-north-1
