@@ -1,4 +1,4 @@
-name: Unit Tests (Linux, GCC, aarch64)
+name: UltiCache Performance Testing
 
 on:
   schedule:
