@@ -90,6 +90,10 @@ jobs:
         run: |
           docker-compose -f testing/performance/ulticache/docker-compose.yml up -d
 
+      - name: Wait for UltiCache to be ready
+        run: |
+          ./testing/performance/ulticache/ready.sh
+
 
   teardown:
     needs: setup
