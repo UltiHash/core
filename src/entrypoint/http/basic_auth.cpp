@@ -7,8 +7,7 @@
 namespace uh::cluster::ep::http {
 
 coro<std::unique_ptr<request>>
-basic_auth::create(boost::asio::ip::tcp::socket& s, user::db& users,
-                   raw_request req) {
+basic_auth::create(stream& s, user::db& users, raw_request req) {
 
     auto header = req.require("authorization");
     std::size_t pos = header.find(' ');
@@ -27,7 +26,7 @@ basic_auth::create(boost::asio::ip::tcp::socket& s, user::db& users,
                                               std::string(creds[1]));
 
     if (req.optional("Transfer-Encoding").value_or("") == "chunked") {
-        auto body = std::make_unique<chunked_body>(s, req);
+        auto body = std::make_unique<chunked_body>(s);
         co_return std::make_unique<request>(std::move(req), std::move(body),
                                             std::move(user));
     } else {

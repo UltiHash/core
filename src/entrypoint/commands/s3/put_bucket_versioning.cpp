@@ -18,12 +18,10 @@ bool put_bucket_versioning::can_handle(const ep::http::request& req) {
 
 coro<response> put_bucket_versioning::handle(request& req) {
 
-    unique_buffer<char> buffer(req.content_length());
-    auto size = co_await req.read_body(buffer.span());
-    buffer.resize(size);
+    std::string buffer = co_await copy_to_buffer(req.body());
 
     xml_parser xml_parser;
-    bool parsed = xml_parser.parse({&*buffer.begin(), buffer.size()});
+    bool parsed = xml_parser.parse(buffer);
     auto part_nodes = xml_parser.get_nodes("VersioningConfiguration.Status");
 
     if (!parsed || part_nodes.size() != 1) {

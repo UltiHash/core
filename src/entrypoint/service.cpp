@@ -71,7 +71,7 @@ service::service(boost::asio::io_context& ioc, const service_config& sc,
       m_server(
           m_config.server,
           std::make_unique<handler>(
-              command_factory(ioc, *m_dedupe, m_directory, m_uploads, m_config,
+              command_factory(*m_dedupe, m_directory, m_uploads,
                               m_gdv, m_limits, m_users, m_license_watcher),
               http::request_factory(m_users),
               std::make_unique<policy::module>(m_directory),

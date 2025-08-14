@@ -2,16 +2,15 @@
 
 #include "raw_body.h"
 
-#include "common/crypto/hash.h"
+#include <common/crypto/hash.h>
 
 namespace uh::cluster::ep::http {
 
 class raw_body_sha256 : public raw_body {
 public:
-    raw_body_sha256(boost::asio::ip::tcp::socket& sock, raw_request& req,
-                    std::string signature);
+    raw_body_sha256(stream& s, raw_request& req, std::string signature);
 
-    coro<std::size_t> read(std::span<char> dest) override;
+    coro<std::span<const char>> read(std::size_t count) override;
 
 private:
     std::string m_signature;

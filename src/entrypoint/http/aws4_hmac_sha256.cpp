@@ -18,7 +18,7 @@ std::set<std::string> QUERY_IGNORE_URL = {"X-Amz-Signature"};
 std::set<std::string> QUERY_IGNORE_HEADER = {};
 
 coro<std::unique_ptr<string_body>>
-read_form_body(boost::asio::ip::tcp::socket& s, raw_request& req) {
+read_form_body(stream& s, raw_request& req) {
     auto content_type = req.optional("content-type");
     if (!content_type ||
         !content_type->starts_with("application/x-www-form-urlencoded")) {
@@ -28,13 +28,12 @@ read_form_body(boost::asio::ip::tcp::socket& s, raw_request& req) {
     raw_body reader(s, req);
     std::size_t length = *reader.length();
 
-    std::string buffer(length, 0);
-    auto size = co_await reader.read({&buffer[0], length});
-    if (size != length) {
+    auto data = co_await reader.read(length);
+    if (data.size() != length) {
         throw std::runtime_error("cannot read content-length bytes");
     }
 
-    co_return std::make_unique<string_body>(std::move(buffer));
+    co_return std::make_unique<string_body>(std::string(data.data(), data.size()));
 }
 
 std::string make_signing_key(const std::string& secret,
@@ -118,7 +117,7 @@ std::string request_signature(raw_request& req, const aws4_signature_info& info,
     return to_hex(hmac_sha256::from_string(signing_key, string_to_sign.str()));
 }
 
-std::unique_ptr<body> make_body(boost::asio::ip::tcp::socket& s,
+std::unique_ptr<body> make_body(stream& s,
                                 raw_request& req,
                                 const aws4_signature_info& info,
                                 std::string signing_key,
@@ -140,7 +139,7 @@ std::unique_ptr<body> make_body(boost::asio::ip::tcp::socket& s,
         LOG_DEBUG() << req.peer
                     << ": using chunked unsigned payload with trailer";
         return std::make_unique<chunked_body>(
-            s, req, chunked_body::trailing_headers::read);
+            s, chunked_body::trailing_headers::read);
     }
 
     if (info.content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER") {
@@ -157,7 +156,7 @@ std::unique_ptr<body> make_body(boost::asio::ip::tcp::socket& s,
 } // namespace
 
 coro<std::unique_ptr<request>>
-aws4_hmac_sha256::create(boost::asio::ip::tcp::socket& s, user::db& users,
+aws4_hmac_sha256::create(stream& s, user::db& users,
                          raw_request req, const std::string& auth) {
 
     std::size_t pos = auth.find(' ');
@@ -219,8 +218,7 @@ aws4_hmac_sha256::create(boost::asio::ip::tcp::socket& s, user::db& users,
 }
 
 coro<std::unique_ptr<request>>
-aws4_hmac_sha256::create_from_url(boost::asio::ip::tcp::socket& s,
-                                  user::db& users, raw_request req) {
+aws4_hmac_sha256::create_from_url(stream& s, user::db& users, raw_request req) {
 
     auto split_credentials = split(req.params["X-Amz-Credential"], '/');
     if (split_credentials.size() != 5) {

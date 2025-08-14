@@ -142,7 +142,7 @@ private:
                 s.remote_endpoint().address().to_string(),
                 s.remote_endpoint().port());
 
-            create_session(name, m_ioc, m_handler->handle(std::move(s)));
+            create_session(std::move(name), m_ioc, m_handler->handle(std::move(s)));
         }
     }
 

@@ -8,45 +8,10 @@ using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
 
-namespace {
-
-coro<std::size_t> fill(request& req, std::vector<char>& buffer) {
-    buffer.resize(buffer.capacity());
-
-    auto read = co_await req.read_body(buffer);
-    buffer.resize(read);
-
-    co_return read;
-}
-
-coro<future<dedupe_response>> upload(boost::asio::io_context& ioc,
-                                     deduplicator_interface& dedup,
-                                     const std::vector<char>& buffer) {
-    promise<dedupe_response> p;
-    auto f = p.get_future();
-
-    auto context = co_await boost::asio::this_coro::context;
-    if (!buffer.empty()) {
-        auto awaitable = dedup.deduplicate({buffer.data(), buffer.size()})
-                             .continue_trace(context);
-        asio::co_spawn(ioc, std::move(awaitable),
-                       use_promise_cospawn(std::move(p)));
-    } else {
-        p.set_value(dedupe_response());
-    }
-
-    co_return f;
-}
-
-} // namespace
-
-put_object::put_object(boost::asio::io_context& ioc,
-                       const entrypoint_config& conf, limits& uhlimits,
+put_object::put_object(limits& uhlimits,
                        directory& dir, storage::global::global_data_view& gdv,
                        deduplicator_interface& dedup)
-    : m_ioc(ioc),
-      m_config(conf),
-      m_dir(dir),
+    : m_dir(dir),
       m_gdv(gdv),
       m_limits(uhlimits),
       m_dedup(dedup) {}
@@ -71,12 +36,7 @@ coro<response> put_object::handle(request& req) {
 
     md5 hash;
 
-    dedupe_response resp;
-    if (content_length >= m_config.buffer_size) {
-        resp = co_await put_large_object(req, hash);
-    } else {
-        resp = co_await put_small_object(req, hash);
-    }
+    dedupe_response resp = co_await dedupe(req, hash);
 
     auto tag = to_hex(hash.finalize());
     LOG_DEBUG() << req.peer() << ": etag: " << tag;
@@ -102,51 +62,34 @@ coro<response> put_object::handle(request& req) {
     co_return res;
 }
 
-coro<dedupe_response> put_object::put_large_object(request& req,
-                                                   md5& hash) const {
-    const auto buffer_size = m_config.buffer_size;
-    double_buffer b(buffer_size);
-
-    auto content_length = req.content_length();
-    std::size_t transferred = 0;
-
-    auto read = co_await fill(req, b.current());
-    hash.consume(b.current());
-    transferred += read;
+coro<dedupe_response> put_object::dedupe(request& req, md5& hash) const {
+    LOG_DEBUG() << req.peer() << ": dedupe putobject";
+    auto& b = req.body();
+    auto bs = b.buffer_size();
 
     dedupe_response rv;
 
-    do {
-        auto future = co_await upload(m_ioc, m_dedup, b.current());
-        b.flip();
+    co_await b.consume();
+    std::span<const char> data = co_await b.read(bs);
 
-        read = co_await fill(req, b.current());
-        hash.consume(b.current());
-        transferred += read;
+    hash.consume(data);
 
-        rv.append(co_await future.get());
-    } while (transferred < content_length);
-
-    auto future = co_await upload(m_ioc, m_dedup, b.current());
-    rv.append(co_await future.get());
-
-    co_return rv;
-}
-
-coro<dedupe_response> put_object::put_small_object(request& req,
-                                                   md5& hash) const {
-    auto content_length = req.content_length();
-
-    unique_buffer<char> buffer(content_length);
-    auto read = co_await req.read_body(buffer.span());
-    buffer.resize(read);
-    hash.consume(buffer.span());
-
-    if (buffer.empty()) {
-        co_return dedupe_response();
+    // TODO interleaved transfer with streams:
+    // First idea was to only `read()` half the buffer size, then `upload()` that part
+    // while `read()`ing the second half. In that case, we cannot call `consume()`
+    // after the first `read()`, as the buffer is still needed by `upload()`. We
+    // can also not call `consume()` after the second `read` for the same reason. We need
+    // to wait until the second `upload()` is finished to release the buffer.
+    while (!data.empty()) {
+        LOG_DEBUG() << req.peer() << ": (i) read " << data.size() << " bytes from body";
+        rv.append(co_await m_dedup.deduplicate(std::string_view{data.data(), data.size()}));
+        co_await b.consume();
+        data = co_await b.read(bs);
+        hash.consume(data);
+        LOG_DEBUG() << req.peer() << ": (ii) read " << data.size() << " bytes from body";
     }
 
-    co_return co_await m_dedup.deduplicate({buffer.data(), buffer.size()});
+    co_return rv;
 }
 
 std::string put_object::action_id() const { return "s3:PutObject"; }

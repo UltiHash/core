@@ -1,9 +1,10 @@
 #pragma once
 
-#include "common/service_interfaces/deduplicator_interface.h"
-#include "entrypoint/directory.h"
-#include "entrypoint/multipart_state.h"
-#include "storage/global/data_view.h"
+#include <common/crypto/hash.h>
+#include <common/service_interfaces/deduplicator_interface.h>
+#include <entrypoint/directory.h>
+#include <entrypoint/multipart_state.h>
+#include <storage/global/data_view.h>
 #include <entrypoint/commands/command.h>
 
 namespace uh::cluster {
@@ -22,6 +23,8 @@ public:
     std::string action_id() const override;
 
 private:
+    coro<dedupe_response> dedupe(ep::http::request& req, md5& hash) const;
+
     deduplicator_interface& m_dedupe;
     storage::global::global_data_view& m_gdv;
     multipart_state& m_uploads;
