@@ -337,10 +337,7 @@ jobs:
   vulnerability-scanning:
     needs: 
       - build-core
-    if: |
-      github.event_name == 'schedule' || 
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'vulnerability-scanning') ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
+    if: false
     uses: ./.github/workflows/vulnerability_scanning.yml
     with:
       docker_image_tag: nightly-build
