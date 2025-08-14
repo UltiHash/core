@@ -34,21 +34,10 @@ coro<void> multipart::validate(const request& req) {
 coro<response> multipart::handle(request& req) {
     metric<entrypoint_multipart_req>::increase(1);
 
-    unique_buffer<char> buffer(req.content_length());
-    {
-        auto size = co_await req.read_body(buffer.span());
-        buffer.resize(size);
-    }
+    cluster::md5 hash;
+    dedupe_response resp = co_await dedupe(req, hash);
 
-    dedupe_response resp = {};
-    {
-        if (!buffer.empty()) {
-            resp =
-                co_await m_dedupe.deduplicate({buffer.data(), buffer.size()});
-        }
-    }
-
-    auto md5 = to_hex(md5::from_buffer(buffer.span()));
+    auto md5 = to_hex(hash.finalize());
 
     std::string id = *query(req, "uploadId");
     std::size_t part_id = *query<std::size_t>(req, "partNumber");
@@ -79,6 +68,30 @@ coro<response> multipart::handle(request& req) {
     }
 
     co_return res;
+}
+
+coro<dedupe_response> multipart::dedupe(request& req, md5& hash) const {
+    auto& b = req.body();
+    auto bs = b.buffer_size();
+
+    co_await b.consume();
+    std::span<const char> data = co_await b.read(bs);
+    hash.consume(data);
+
+    // TODO interleaved transfer with streams:
+    // First idea was to only `read()` half the buffer size, then `upload()` that part
+    // while `read()`ing the second half. In that case, we cannot call `consume()`
+    // after the first `read()`, as the buffer is still needed by `upload()`. We
+    // can also not call `consume()` after the second `read` for the same reason. We need
+    // to wait until the second `upload()` is finished to release the buffer.
+    dedupe_response rv;
+    while (!data.empty()) {
+        rv.append(co_await m_dedupe.deduplicate(std::string_view{ data.data(), data.size() }));
+        co_await b.consume();
+        data = co_await b.read(bs);
+    }
+
+    co_return rv;
 }
 
 std::string multipart::action_id() const { return "s3:UploadPart"; }

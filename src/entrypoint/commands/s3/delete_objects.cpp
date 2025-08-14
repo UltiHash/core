@@ -59,15 +59,13 @@ coro<response> delete_objects::handle(request& req) {
     LOG_DEBUG() << req.peer() << ": delete_objects::handle(): content-length: "
                 << req.content_length();
 
-    std::vector<char> buffer(req.content_length());
-    auto count = co_await req.read_body(buffer);
-    buffer.resize(count);
+    std::string buffer = co_await copy_to_buffer(req.body());
 
     LOG_DEBUG() << req.peer() << ": delete_objects::handle(): request XML: "
-                << std::string(buffer.data(), buffer.data() + buffer.size());
+                << buffer;
 
     xml_parser xml_parser;
-    bool parsed = xml_parser.parse({&*buffer.begin(), buffer.size()});
+    bool parsed = xml_parser.parse(buffer);
     auto object_nodes = xml_parser.get_nodes("Delete.Object");
 
     if (!parsed || object_nodes.empty() ||

@@ -15,12 +15,16 @@ coro<void> mock_command::validate(const request& req) { co_return; }
 
 std::string mock_command::action_id() const { return m_id; }
 
-coro<std::size_t> mock_body::read(std::span<char>) { co_return 0ull; }
+coro<std::span<const char>> mock_body::read(std::size_t len) { co_return std::span<const char>{}; }
 
 std::optional<std::size_t> mock_body::length() const { return {}; }
 
-std::vector<boost::asio::const_buffer> mock_body::get_raw_buffer() const {
-    throw std::runtime_error("not implemented");
+coro<void> mock_body::consume() {
+    co_return;
+}
+
+std::size_t mock_body::buffer_size() const {
+    return 0ull;
 }
 
 ep::http::request make_request(const std::string& code,
@@ -30,7 +34,7 @@ ep::http::request make_request(const std::string& code,
 
     parser.put(boost::asio::buffer(code), ec);
 
-    return request(raw_request::from_string(parser.release(), {}, {}, {}),
+    return request(raw_request::from_string(parser.release(), {}),
                    std::make_unique<mock_body>(), user{.arn = principal});
 }
 

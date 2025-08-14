@@ -56,10 +56,7 @@ command_factory::action_command(ep::http::request& req) {
                                 "Your request was too large.");
     }
 
-    std::string post_query(length, '\0');
-    auto size = co_await req.read_body({&post_query[0], length});
-    post_query.resize(size);
-
+    std::string post_query = co_await copy_to_buffer(req.body());
     req.set_query_params(post_query);
 
     if (ep::iam::create_user::can_handle(req)) {
@@ -107,8 +104,7 @@ coro<std::unique_ptr<command>> command_factory::create(ep::http::request& req) {
         co_return std::make_unique<get_object>(m_directory, m_gdv);
     }
     if (put_object::can_handle(req)) {
-        co_return std::make_unique<put_object>(m_ioc, m_config, m_limits,
-                                               m_directory, m_gdv, m_dedupe);
+        co_return std::make_unique<put_object>(m_limits, m_directory, m_gdv, m_dedupe);
     }
     if (multipart::can_handle(req)) {
         co_return std::make_unique<multipart>(m_dedupe, m_gdv, m_uploads);
