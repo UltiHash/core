@@ -1,3 +1,5 @@
+add_subdirectory(http)
+
 add_library(entrypoint
             garbage_collector.cpp
             object.cpp
@@ -46,21 +48,6 @@ add_library(entrypoint
             multipart_state.cpp
             directory.cpp
             service.cpp
-            http/stream.cpp
-            http/range.cpp
-            http/raw_body.cpp
-            http/string_body.cpp
-            http/response.cpp
-            http/chunked_body.cpp
-            http/basic_auth.cpp
-            http/raw_request.cpp
-            http/aws4_hmac_sha256.cpp
-            http/no_auth.cpp
-            http/request_factory.cpp
-            http/chunk_body_sha256.cpp
-            http/request.cpp
-            http/command_exception.cpp
-            http/raw_body_sha256.cpp
             user/db.cpp
             aws/arn.cpp
             command_factory.cpp
@@ -70,4 +57,4 @@ add_library(entrypoint
             policy/module.cpp
             policy/variables.cpp)
 
-target_link_libraries(entrypoint db etcd nlohmann_json deduplicator storage uhcrypto utils license)
+target_link_libraries(entrypoint ep_http db etcd nlohmann_json deduplicator storage uhcrypto utils license)
