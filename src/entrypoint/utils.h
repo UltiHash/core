@@ -1,5 +1,7 @@
 #pragma once
 
+#include <common/crypto/hash.h>
+#include <common/service_interfaces/deduplicator_interface.h>
 #include <entrypoint/object.h>
 #include <entrypoint/http/response.h>
 
@@ -28,5 +30,12 @@ encoder_function encoder(std::optional<std::string> encoding_type);
  * Set default response headers from object.
  */
 void set_default_headers(ep::http::response& res, const ep::object& obj);
+
+/**
+ * Deduplicate an HTTP body and compute MD5 checksum
+ */
+coro<dedupe_response> deduplicate(deduplicator_interface& dd,
+                                  ep::http::body& body,
+                                  md5& hash);
 
 } // namespace uh::cluster

@@ -70,4 +70,29 @@ void set_default_headers(response& res, const object& obj) {
     res.set("X-Amz-Version-Id", obj.version);
 }
 
+coro<dedupe_response> deduplicate(deduplicator_interface& dd,
+                                  ep::http::body& body,
+                                  md5& hash) {
+    auto bs = body.buffer_size();
+
+    co_await body.consume();
+    std::span<const char> data = co_await body.read(bs);
+    hash.consume(data);
+
+    // TODO interleaved transfer with streams:
+    // First idea was to only `read()` half the buffer size, then `upload()` that part
+    // while `read()`ing the second half. In that case, we cannot call `consume()`
+    // after the first `read()`, as the buffer is still needed by `upload()`. We
+    // can also not call `consume()` after the second `read` for the same reason. We need
+    // to wait until the second `upload()` is finished to release the buffer.
+    dedupe_response rv;
+    while (!data.empty()) {
+        rv.append(co_await dd.deduplicate(std::string_view{ data.data(), data.size() }));
+        co_await body.consume();
+        data = co_await body.read(bs);
+    }
+
+    co_return rv;
+}
+
 } // namespace uh::cluster

@@ -1,7 +1,9 @@
 #include "multipart.h"
-#include "common/crypto/hash.h"
-#include "common/telemetry/metrics.h"
-#include "entrypoint/http/command_exception.h"
+
+#include <common/crypto/hash.h>
+#include <common/telemetry/metrics.h>
+#include <entrypoint/http/command_exception.h>
+#include <entrypoint/utils.h>
 
 using namespace uh::cluster::ep::http;
 
@@ -35,7 +37,7 @@ coro<response> multipart::handle(request& req) {
     metric<entrypoint_multipart_req>::increase(1);
 
     cluster::md5 hash;
-    dedupe_response resp = co_await dedupe(req, hash);
+    auto resp = co_await deduplicate(m_dedupe, req.body(), hash);
 
     auto md5 = to_hex(hash.finalize());
 
@@ -68,30 +70,6 @@ coro<response> multipart::handle(request& req) {
     }
 
     co_return res;
-}
-
-coro<dedupe_response> multipart::dedupe(request& req, md5& hash) const {
-    auto& b = req.body();
-    auto bs = b.buffer_size();
-
-    co_await b.consume();
-    std::span<const char> data = co_await b.read(bs);
-    hash.consume(data);
-
-    // TODO interleaved transfer with streams:
-    // First idea was to only `read()` half the buffer size, then `upload()` that part
-    // while `read()`ing the second half. In that case, we cannot call `consume()`
-    // after the first `read()`, as the buffer is still needed by `upload()`. We
-    // can also not call `consume()` after the second `read` for the same reason. We need
-    // to wait until the second `upload()` is finished to release the buffer.
-    dedupe_response rv;
-    while (!data.empty()) {
-        rv.append(co_await m_dedupe.deduplicate(std::string_view{ data.data(), data.size() }));
-        co_await b.consume();
-        data = co_await b.read(bs);
-    }
-
-    co_return rv;
 }
 
 std::string multipart::action_id() const { return "s3:UploadPart"; }
