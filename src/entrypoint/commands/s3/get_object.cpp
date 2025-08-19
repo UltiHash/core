@@ -33,7 +33,9 @@ public:
     std::optional<std::size_t> length() const override { return m_size; }
 
     coro<std::span<const char>> read(std::size_t count) override {
-        co_await fill();
+        if (m_put_ptr - m_get_ptr < count) {
+            co_await fill();
+        }
 
         auto size = std::min(count, m_put_ptr - m_get_ptr);
         auto rv = std::span<const char>{ &m_buffer[m_get_ptr], size };
@@ -44,7 +46,6 @@ public:
     }
 
     coro<std::span<const char>> read_until(std::string_view delimiter) {
-        co_await fill();
         throw std::runtime_error("not implemented");
     }
 
@@ -76,16 +77,26 @@ public:
             m_addr_index++;
         }
 
-        co_await m_storage.read_address(partial_addr, { &m_buffer[m_put_ptr], count });
-        m_put_ptr += count;
-        m_total += count;
-        m_size -= count;
+        if (count > 0) {
+            LOG_DEBUG() << "local_read_handle: fill, reading " << count << " bytes from storage";
+            co_await m_storage.read_address(partial_addr, { &m_buffer[m_put_ptr], count });
+            m_put_ptr += count;
+            m_total += count;
+            m_size -= count;
+        }
     }
 
     coro<void> consume() override {
-        memmove(&m_buffer[0], &m_buffer[m_get_ptr], m_put_ptr - m_get_ptr);
-        m_put_ptr -= m_get_ptr;
-        m_get_ptr = 0;
+        auto count = m_put_ptr - m_get_ptr;
+        if (count > 0) {
+            LOG_DEBUG() << "local_read_handle: copying " << (m_put_ptr - m_get_ptr) << " bytes to new buffer";
+            memmove(&m_buffer[0], &m_buffer[m_get_ptr], m_put_ptr - m_get_ptr);
+            m_put_ptr -= m_get_ptr;
+            m_get_ptr = 0;
+        } else {
+            m_put_ptr = m_get_ptr = 0ull;
+        }
+
         co_return;
     }
 
