@@ -12,7 +12,8 @@ namespace uh::cluster::ep::http {
 request_factory::request_factory(user::db& users)
     : m_users(users) {}
 
-coro<std::unique_ptr<request>> request_factory::create(stream& s, boost::asio::ip::tcp::endpoint peer) {
+coro<std::unique_ptr<request>>
+request_factory::create(stream& s, boost::asio::ip::tcp::endpoint peer) {
     co_await s.consume();
 
     LOG_DEBUG() << s.peer() << ": reading next request";

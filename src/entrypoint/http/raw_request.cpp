@@ -11,7 +11,8 @@ using namespace boost;
 
 namespace uh::cluster::ep::http {
 
-coro<raw_request> raw_request::read(stream& s, boost::asio::ip::tcp::endpoint peer) {
+coro<raw_request> raw_request::read(stream& s,
+                                    boost::asio::ip::tcp::endpoint peer) {
     auto buffer = co_await s.read_until("\r\n\r\n");
 
     beast::http::request_parser<beast::http::empty_body> parser;
