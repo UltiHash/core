@@ -1,7 +1,9 @@
 #include "multipart.h"
-#include "common/crypto/hash.h"
-#include "common/telemetry/metrics.h"
-#include "entrypoint/http/command_exception.h"
+
+#include <common/crypto/hash.h>
+#include <common/telemetry/metrics.h>
+#include <entrypoint/http/command_exception.h>
+#include <entrypoint/utils.h>
 
 using namespace uh::cluster::ep::http;
 
@@ -34,21 +36,10 @@ coro<void> multipart::validate(const request& req) {
 coro<response> multipart::handle(request& req) {
     metric<entrypoint_multipart_req>::increase(1);
 
-    unique_buffer<char> buffer(req.content_length());
-    {
-        auto size = co_await req.read_body(buffer.span());
-        buffer.resize(size);
-    }
+    cluster::md5 hash;
+    auto resp = co_await deduplicate(m_dedupe, req.body(), hash);
 
-    dedupe_response resp = {};
-    {
-        if (!buffer.empty()) {
-            resp =
-                co_await m_dedupe.deduplicate({buffer.data(), buffer.size()});
-        }
-    }
-
-    auto md5 = to_hex(md5::from_buffer(buffer.span()));
+    auto md5 = to_hex(hash.finalize());
 
     std::string id = *query(req, "uploadId");
     std::size_t part_id = *query<std::size_t>(req, "partNumber");

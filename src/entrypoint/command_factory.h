@@ -13,16 +13,13 @@
 namespace uh::cluster {
 
 struct command_factory {
-    command_factory(boost::asio::io_context& ioc,
-                    deduplicator_interface& dedupe, directory& dir,
-                    multipart_state& uploads, entrypoint_config& config,
+    command_factory(deduplicator_interface& dedupe, directory& dir,
+                    multipart_state& uploads,
                     storage::global::global_data_view& gdv, limits& uhlimits,
                     ep::user::db& users, license_watcher& watcher)
-        : m_ioc(ioc),
-          m_dedupe(dedupe),
+        : m_dedupe(dedupe),
           m_directory(dir),
           m_uploads(uploads),
-          m_config(config),
           m_gdv(gdv),
           m_limits(uhlimits),
           m_users(users),
@@ -38,11 +35,9 @@ private:
 
     static constexpr std::size_t MAX_POST_QUERY_LENGTH = 64 * KIBI_BYTE;
 
-    boost::asio::io_context& m_ioc;
     deduplicator_interface& m_dedupe;
     directory& m_directory;
     multipart_state& m_uploads;
-    entrypoint_config& m_config;
     storage::global::global_data_view& m_gdv;
     limits& m_limits;
     ep::user::db& m_users;

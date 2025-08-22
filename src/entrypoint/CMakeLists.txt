@@ -42,10 +42,7 @@ add_library(entrypoint
             commands/s3/complete_multipart.cpp
             commands/s3/put_bucket_versioning.cpp
             commands/s3/get_bucket_versioning.cpp
-            formats.cpp
-            multipart_state.cpp
-            directory.cpp
-            service.cpp
+            http/stream.cpp
             http/range.cpp
             http/raw_body.cpp
             http/string_body.cpp
@@ -60,6 +57,10 @@ add_library(entrypoint
             http/request.cpp
             http/command_exception.cpp
             http/raw_body_sha256.cpp
+            formats.cpp
+            multipart_state.cpp
+            directory.cpp
+            service.cpp
             user/db.cpp
             aws/arn.cpp
             command_factory.cpp

@@ -2,7 +2,6 @@
 
 #include <common/network/tools.h>
 
-#include "command_factory.h"
 #include "request_factory.h"
 #include "handler.h"
 
@@ -13,7 +12,7 @@ namespace uh::cluster::proxy {
 
 using tcp = boost::asio::ip::tcp;
 
-std::unique_ptr<boost::beast::tcp_stream> socket_factory(
+std::unique_ptr<boost::asio::ip::tcp::socket> socket_factory(
     boost::asio::io_context& ioc,
     const std::string& server,
     uint16_t port) {
@@ -26,7 +25,7 @@ std::unique_ptr<boost::beast::tcp_stream> socket_factory(
     tcp::socket s(ioc);
     boost::asio::connect(s, addr);
 
-    return std::make_unique<boost::beast::tcp_stream>(std::move(s));
+    return std::make_unique<boost::asio::ip::tcp::socket>(std::move(s));
 }
 
 service::service(boost::asio::io_context& ioc, const config& c)

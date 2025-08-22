@@ -36,9 +36,7 @@ public:
 
     const raw_request& get_raw_request() const noexcept;
 
-    coro<std::size_t> read_body(std::span<char> buffer);
-
-    std::vector<boost::asio::const_buffer> get_raw_buffer() const;
+    http::body& body() { return *m_body; }
 
     boost::asio::ip::tcp::endpoint peer() const;
 
@@ -67,8 +65,9 @@ public:
     const beast::http::request<beast::http::empty_body>& base() const;
 
 private:
+    friend std::ostream& operator<<(std::ostream& out, const request& req);
     raw_request m_rawreq;
-    std::unique_ptr<body> m_body;
+    std::unique_ptr<http::body> m_body;
     user::user m_authenticated_user;
 
     std::string m_bucket_id{};

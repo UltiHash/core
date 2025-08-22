@@ -9,9 +9,9 @@ namespace {
 
 using namespace uh::cluster::ep::http;
 
-std::unique_ptr<body> make_body(boost::asio::ip::tcp::socket& s, raw_request& req) {
+std::unique_ptr<body> make_body(stream& s, raw_request& req) {
     if (req.optional("Transfer-Encoding").value_or("") == "chunked") {
-        return std::make_unique<chunked_body>(s, req);
+        return std::make_unique<chunked_body>(s);
     }
 
     std::string content_sha =
@@ -21,14 +21,14 @@ std::unique_ptr<body> make_body(boost::asio::ip::tcp::socket& s, raw_request& re
 
         LOG_DEBUG() << req.peer << ": using chunked HMAC-SHA256";
         return std::make_unique<chunked_body>(
-            s, req, chunked_body::trailing_headers::none);
+            s, chunked_body::trailing_headers::none);
     }
 
     if (content_sha == "STREAMING-UNSIGNED-PAYLOAD-TRAILER" ||
         content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER") {
 
         LOG_DEBUG() << req.peer << ": using chunked reader with trailer";
-        return std::make_unique<chunked_body>(s, req, chunked_body::trailing_headers::read);
+        return std::make_unique<chunked_body>(s, chunked_body::trailing_headers::read);
     }
 
     LOG_DEBUG() << req.peer << ": using single-chunk body";
@@ -37,10 +37,10 @@ std::unique_ptr<body> make_body(boost::asio::ip::tcp::socket& s, raw_request& re
 
 }
 
-coro<std::unique_ptr<ep::http::request>> request_factory::create(boost::asio::ip::tcp::socket& sock,
+coro<std::unique_ptr<ep::http::request>> request_factory::create(ep::http::stream& s,
                                                        raw_request& req) {
 
-    auto body = make_body(sock, req);
+    auto body = make_body(s, req);
 
     co_return std::make_unique<ep::http::request>(
             std::move(req), std::move(body),

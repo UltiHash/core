@@ -1,21 +1,21 @@
 #include "raw_body_sha256.h"
 
-#include "common/utils/strings.h"
+#include <common/utils/strings.h>
 
 namespace uh::cluster::ep::http {
 
-raw_body_sha256::raw_body_sha256(boost::asio::ip::tcp::socket& sock,
+raw_body_sha256::raw_body_sha256(stream& s,
                                  raw_request& req, std::string signature)
-    : raw_body(sock, req),
+    : raw_body(s, req),
       m_signature(std::move(signature)) {}
 
-coro<std::size_t> raw_body_sha256::read(std::span<char> dest) {
+coro<std::span<const char>> raw_body_sha256::read(std::size_t count) {
 
-    auto rv = co_await raw_body::read(dest);
+    auto rv = co_await raw_body::read(count);
 
-    m_hash.consume(dest.subspan(0, rv));
+    m_hash.consume(rv);
 
-    if (rv < dest.size()) {
+    if (rv.empty()) {
         auto sig = to_hex(m_hash.finalize());
         if (sig != m_signature) {
             throw std::runtime_error("body signature mismatch");

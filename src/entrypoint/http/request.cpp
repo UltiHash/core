@@ -6,7 +6,7 @@ using namespace boost;
 
 namespace uh::cluster::ep::http {
 
-request::request(raw_request rawreq, std::unique_ptr<body> body,
+request::request(raw_request rawreq, std::unique_ptr<http::body> body,
                  ep::user::user user)
     : m_rawreq(std::move(rawreq)),
       m_body(std::move(body)),
@@ -33,15 +33,6 @@ std::string request::arn() const {
 
 const raw_request& request::get_raw_request() const noexcept {
     return m_rawreq;
-}
-
-coro<std::size_t> request::read_body(std::span<char> buffer) {
-    return m_body->read(buffer);
-}
-
-std::vector<boost::asio::const_buffer>
-request::get_raw_buffer() const {
-    return m_body->get_raw_buffer();
 }
 
 boost::asio::ip::tcp::endpoint request::peer() const { return m_rawreq.peer; }
@@ -112,8 +103,8 @@ std::string get_object_key(const std::string& path) {
 }
 
 std::ostream& operator<<(std::ostream& out, const request& req) {
-    auto rb = req.get_raw_request().get_raw_buffer();
-    out << "\n" << std::string{rb.data(), rb.size()} << "\n";
+    auto& r = req.m_rawreq.headers;
+    out << r.method_string() << " " << r.target();
 
     return out;
 }
