@@ -1,0 +1,134 @@
+services:
+  database:
+    image: bitnami/postgresql:16.3.0
+    environment:
+      POSTGRESQL_PASSWORD: uh
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  etcd:
+    image: bitnami/etcd:3.5.12
+    environment:
+      ALLOW_NONE_AUTHENTICATION: yes
+
+  database-init:
+    image: registry.ultihash.io/dev/database-init:ulticache-nightly-build
+    depends_on:
+      - database
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: uh
+      SUPER_USER_USERNAME: root
+      SUPER_USER_ACCESS_KEY_ID: TEST-USER
+      SUPER_USER_SECRET_KEY: SECRET
+
+      DB_USER: postgres
+      DB_HOST: database
+      DB_PORT: 5432
+      PGPASSWORD: uh
+
+  coordinator:
+    image: registry.ultihash.io/dev/core:ulticache-nightly-build
+    depends_on:
+       - etcd
+    environment:
+      UH_LICENSE: ${UH_LICENSE}
+      UH_LOG_LEVEL: INFO
+      UH_DB_USER: postgres
+      UH_DB_HOSTPORT: database:5432
+      UH_DB_PASS: uh
+    command: ["/usr/bin/bash", "-l", "-c", "sleep 10 && uh-cluster --registry etcd:2379 coordinator"]
+
+  storage:
+    image: registry.ultihash.io/dev/core:ulticache-nightly-build
+    depends_on:
+       - etcd
+    environment:
+      UH_LOG_LEVEL: INFO
+      UH_OTEL_ENDPOINT: http://otel:4317
+    command: ["/usr/bin/bash", "-l", "-c", "sleep 10 && uh-cluster --registry etcd:2379 storage"]
+
+  deduplicator:
+    image: registry.ultihash.io/dev/core:ulticache-nightly-build
+    depends_on:
+      - etcd
+      - storage
+    environment:
+      UH_LOG_LEVEL: INFO
+      UH_OTEL_ENDPOINT: http://otel:4317
+    command: ["/usr/bin/bash", "-l", "-c", "sleep 10 && uh-cluster --registry etcd:2379 deduplicator"]
+
+  entrypoint:
+    image: registry.ultihash.io/dev/core:ulticache-nightly-build
+    depends_on:
+      - etcd
+      - storage
+      - deduplicator
+    environment:
+      UH_LOG_LEVEL: INFO
+      UH_OTEL_ENDPOINT: http://otel:4317
+      UH_DB_HOSTPORT: database:5432
+      UH_DB_USER: postgres
+      UH_DB_PASS: uh
+    configs:
+      - source: policies_config
+        target: /etc/uh/policies.json
+    command: ["/usr/bin/bash", "-l", "-c", "sleep 15 && uh-cluster --registry etcd:2379 entrypoint"]
+    ports:
+      - 8080:8080
+
+  otel:
+    image: otel/opentelemetry-collector-contrib:0.118.0
+    restart: on-failure
+    configs:
+      - source: otel_collector_config
+        target: /etc/otelcol-contrib/config.yaml
+
+configs:
+  otel_collector_config:
+    content: |
+      receivers:
+        otlp:
+          protocols:
+            grpc:
+              endpoint: 'otel:4317'
+            http:
+
+      processors:
+        batch:
+          send_batch_size: 10000
+          timeout: 10s
+
+      exporters:
+        debug: {}
+        otlphttp/uptrace:
+          endpoint: https://collector.ultihash.io
+          headers: { 'uptrace-dsn': https://${UH_MONITORING_TOKEN}@collector.ultihash.io }
+
+      service:
+        pipelines:
+          metrics:
+            receivers: [otlp]
+            processors: [batch]
+            exporters: [otlphttp/uptrace]
+          logs:
+            receivers: [otlp]
+            processors: [batch]
+            exporters: [otlphttp/uptrace]
+
+  policies_config:
+    content: |
+      {
+          "Version": "2012-10-17",
+          "Statement": {
+              "Sid":  "AllowAllForAnybody",
+              "Effect": "Allow",
+              "Action": "*",
+              "Principal": "*",
+              "Resource": "*"
+          }
+      }
+

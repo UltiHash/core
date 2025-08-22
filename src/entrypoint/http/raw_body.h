@@ -2,29 +2,24 @@
 
 #include "body.h"
 #include "raw_request.h"
+#include "stream.h"
 
 namespace uh::cluster::ep::http {
 
 class raw_body : public body {
 public:
-    raw_body(boost::asio::ip::tcp::socket& sock, raw_request& req);
-    raw_body(boost::asio::ip::tcp::socket& sock, std::vector<char> b, std::size_t len);
+    raw_body(stream& s, raw_request& req);
 
     std::optional<std::size_t> length() const override;
 
-    coro<std::size_t> read(std::span<char> dest) override;
+    coro<std::span<const char>> read(std::size_t count) override;
+    coro<void> consume() override;
 
-    std::vector<boost::asio::const_buffer>
-    get_raw_buffer() const override {
-        return m_raw_buffers;
-    }
+    std::size_t buffer_size() const override;
 
 private:
-    boost::asio::ip::tcp::socket& m_socket;
-    std::vector<char> m_body_prefix;
+    stream& m_s;
     std::size_t m_length;
-    std::size_t m_read_position = 0;
-    std::vector<boost::asio::const_buffer> m_raw_buffers;
 };
 
 } // namespace uh::cluster::ep::http

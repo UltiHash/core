@@ -15,19 +15,7 @@ bool put_bucket_policy::can_handle(const ep::http::request& req) {
 
 coro<response> put_bucket_policy::handle(request& req) {
 
-    constexpr std::size_t buffer_size = 64 * KIBI_BYTE;
-    std::string buffer;
-    std::size_t pos = 0;
-    std::size_t count = 0;
-
-    do {
-        buffer.resize(pos + buffer_size);
-        count = co_await req.read_body({&buffer[pos], buffer_size});
-        pos += count;
-        buffer.resize(pos);
-    } while (count == buffer_size);
-
-    co_await m_dir.set_bucket_policy(req.bucket(), std::move(buffer));
+    co_await m_dir.set_bucket_policy(req.bucket(), co_await copy_to_buffer(req.body()));
     co_return response(status::no_content);
 }
 

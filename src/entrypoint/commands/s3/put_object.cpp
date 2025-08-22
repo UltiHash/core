@@ -1,55 +1,21 @@
 #include "put_object.h"
 
-#include "common/utils/double_buffer.h"
+#include <common/crypto/hash.h>
 #include <entrypoint/constant.h>
+#include <entrypoint/utils.h>
 
 using namespace boost;
 using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
 
-namespace {
-
-coro<std::size_t> fill(request& req, std::vector<char>& buffer) {
-    buffer.resize(buffer.capacity());
-
-    auto read = co_await req.read_body(buffer);
-    buffer.resize(read);
-
-    co_return read;
-}
-
-coro<future<dedupe_response>> upload(boost::asio::io_context& ioc,
-                                     deduplicator_interface& dedup,
-                                     const std::vector<char>& buffer) {
-    promise<dedupe_response> p;
-    auto f = p.get_future();
-
-    auto context = co_await boost::asio::this_coro::context;
-    if (!buffer.empty()) {
-        auto awaitable = dedup.deduplicate({buffer.data(), buffer.size()})
-                             .continue_trace(context);
-        asio::co_spawn(ioc, std::move(awaitable),
-                       use_promise_cospawn(std::move(p)));
-    } else {
-        p.set_value(dedupe_response());
-    }
-
-    co_return f;
-}
-
-} // namespace
-
-put_object::put_object(boost::asio::io_context& ioc,
-                       const entrypoint_config& conf, limits& uhlimits,
+put_object::put_object(limits& uhlimits,
                        directory& dir, storage::global::global_data_view& gdv,
-                       deduplicator_interface& dedup)
-    : m_ioc(ioc),
-      m_config(conf),
-      m_dir(dir),
+                       deduplicator_interface& dedupe)
+    : m_dir(dir),
       m_gdv(gdv),
       m_limits(uhlimits),
-      m_dedup(dedup) {}
+      m_dedupe(dedupe) {}
 
 bool put_object::can_handle(const request& req) {
     return req.method() == verb::put && req.bucket() != RESERVED_BUCKET_NAME &&
@@ -70,16 +36,9 @@ coro<response> put_object::handle(request& req) {
     m_limits.check_storage_size(content_length);
 
     md5 hash;
-
-    dedupe_response resp;
-    if (content_length >= m_config.buffer_size) {
-        resp = co_await put_large_object(req, hash);
-    } else {
-        resp = co_await put_small_object(req, hash);
-    }
+    auto resp = co_await deduplicate(m_dedupe, req.body(), hash);
 
     auto tag = to_hex(hash.finalize());
-    LOG_DEBUG() << req.peer() << ": etag: " << tag;
 
     auto original_size = resp.addr.data_size();
     object obj{.name = req.object_key(),
@@ -100,53 +59,6 @@ coro<response> put_object::handle(request& req) {
     res.set_effective_size(resp.effective_size);
 
     co_return res;
-}
-
-coro<dedupe_response> put_object::put_large_object(request& req,
-                                                   md5& hash) const {
-    const auto buffer_size = m_config.buffer_size;
-    double_buffer b(buffer_size);
-
-    auto content_length = req.content_length();
-    std::size_t transferred = 0;
-
-    auto read = co_await fill(req, b.current());
-    hash.consume(b.current());
-    transferred += read;
-
-    dedupe_response rv;
-
-    do {
-        auto future = co_await upload(m_ioc, m_dedup, b.current());
-        b.flip();
-
-        read = co_await fill(req, b.current());
-        hash.consume(b.current());
-        transferred += read;
-
-        rv.append(co_await future.get());
-    } while (transferred < content_length);
-
-    auto future = co_await upload(m_ioc, m_dedup, b.current());
-    rv.append(co_await future.get());
-
-    co_return rv;
-}
-
-coro<dedupe_response> put_object::put_small_object(request& req,
-                                                   md5& hash) const {
-    auto content_length = req.content_length();
-
-    unique_buffer<char> buffer(content_length);
-    auto read = co_await req.read_body(buffer.span());
-    buffer.resize(read);
-    hash.consume(buffer.span());
-
-    if (buffer.empty()) {
-        co_return dedupe_response();
-    }
-
-    co_return co_await m_dedup.deduplicate({buffer.data(), buffer.size()});
 }
 
 std::string put_object::action_id() const { return "s3:PutObject"; }

@@ -13,7 +13,7 @@ namespace {
 constexpr std::size_t MAXIMUM_CHUNK_SIZE = 5ul * 1024ul * 1024ul;
 constexpr std::size_t MAXIMUM_PART_NUMBER = 10000;
 
-void validate_internal(const upload_info& info, std::span<char> body) {
+void validate_internal(const upload_info& info, std::string_view body) {
     xml_parser xml_parser;
     bool parsed = xml_parser.parse({&*body.begin(), body.size()});
     auto part_nodes = xml_parser.get_nodes("CompleteMultipartUpload.Part");
@@ -87,9 +87,7 @@ bool complete_multipart::can_handle(const request& req) {
 coro<response> complete_multipart::handle(request& req) {
     metric<entrypoint_complete_multipart_req>::increase(1);
 
-    unique_buffer<char> buffer(req.content_length());
-    auto size = co_await req.read_body(buffer.span());
-    buffer.resize(size);
+    std::string buffer = co_await copy_to_buffer(req.body());
 
     upload_info info;
     std::string id = *req.query("uploadId");
@@ -101,7 +99,7 @@ coro<response> complete_multipart::handle(request& req) {
         auto lock = co_await instance.lock_upload(id);
         info = co_await instance.details(id);
 
-        validate_internal(info, buffer.span());
+        validate_internal(info, buffer);
 
         if (!info.completed) {
             m_limits.check_storage_size(info.data_size);

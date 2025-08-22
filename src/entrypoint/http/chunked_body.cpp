@@ -1,131 +1,80 @@
 #include "chunked_body.h"
 
-#include <algorithm>
 #include <charconv>
 
 using namespace boost;
 
 namespace uh::cluster::ep::http {
 
-chunked_body::chunked_body(boost::asio::ip::tcp::socket& sock, raw_request& req,
-                           trailing_headers trailing)
-    : m_socket(sock),
-      m_buffer(),
-      m_trailing(trailing) {
-    m_buffer.reserve(BUFFER_SIZE);
-    m_buffer.resize(req.get_remained_buffer().size());
-    asio::buffer_copy(asio::buffer(m_buffer),
-                      asio::buffer(req.get_remained_buffer().data(),
-                                   req.get_remained_buffer().size()));
-}
+chunked_body::chunked_body(stream& s, trailing_headers trailing)
+    : m_s(s),
+      m_trailing(trailing) { }
 
 std::optional<std::size_t> chunked_body::length() const { return {}; }
 
-coro<std::size_t> chunked_body::read(std::span<char> dest) {
+coro<std::span<const char>> chunked_body::read(std::size_t count) {
     if (m_end) {
-        co_return 0;
+        co_return std::span<const char>{};
     }
 
-    m_buffer.erase(m_buffer.begin(), m_buffer.begin() + m_read_position);
-    m_read_position = 0;
-    m_raw_buffers.clear();
-
-    std::size_t rv = 0ull;
-
-    while (rv < dest.size()) {
-        if (m_chunk_bytes_left == 0ull) {
-            auto hdr = co_await read_chunk_header();
-            m_chunk_bytes_left = hdr.size;
-
-            on_chunk_header(hdr);
-        }
+    if (m_chunk_bytes_left == 0ull) {
+        auto hdr = co_await read_chunk_header();
+        m_chunk_bytes_left = hdr.size;
 
         if (m_chunk_bytes_left == 0ull) {
             on_body_done();
             m_end = true;
 
             /*
-             * Note: processing of trailing headers is not implemented yet.
-             */
+            * Note: processing of trailing headers is not implemented yet.
+            */
             if (m_trailing == trailing_headers::read) {
-                auto byte_size = co_await asio::async_read_until(
-                    m_socket, asio::dynamic_buffer(m_buffer), "\r\n\r\n");
-                m_raw_buffers.push_back(
-                    {m_buffer.data() + m_read_position, byte_size});
-                m_read_position += byte_size;
+                co_await m_s.read_until("\r\n\r\n");
+            } else {
+                co_await m_s.read_until("\r\n");
             }
 
-            break;
+            co_return std::span<const char>{};
         }
-
-        auto count = std::min(m_chunk_bytes_left, dest.size() - rv);
-        auto read = co_await read_data(dest.subspan(rv, count));
-
-        on_chunk_data(dest.subspan(rv, read));
-
-        rv += read;
-        m_chunk_bytes_left -= read;
-
-        if (m_chunk_bytes_left == 0ull) {
-            on_chunk_done();
-        }
-
-        co_await read_nl();
     }
 
-    co_return rv;
+    auto n = std::min(m_chunk_bytes_left, count);
+    auto data = co_await m_s.read(n);
+
+    on_chunk_data(data);
+    m_chunk_bytes_left -= data.size();
+
+    if (m_chunk_bytes_left == 0ull) {
+        on_chunk_done();
+
+        auto nl = co_await m_s.read(2);
+        if (nl[0] != '\r' || nl[1] != '\n') {
+            throw std::runtime_error("newline required");
+        }
+    }
+
+    co_return data;
+}
+
+coro<void> chunked_body::consume() {
+    co_await m_s.consume();
+}
+
+std::size_t chunked_body::buffer_size() const {
+    return m_s.buffer_size();
 }
 
 void chunked_body::on_chunk_header(const chunk_header&) {}
-void chunked_body::on_chunk_data(std::span<char>) {}
+void chunked_body::on_chunk_data(std::span<const char>) {}
 void chunked_body::on_chunk_done() {}
 void chunked_body::on_body_done() {}
 
-coro<void> chunked_body::read_nl() {
-    char nl[2];
-    std::size_t offset = 0;
-
-    if (!m_buffer.empty()) {
-        auto count = std::min(m_buffer.size() - m_read_position, sizeof(nl));
-        memcpy(nl, m_buffer.data() + m_read_position, count);
-        m_raw_buffers.push_back({m_buffer.data() + m_read_position, count});
-        m_read_position += count;
-        offset += count;
-    }
-
-    if (offset < sizeof(nl)) {
-        // When does this happen?
-        co_await asio::async_read(
-            m_socket, asio::buffer(&nl[offset], sizeof(nl) - offset));
-    }
-
-    if (nl[0] != '\r' || nl[1] != '\n') {
-        throw std::runtime_error("newline required");
-    }
-}
-
-std::size_t chunked_body::find_nl() const {
-    std::string_view sv(&m_buffer[m_read_position],
-                        m_buffer.size() - m_read_position);
-
-    if (auto pos = sv.find("\r\n"); pos != std::string_view::npos) {
-        return m_read_position + pos + 2;
-    }
-
-    throw std::runtime_error("newline required");
-}
-
 coro<chunked_body::chunk_header> chunked_body::read_chunk_header() {
-    // TODO: use return value of async_read_until rather than using find_nl()
-    co_await asio::async_read_until(m_socket, asio::dynamic_buffer(m_buffer),
-                                    "\r\n");
-
-    auto pos = find_nl();
+    auto data = co_await m_s.read_until("\r\n");
 
     chunk_header hdr;
 
-    auto [next, ec] = std::from_chars(&m_buffer[m_read_position],
-                                      &m_buffer[pos], hdr.size, 16);
+    auto [next, ec] = std::from_chars(data.data(), &data.back(), hdr.size, 16);
     if (ec != std::errc()) {
         throw std::runtime_error("from_chars failed: " +
                                  make_error_condition(ec).message());
@@ -133,36 +82,12 @@ coro<chunked_body::chunk_header> chunked_body::read_chunk_header() {
 
     if (*next == ';') {
         ++next;
-        hdr.extensions_string = std::string(next, &*(m_buffer.cbegin() + pos));
+        hdr.extensions_string = std::string(next, &data.back());
         hdr.extensions = parse_values_string(hdr.extensions_string, ';');
     }
 
-    m_raw_buffers.push_back(
-        {m_buffer.data() + m_read_position, pos - m_read_position});
-    m_read_position = pos;
+    on_chunk_header(hdr);
     co_return hdr;
-}
-
-coro<std::size_t> chunked_body::read_data(std::span<char> buffer) {
-    std::size_t offs = 0ull;
-
-    if (m_read_position < m_buffer.size()) {
-        auto count = std::min(m_buffer.size() - m_read_position, buffer.size());
-        memcpy(buffer.data(), m_buffer.data() + m_read_position, count);
-
-        m_raw_buffers.push_back({m_buffer.data() + m_read_position, count});
-        m_read_position += count;
-        offs += count;
-    }
-
-    if (offs < buffer.size()) {
-        auto read_bytes = co_await asio::async_read(
-            m_socket, asio::buffer(buffer.data() + offs, buffer.size() - offs));
-        m_raw_buffers.push_back({buffer.data() + offs, read_bytes});
-        offs += read_bytes;
-    }
-
-    co_return offs;
 }
 
 } // namespace uh::cluster::ep::http

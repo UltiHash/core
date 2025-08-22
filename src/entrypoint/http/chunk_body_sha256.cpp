@@ -18,13 +18,13 @@ std::string make_prelude(raw_request& req, const aws4_signature_info& info) {
 
 } // namespace
 
-chunk_body_sha256::chunk_body_sha256(boost::asio::ip::tcp::socket& s,
+chunk_body_sha256::chunk_body_sha256(stream& s,
                                      raw_request& req,
                                      const aws4_signature_info& info,
                                      const std::string& signing_key,
                                      const std::string& signature,
                                      chunked_body::trailing_headers trailing)
-    : chunked_body(s, req, trailing),
+    : chunked_body(s, trailing),
       m_prelude(make_prelude(req, info)),
       m_signing_key(signing_key),
       m_to_sign(m_prelude + signature + "\n" + SHA256_EMPTY_STRING + "\n") {}
@@ -36,7 +36,7 @@ void chunk_body_sha256::on_chunk_header(const chunk_header& hdr) {
     }
 }
 
-void chunk_body_sha256::on_chunk_data(std::span<char> data) {
+void chunk_body_sha256::on_chunk_data(std::span<const char> data) {
     m_hash.consume(data);
 }
 

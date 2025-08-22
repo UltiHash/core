@@ -1,9 +1,9 @@
 #pragma once
 
-#include "common/service_interfaces/deduplicator_interface.h"
-#include "entrypoint/directory.h"
-#include "entrypoint/multipart_state.h"
-#include "storage/global/data_view.h"
+#include <common/service_interfaces/deduplicator_interface.h>
+#include <entrypoint/directory.h>
+#include <entrypoint/multipart_state.h>
+#include <storage/global/data_view.h>
 #include <entrypoint/commands/command.h>
 
 namespace uh::cluster {

@@ -1,5 +1,6 @@
 #include "handler.h"
 #include "http/command_exception.h"
+#include <entrypoint/http/stream.h>
 #include <common/utils/downstream_exception.h>
 #include <common/utils/random.h>
 #include <format>
@@ -19,6 +20,9 @@ handler::handler(command_factory&& comm_factory, request_factory&& factory,
 coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     std::optional<std::string> failed_request_id{std::nullopt};
 
+    auto peer = s.remote_endpoint();
+    socket_stream st(s);
+
     auto state = co_await boost::asio::this_coro::cancellation_state;
     while (state.cancelled() == boost::asio::cancellation_type::none) {
         // Note: lifetime of response must not exceed lifetime of request.
@@ -28,12 +32,14 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
         try {
             try {
-                resp = co_await handle_request(s, id).start_trace();
+                resp = co_await handle_request(peer, st, id).start_trace();
                 metric<success>::increase(1);
 
             } catch (const boost::system::system_error& e) {
+                LOG_ERROR() << peer << ": error: " << e.what();
                 throw;
             } catch (const downstream_exception& e) {
+                LOG_WARN() << peer << ": error: " << e.what();
                 if (e.code() == boost::asio::error::operation_aborted) {
                     throw e.original_exception();
                 } else if (e.code() == boost::beast::error::timeout) {
@@ -43,14 +49,17 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                         command_exception(error::internal_network_error));
                 }
             } catch (const command_exception& e) {
+                LOG_WARN() << peer << ": error: " << e.what();
                 resp = make_response(e);
             } catch (const error_exception& e) {
+                LOG_WARN() << peer << ": error: " << e.what();
                 resp = make_response(command_exception(*e.error()));
             } catch (const std::exception& e) {
+                LOG_WARN() << peer << ": error: " << e.what();
                 resp = make_response(command_exception());
             }
 
-            co_await write(s, std::move(*resp), id);
+            co_await write(st, std::move(*resp), id);
 
         } catch (const boost::system::system_error& e) {
             if (e.code() == boost::asio::error::operation_aborted) {
@@ -58,7 +67,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 break;
             } else if (e.code() == boost::beast::http::error::end_of_stream or
                        e.code() == boost::asio::error::eof) {
-                LOG_INFO() << s.remote_endpoint() << " disconnected";
+                LOG_INFO() << peer << " disconnected";
                 break;
             }
             throw;
@@ -71,18 +80,22 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
         auto resp =
             make_response(command_exception(error::service_unavailable));
-        co_await write(s, std::move(resp), *failed_request_id);
+        co_await write(st, std::move(resp), *failed_request_id);
     }
 }
 
-coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
-                                       const std::string& id) {
-    std::unique_ptr<request> req = co_await m_factory.create(s);
-    LOG_INFO() << req->peer() << ": read request, id=" << id << ": " << *req;
+coro<response> handler::handle_request(
+        const boost::asio::ip::tcp::endpoint& peer,
+        stream& s, const std::string& id) {
+
+    co_await s.consume();
+    std::unique_ptr<request> req = co_await m_factory.create(s, peer);
+
+    LOG_INFO() << peer << ": read request, id=" << id << ": " << *req;
 
     auto span = co_await boost::asio::this_coro::span;
 
-    span->set_attribute("client-ip", req->peer().address().to_string());
+    span->set_attribute("client-ip", peer.address().to_string());
     span->set_attribute("request-target", req->target());
     span->set_attribute("request-user-id", req->authenticated_user().id);
     span->set_attribute("request-user-name", req->authenticated_user().name);

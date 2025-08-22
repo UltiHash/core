@@ -16,9 +16,11 @@ namespace {
 class local_read_handle : public uh::cluster::ep::http::body {
 public:
     local_read_handle(storage::global::global_data_view& storage,
-                      directory::object_lock&& obj)
+                      directory::object_lock&& obj,
+                      std::size_t buffer_size = 32 * MEBI_BYTE)
         : m_storage(storage),
           m_obj(std::move(obj)),
+          m_buffer(buffer_size),
           m_size(m_obj->addr->data_size()) {}
 
     ~local_read_handle() override {
@@ -30,11 +32,28 @@ public:
 
     std::optional<std::size_t> length() const override { return m_size; }
 
-    coro<std::size_t> read(std::span<char> buffer) override {
-        std::size_t buffer_size = 0;
+    coro<std::span<const char>> read(std::size_t count) override {
+        if (m_put_ptr - m_get_ptr < count) {
+            co_await fill();
+        }
+
+        auto size = std::min(count, m_put_ptr - m_get_ptr);
+        auto rv = std::span<const char>{ &m_buffer[m_get_ptr], size };
+
+        m_get_ptr += size;
+
+        co_return rv;
+    }
+
+    coro<std::span<const char>> read_until(std::string_view delimiter) {
+        throw std::runtime_error("not implemented");
+    }
+
+    coro<void> fill() {
+        std::size_t count = 0;
 
         address partial_addr;
-        while (m_addr_index < m_obj->addr->size() && buffer_size < buffer.size()) {
+        while (m_addr_index < m_obj->addr->size() && count + m_put_ptr < m_buffer.size()) {
 
             auto frag = m_obj->addr->get(m_addr_index);
             if (m_frag_offset > 0) {
@@ -42,54 +61,63 @@ public:
                 frag.size -= m_frag_offset;
             }
 
-            if (frag.size + buffer_size > buffer.size()) {
-                auto remains = buffer.size() - buffer_size;
+            if (frag.size + count + m_put_ptr > m_buffer.size()) {
+                auto remains = m_buffer.size() - (count + m_put_ptr);
 
                 m_frag_offset += remains;
                 frag.size = remains;
                 partial_addr.push(frag);
-                buffer_size += frag.size;
+                count += frag.size;
                 break;
             }
 
             m_frag_offset = 0;
             partial_addr.push(frag);
-            buffer_size += frag.size;
+            count += frag.size;
             m_addr_index++;
         }
 
-        co_await m_storage.read_address(partial_addr, buffer);
-        m_total += buffer_size;
-        m_size -= buffer_size;
-
-        co_return buffer_size;
+        if (count > 0) {
+            LOG_DEBUG() << "local_read_handle: fill, reading " << count << " bytes from storage";
+            co_await m_storage.read_address(partial_addr, { &m_buffer[m_put_ptr], count });
+            m_put_ptr += count;
+            m_total += count;
+            m_size -= count;
+        }
     }
 
-    std::vector<boost::asio::const_buffer> get_raw_buffer() const override {
-        throw std::runtime_error("not implemented");
+    coro<void> consume() override {
+        auto count = m_put_ptr - m_get_ptr;
+        if (count > 0) {
+            LOG_DEBUG() << "local_read_handle: copying " << (m_put_ptr - m_get_ptr) << " bytes to new buffer";
+            memmove(&m_buffer[0], &m_buffer[m_get_ptr], m_put_ptr - m_get_ptr);
+            m_put_ptr -= m_get_ptr;
+            m_get_ptr = 0;
+        } else {
+            m_put_ptr = m_get_ptr = 0ull;
+        }
+
+        co_return;
     }
+
+    std::size_t buffer_size() const override { return m_buffer.size(); }
 private:
     void report_stats() {
-        const std::chrono::duration<double> duration = m_timer.passed();
-        const auto size = static_cast<double>(m_total) / MEBI_BYTE;
-        const auto bandwidth = size / duration.count();
-
         metric<entrypoint_egressed_data_counter, byte>::increase(m_total);
-
-        LOG_INFO() << "retrieval size " << m_total << " b";
-        LOG_INFO() << "retrieval duration " << duration.count() << " s";
-        LOG_INFO() << "retrieval bandwidth " << bandwidth << " MB/s";
     }
 
     storage::global::global_data_view& m_storage;
     directory::object_lock m_obj;
+
+    std::vector<char> m_buffer;
+    std::size_t m_get_ptr = 0ull;
+    std::size_t m_put_ptr = 0ull;
+
     size_t m_addr_index = 0;
     std::size_t m_frag_offset = 0;
 
     std::size_t m_size;
-
     std::size_t m_total = 0;
-    timer m_timer;
 };
 
 } // namespace
@@ -140,7 +168,7 @@ coro<response> get_object::handle(request& req) {
         }
 
         obj->addr = apply_range(*obj->addr, spec);
-        LOG_DEBUG() << "range based access: header=" << *range;
+        LOG_DEBUG() << req.peer() << ": range based access: header=" << *range;
 
         auto r = spec.ranges.front();
         r.end = r.start + obj->addr->data_size();

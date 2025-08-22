@@ -11,8 +11,9 @@ using namespace boost;
 
 namespace uh::cluster::ep::http {
 
-coro<raw_request> raw_request::read(asio::ip::tcp::socket& sock) {
-    auto [buffer, header_length] = co_await read_header_data(sock);
+coro<raw_request> raw_request::read(stream& s,
+                                    boost::asio::ip::tcp::endpoint peer) {
+    auto buffer = co_await s.read_until("\r\n\r\n");
 
     beast::http::request_parser<beast::http::empty_body> parser;
     parser.body_limit((std::numeric_limits<std::uint64_t>::max)());
@@ -24,14 +25,12 @@ coro<raw_request> raw_request::read(asio::ip::tcp::socket& sock) {
         throw std::runtime_error("Incomplete HTTP header");
     }
 
-    co_return from_string(parser.release(), sock.remote_endpoint(),
-                          std::move(buffer), header_length);
+    co_return from_string(parser.release(), peer);
 }
 
 raw_request
 raw_request::from_string(beast::http::request<beast::http::empty_body> headers,
-                         boost::asio::ip::tcp::endpoint peer,
-                         std::vector<char>&& buffer, size_t header_length) {
+                         boost::asio::ip::tcp::endpoint peer) {
     raw_request rv;
 
     rv.headers = std::move(headers);
@@ -40,8 +39,6 @@ raw_request::from_string(beast::http::request<beast::http::empty_body> headers,
             "bad http version. support exists only for HTTP 1.1.\n");
     }
 
-    rv.m_buffer = std::move(buffer);
-    rv.m_read_position = header_length;
     rv.peer = peer;
 
     const auto& target = rv.headers.target();

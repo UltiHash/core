@@ -1,15 +1,12 @@
 #include "response.h"
 #include "common/coroutines/promise.h"
 #include "common/types/common_types.h"
-#include "common/utils/double_buffer.h"
 #include "entrypoint/formats.h"
 #include "string_body.h"
 #include <boost/property_tree/xml_parser.hpp>
 #include <sstream>
 
 namespace uh::cluster::ep::http {
-
-static constexpr std::size_t BUFFER_CHUNK_SIZE = 32 * MEBI_BYTE;
 
 namespace asio = boost::asio;
 
@@ -102,8 +99,23 @@ std::ostream& operator<<(std::ostream& out, const response& res) {
     return out;
 }
 
-coro<void> write(asio::ip::tcp::socket& out, response&& res,
-                 const std::string& id) {
+struct visitor {
+    void operator()(auto ec, auto buffers) {
+        last_bytes = 0;
+
+        for (const auto& b : buffers) {
+            auto s = buffer.size();
+            buffer.resize(buffer.size() + b.size());
+            memcpy(&buffer[s], b.data(), b.size());
+            last_bytes += b.size();
+        }
+    };
+
+    std::vector<char>& buffer;
+    std::size_t& last_bytes;
+};
+
+coro<void> write(stream& s, response&& res, const std::string& id) {
     auto& body = res.body();
 
     res.set("Server", "UltiHash");
@@ -115,43 +127,30 @@ coro<void> write(asio::ip::tcp::socket& out, response&& res,
         res.set("Content-Length", body.length());
     }
 
+    std::vector<char> buffer;
+    std::size_t last_bytes;
     beast::http::response_serializer<beast::http::empty_body> sr(res.base());
-    beast::http::write_header(out, sr);
-
-    std::optional<future<std::size_t>> fut;
-
-    std::size_t buffer_size =
-        body.length() && *body.length() < BUFFER_CHUNK_SIZE ? *body.length()
-                                                            : BUFFER_CHUNK_SIZE;
-    double_buffer buffers(buffer_size);
-
-    while (body.length() > 0) {
-        auto& buffer = buffers.current();
-        buffer.resize(buffer.capacity());
-
-        auto count = co_await res.body().read(buffer);
-        buffer.resize(count);
-
-        if (fut) {
-            co_await fut->get();
-        }
-
-        promise<std::size_t> p;
-        fut = p.get_future();
-        asio::async_write(out, asio::buffer(buffer), use_promise(std::move(p)));
-
-        buffers.flip();
+    while (!sr.is_header_done()) {
+        beast::error_code ec;
+        sr.next(ec, visitor{buffer, last_bytes});
+        sr.consume(last_bytes);
+        LOG_DEBUG() << s.peer() << ": serializing header, buffer size: " << buffer.size();
     }
 
-    if (fut) {
-        co_await fut->get();
-        fut.reset();
+    co_await s.write(buffer);
+    auto bs = body.buffer_size();
+
+    std::span<const char> data = co_await body.read(bs);
+    while (!data.empty()) {
+        co_await s.write(data);
+        co_await body.consume();
+        data = co_await body.read(bs);
     }
 
     if (static_cast<unsigned>(res.result()) >= 500) {
-        LOG_WARN() << out.remote_endpoint() << ", response sent: " << res;
+        LOG_WARN() << s.peer() << ", response sent: " << res;
     } else {
-        LOG_DEBUG() << out.remote_endpoint() << ", response sent: " << res;
+        LOG_DEBUG() << s.peer() << ", response sent: " << res;
     }
 }
 
