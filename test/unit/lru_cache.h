@@ -63,20 +63,20 @@ public:
     void put(const Key& key, const Value& value) override {
         std::unique_lock lock(m_mutex);
 
-        std::size_t value_size = value.size();
+        std::size_t value_size = detail::get_size(value);
         if (value_size > m_capacity) {
             throw std::length_error("Value size exceeds cache capacity");
         }
 
         auto it = m_cache.find(key);
         if (it != m_cache.end()) {
-            m_current_size -= it->second->second.size();
+            m_current_size -= detail::get_size(it->second->second);
             m_items.erase(it->second);
             m_cache.erase(it);
         }
 
         while (!m_items.empty() && (m_current_size + value_size > m_capacity)) {
-            m_current_size -= m_items.back().second.size();
+            m_current_size -= detail::get_size(m_items.back().second);
             m_cache.erase(m_items.back().first);
             m_items.pop_back();
         }

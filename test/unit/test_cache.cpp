@@ -1,4 +1,4 @@
-#define BOOST_TEST_MODULE "task tests"
+#define BOOST_TEST_MODULE "cache tests"
 
 #include "lfu_cache.h"
 #include "lru_cache.h"
@@ -46,6 +46,18 @@ BOOST_AUTO_TEST_CASE(queries_for_added_items) {
     s3_object_key key1 = {"bucket1", "object1", "v1"};
 
     cache.put(key1, std::vector<char>{1, 2, 3, 4});
+
+    BOOST_CHECK_EQUAL(cache.get_used_space(), 4);
+    BOOST_CHECK_EQUAL(cache.size(), 1);
+    BOOST_CHECK(cache.get(key1) != std::nullopt);
+}
+
+BOOST_AUTO_TEST_CASE(does_same_thing_with_shared_ptr_as_value) {
+    lru_cache<s3_object_key, std::shared_ptr<std::vector<char>>> cache(10);
+    s3_object_key key1 = {"bucket1", "object1", "v1"};
+
+    cache.put(key1, std::make_shared<std::vector<char>>(
+                        std::initializer_list<char>{1, 2, 3, 4}));
 
     BOOST_CHECK_EQUAL(cache.get_used_space(), 4);
     BOOST_CHECK_EQUAL(cache.size(), 1);
@@ -126,6 +138,18 @@ BOOST_AUTO_TEST_CASE(queries_for_added_items) {
     s3_object_key key1 = {"bucket1", "object1", "v1"};
 
     cache.put(key1, std::vector<char>{1, 2, 3, 4});
+
+    BOOST_CHECK_EQUAL(cache.get_used_space(), 4);
+    BOOST_CHECK_EQUAL(cache.size(), 1);
+    BOOST_CHECK(cache.get(key1));
+}
+
+BOOST_AUTO_TEST_CASE(does_same_with_shared_ptr_as_value) {
+    lfu_cache<s3_object_key, std::shared_ptr<std::vector<char>>> cache(10);
+    s3_object_key key1 = {"bucket1", "object1", "v1"};
+
+    cache.put(key1, std::make_shared<std::vector<char>>(
+                        std::initializer_list<char>{1, 2, 3, 4}));
 
     BOOST_CHECK_EQUAL(cache.get_used_space(), 4);
     BOOST_CHECK_EQUAL(cache.size(), 1);

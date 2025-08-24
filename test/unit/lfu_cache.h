@@ -56,7 +56,7 @@ private:
             auto& min_freq_list = m_frequency_lists[m_min_frequency];
             Key key_to_evict = min_freq_list.back();
 
-            size_t value_size = m_cache[key_to_evict].value.size();
+            size_t value_size = detail::get_size(m_cache[key_to_evict].value);
             m_current_size -= value_size;
 
             min_freq_list.pop_back();
@@ -104,7 +104,7 @@ public:
     void put(const Key& key, const Value& value) override {
         std::unique_lock lock(m_mutex);
 
-        size_t value_size = value.size();
+        size_t value_size = detail::get_size(value);
         if (value_size > m_capacity) {
             throw std::length_error("Value size exceeds cache capacity");
         }
@@ -122,7 +122,7 @@ public:
                 }
             }
 
-            m_current_size -= it->second.value.size();
+            m_current_size -= detail::get_size(it->second.value);
             m_cache.erase(it);
         }
 
