@@ -19,7 +19,7 @@ public:
     using entry = typename cache<Key, Value>::entry;
     using time_point = typename cache<Key, Value>::time_point;
 
-    std::shared_ptr<entry> get(const Key& key) override {
+    [[nodiscard]] std::shared_ptr<entry> get(const Key& key) override {
         std::shared_lock lock(m_mutex);
         auto it = m_cache.find(key);
         if (it == m_cache.end()) {
@@ -29,7 +29,7 @@ public:
         return it->second->second;
     }
 
-    std::shared_ptr<entry> remove(const Key& key) override {
+    [[nodiscard]] std::shared_ptr<entry> remove(const Key& key) override {
         std::unique_lock lock(m_mutex);
         auto it = m_cache.find(key);
         if (it != m_cache.end()) {
@@ -41,7 +41,7 @@ public:
         return nullptr;
     }
 
-    std::vector<std::shared_ptr<entry>>
+    [[nodiscard]] std::vector<std::shared_ptr<entry>>
     evict(std::size_t size,
           std::optional<time_point> expire_before = std::nullopt) override {
         std::unique_lock lock(m_mutex);
@@ -62,11 +62,20 @@ public:
         return ret;
     }
 
-    void put(const Key& key, Value value) override {
+    [[nodiscard]] std::shared_ptr<entry> put(const Key& key,
+                                             Value value) override {
         std::unique_lock lock(m_mutex);
+        auto it = m_cache.find(key);
+        std::shared_ptr<entry> old_entry = nullptr;
 
         m_items.emplace_front(key, std::make_shared<entry>(std::move(value)));
-        m_cache[key] = m_items.begin();
+        if (it != m_cache.end()) {
+            old_entry = std::move(it->second->second);
+            it->second = m_items.begin();
+        } else {
+            m_cache[key] = m_items.begin();
+        }
+        return old_entry;
     }
 
     std::size_t size() const override {

@@ -102,12 +102,24 @@ public:
         return ret;
     }
 
-    void put(const Key& key, Value value) override {
+    [[nodiscard]] std::shared_ptr<abstract_entry> put(const Key& key,
+                                                      Value value) override {
         std::unique_lock lock(m_mutex);
+        auto it = m_cache.find(key);
+        std::shared_ptr<abstract_entry> old_entry = nullptr;
+
         m_frequency_lists[1].push_front(key);
-        m_cache[key] = std::make_shared<entry>(std::move(value),
-                                               m_frequency_lists[1].begin());
+        auto new_entry = std::make_shared<entry>(std::move(value),
+                                                 m_frequency_lists[1].begin());
+
+        if (it != m_cache.end()) {
+            old_entry = std::move(it->second);
+            it->second = new_entry;
+        } else {
+            m_cache[key] = new_entry;
+        }
         m_min_frequency = 1;
+        return old_entry;
     }
 
     size_t size() const override {

@@ -56,24 +56,24 @@ public:
     };
     virtual ~cache() = default;
 
-    virtual std::shared_ptr<entry> get(const Key& key) = 0;
+    [[nodiscard]] virtual std::shared_ptr<entry> get(const Key& key) = 0;
 
-    virtual std::shared_ptr<entry> remove(const Key& key) = 0;
+    [[nodiscard]] virtual std::shared_ptr<entry> remove(const Key& key) = 0;
 
     /*
      * Evict entries until the given size is freed. If size is 0, evict all
      */
-    virtual std::vector<std::shared_ptr<entry>>
+    [[nodiscard]] virtual std::vector<std::shared_ptr<entry>>
     evict(std::size_t size,
           std::optional<time_point> expire_before = std::nullopt) = 0;
 
     /*
-     * Before calling put, you need to ensure that cache doesn't store value
-     * with the given key.
+     * @return removed entry if key exists, nullptr otherwise
      *
-     * Let's add etag and expire_time as additional arguments
+     * TODO: Let's add etag and expire_time as additional arguments
      */
-    virtual void put(const Key& key, Value value) = 0;
+    [[nodiscard]] virtual std::shared_ptr<entry> put(const Key& key,
+                                                     Value value) = 0;
 
     virtual std::size_t size() const = 0;
 };

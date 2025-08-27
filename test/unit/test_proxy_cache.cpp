@@ -44,7 +44,10 @@ BOOST_AUTO_TEST_SUITE(a_lru_cache)
 BOOST_AUTO_TEST_CASE(queries_for_added_items) {
     auto cache = lru_cache<s3_object_key, std::vector<char>>();
     s3_object_key key1 = {"bucket1", "object1", "v1"};
-    cache.put(key1, std::vector<char>{1, 2, 3, 4});
+    // NOTE: (void) to suppress unused variable warning, since cache assumes it
+    // stores value's handle rather than value itself, which should be deleted
+    // seperately
+    (void)cache.put(key1, std::vector<char>{1, 2, 3, 4});
 
     auto pe = cache.get(key1);
 
@@ -61,13 +64,13 @@ BOOST_AUTO_TEST_CASE(deletes_least_recently_used_items) {
     s3_object_key key2 = {"bucket2", "object2", "v2"};
     s3_object_key key3 = {"bucket3", "object3", "v3"};
     auto data3 = std::vector<char>{8, 9, 10, 11};
-    cache.put(key1, std::vector<char>{1, 2, 3, 4});
-    cache.put(key2, std::vector<char>{5, 6, 7});
+    (void)cache.put(key1, std::vector<char>{1, 2, 3, 4});
+    (void)cache.put(key2, std::vector<char>{5, 6, 7});
     // Use Key1 to make it most recently used
     auto pe = cache.get(key1);
     (void)pe;
-    cache.put(key3, data3);
-    cache.evict(1);
+    (void)cache.put(key3, data3);
+    (void)cache.evict(1);
 
     BOOST_CHECK_EQUAL(cache.size(), 2);
     BOOST_CHECK(cache.get(key1) != nullptr);
@@ -75,17 +78,26 @@ BOOST_AUTO_TEST_CASE(deletes_least_recently_used_items) {
     BOOST_CHECK(cache.get(key3) != nullptr);
 }
 
+BOOST_AUTO_TEST_CASE(returns_previous_value_on_put_when_key_exists) {
+    auto cache = lru_cache<s3_object_key, std::vector<char>>();
+    s3_object_key key1 = {"bucket1", "object1", "v1"};
+    (void)cache.put(key1, std::vector<char>{1, 2, 3});
+
+    auto pe = cache.put(key1, std::vector<char>{10, 11});
+    BOOST_CHECK(pe != nullptr);
+}
+
 BOOST_AUTO_TEST_CASE(resets_usage_when_updating_existing_key) {
     auto cache = lru_cache<s3_object_key, std::vector<char>>();
     s3_object_key key1 = {"bucket1", "object1", "v1"};
     s3_object_key key2 = {"bucket2", "object2", "v2"};
-    cache.put(key1, std::vector<char>{1, 2, 3});
-    cache.get(key1);
-    cache.put(key2, std::vector<char>{4, 5, 6});
-    cache.get(key2);
-    cache.put(key2, std::vector<char>{7, 8, 9});
+    (void)cache.put(key1, std::vector<char>{1, 2, 3});
+    (void)cache.get(key1);
+    (void)cache.put(key2, std::vector<char>{4, 5, 6});
+    (void)cache.get(key2);
+    (void)cache.put(key2, std::vector<char>{7, 8, 9});
 
-    cache.evict(1);
+    (void)cache.evict(1);
 
     BOOST_CHECK(cache.get(key1) == nullptr);
     BOOST_CHECK(cache.get(key2) != nullptr);
@@ -105,7 +117,7 @@ BOOST_AUTO_TEST_CASE(supports_concurrent_put) {
                 s3_object_key key{"bucket" + std::to_string(t),
                                   "object" + std::to_string(i), "v1"};
 
-                cache.put(key, std::vector<int>{i});
+                (void)cache.put(key, std::vector<int>{i});
             }
         });
     }
@@ -132,7 +144,7 @@ BOOST_AUTO_TEST_SUITE(a_lfu_cache)
 BOOST_AUTO_TEST_CASE(queries_for_added_items) {
     auto cache = lfu_cache<s3_object_key, std::vector<char>>();
     s3_object_key key1 = {"bucket1", "object1", "v1"};
-    cache.put(key1, std::vector<char>{1, 2, 3, 4});
+    (void)cache.put(key1, std::vector<char>{1, 2, 3, 4});
 
     auto pe = cache.get(key1);
 
@@ -148,13 +160,13 @@ BOOST_AUTO_TEST_CASE(deletes_least_frequently_used_items) {
     s3_object_key key1 = {"bucket1", "object1", "v1"};
     s3_object_key key2 = {"bucket2", "object2", "v2"};
     s3_object_key key3 = {"bucket3", "object3", "v3"};
-    cache.put(key1, std::vector<char>{1, 2, 3, 4});
-    cache.get(key1);
-    cache.get(key1);
-    cache.put(key2, std::vector<char>{5, 6, 7});
-    cache.get(key2);
+    (void)cache.put(key1, std::vector<char>{1, 2, 3, 4});
+    (void)cache.get(key1);
+    (void)cache.get(key1);
+    (void)cache.put(key2, std::vector<char>{5, 6, 7});
+    (void)cache.get(key2);
     auto data3 = std::vector<char>{8, 9, 10, 11};
-    cache.put(key3, data3);
+    (void)cache.put(key3, data3);
 
     cache.evict(1);
 
@@ -167,11 +179,11 @@ BOOST_AUTO_TEST_CASE(deletes_least_frequently_used_items) {
 BOOST_AUTO_TEST_CASE(evicts_oldest_item_when_frequencies_are_equal) {
     auto cache = lfu_cache<s3_object_key, std::vector<char>>();
     s3_object_key key1 = {"bucket1", "object1", "v1"};
-    cache.put(key1, std::vector<char>{1, 2, 3});
+    (void)cache.put(key1, std::vector<char>{1, 2, 3});
     s3_object_key key2 = {"bucket2", "object2", "v2"};
-    cache.put(key2, std::vector<char>{4, 5, 6});
+    (void)cache.put(key2, std::vector<char>{4, 5, 6});
     s3_object_key key3 = {"bucket3", "object3", "v3"};
-    cache.put(key3, std::vector<char>{10, 11});
+    (void)cache.put(key3, std::vector<char>{10, 11});
 
     cache.evict(4);
 
@@ -180,18 +192,27 @@ BOOST_AUTO_TEST_CASE(evicts_oldest_item_when_frequencies_are_equal) {
     BOOST_CHECK(cache.get(key3) != nullptr);
 }
 
+BOOST_AUTO_TEST_CASE(returns_previous_value_on_put_when_key_exists) {
+    auto cache = lru_cache<s3_object_key, std::vector<char>>();
+    s3_object_key key1 = {"bucket1", "object1", "v1"};
+    (void)cache.put(key1, std::vector<char>{1, 2, 3});
+
+    auto pe = cache.put(key1, std::vector<char>{10, 11});
+    BOOST_CHECK(pe != nullptr);
+}
+
 BOOST_AUTO_TEST_CASE(resets_frequency_when_updating_existing_key) {
     auto cache = lfu_cache<s3_object_key, std::vector<char>>();
     s3_object_key key1 = {"bucket1", "object1", "v1"};
     s3_object_key key2 = {"bucket2", "object2", "v2"};
-    cache.put(key1, std::vector<char>{1, 2, 3});
-    cache.get(key1);
-    cache.get(key1);
-    cache.put(key2, std::vector<char>{4, 5, 6});
-    cache.get(key2);
-    cache.put(key1, std::vector<char>{7, 8, 9});
+    (void)cache.put(key1, std::vector<char>{1, 2, 3});
+    (void)cache.get(key1);
+    (void)cache.get(key1);
+    (void)cache.put(key2, std::vector<char>{4, 5, 6});
+    (void)cache.get(key2);
+    (void)cache.put(key1, std::vector<char>{7, 8, 9});
     s3_object_key key3 = {"bucket3", "object3", "v3"};
-    cache.put(key3, std::vector<char>{10, 11});
+    (void)cache.put(key3, std::vector<char>{10, 11});
 
     cache.evict(1);
 
@@ -214,7 +235,7 @@ BOOST_AUTO_TEST_CASE(supports_concurrent_put) {
                 s3_object_key key{"bucket" + std::to_string(t),
                                   "object" + std::to_string(i), "v1"};
 
-                cache.put(key, std::vector<int>{i});
+                (void)cache.put(key, std::vector<int>{i});
             }
         });
     }
