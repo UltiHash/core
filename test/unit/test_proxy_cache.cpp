@@ -75,6 +75,22 @@ BOOST_AUTO_TEST_CASE(deletes_least_recently_used_items) {
     BOOST_CHECK(cache.get(key3) != nullptr);
 }
 
+BOOST_AUTO_TEST_CASE(resets_usage_when_updating_existing_key) {
+    auto cache = lru_cache<s3_object_key, std::vector<char>>();
+    s3_object_key key1 = {"bucket1", "object1", "v1"};
+    s3_object_key key2 = {"bucket2", "object2", "v2"};
+    cache.put(key1, std::vector<char>{1, 2, 3});
+    cache.get(key1);
+    cache.put(key2, std::vector<char>{4, 5, 6});
+    cache.get(key2);
+    cache.put(key2, std::vector<char>{7, 8, 9});
+
+    cache.evict(1);
+
+    BOOST_CHECK(cache.get(key1) == nullptr);
+    BOOST_CHECK(cache.get(key2) != nullptr);
+}
+
 BOOST_AUTO_TEST_CASE(supports_concurrent_put) {
     auto cache = lru_cache<s3_object_key, std::vector<int>>();
 
