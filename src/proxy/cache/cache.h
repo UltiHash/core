@@ -32,10 +32,11 @@ concept has_size = requires(T t) {
 
 } // namespace detail
 
-template <typename Key, typename Entry>
-requires detail::has_size<Entry> && std::movable<Entry> &&
-         std::is_base_of_v<entry_interface<Entry>, Entry>
-class cache_interface {
+template <typename Entry>
+concept EntryType = detail::has_size<Entry> && std::movable<Entry> &&
+                    std::is_base_of_v<entry_interface<Entry>, Entry>;
+
+template <typename Key, EntryType Entry> class cache_interface {
 public:
     using timepoint_t = typename entry_interface<Entry>::time_point;
 
