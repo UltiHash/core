@@ -1,6 +1,6 @@
 #pragma once
 
-#include "cache.h"
+#include <proxy/cache/cache.h>
 
 #include <list>
 #include <mutex>
@@ -11,15 +11,16 @@
 #include <unordered_map>
 #include <vector>
 
-namespace uh::cluster {
+namespace uh::cluster::proxy::cache {
 
-template <typename Key, typename Value>
-class lru_cache : public cache<Key, Value> {
+template <typename Key, typename Entry>
+class lru_cache : public cache_interface<Key, Entry> {
 public:
-    using entry = typename cache<Key, Value>::entry;
-    using time_point = typename cache<Key, Value>::time_point;
+    lru_cache() = default;
 
-    [[nodiscard]] std::shared_ptr<entry> get(const Key& key) override {
+    using time_point = typename entry_interface<Entry>::time_point;
+
+    [[nodiscard]] std::shared_ptr<Entry> get(const Key& key) override {
         std::shared_lock lock(m_mutex);
         auto it = m_cache.find(key);
         if (it == m_cache.end()) {
@@ -29,7 +30,7 @@ public:
         return it->second->second;
     }
 
-    [[nodiscard]] std::shared_ptr<entry> remove(const Key& key) override {
+    [[nodiscard]] std::shared_ptr<Entry> remove(const Key& key) override {
         std::unique_lock lock(m_mutex);
         auto it = m_cache.find(key);
         if (it != m_cache.end()) {
@@ -41,16 +42,16 @@ public:
         return nullptr;
     }
 
-    [[nodiscard]] std::vector<std::shared_ptr<entry>>
+    [[nodiscard]] std::vector<std::shared_ptr<Entry>>
     evict(std::size_t size,
           std::optional<time_point> expire_before = std::nullopt) override {
         std::unique_lock lock(m_mutex);
-        std::vector<std::shared_ptr<entry>> ret;
+        std::vector<std::shared_ptr<Entry>> ret;
         for (auto it = m_items.rbegin(); it != m_items.rend() && size > 0;) {
             if (it->second.use_count() == 1 &&
                 (!expire_before.has_value() ||
                  it->second->get_expire_time() < expire_before.value())) {
-                auto t = it->second->value.size();
+                auto t = it->second->size();
                 size = (t > size) ? 0 : size - t;
                 m_cache.erase(it->first);
                 ret.push_back(std::move(it->second));
@@ -62,13 +63,13 @@ public:
         return ret;
     }
 
-    [[nodiscard]] std::shared_ptr<entry> put(const Key& key,
-                                             Value value) override {
+    [[nodiscard]] std::shared_ptr<Entry>
+    put(const Key& key, std::shared_ptr<Entry> entry) override {
         std::unique_lock lock(m_mutex);
         auto it = m_cache.find(key);
-        std::shared_ptr<entry> old_entry = nullptr;
+        std::shared_ptr<Entry> old_entry = nullptr;
 
-        m_items.emplace_front(key, std::make_shared<entry>(std::move(value)));
+        m_items.emplace_front(key, std::move(entry));
         if (it != m_cache.end()) {
             old_entry = std::move(it->second->second);
             it->second = m_items.begin();
@@ -84,7 +85,7 @@ public:
     }
 
 private:
-    using items_t = std::list<std::pair<Key, std::shared_ptr<entry>>>;
+    using items_t = std::list<std::pair<Key, std::shared_ptr<Entry>>>;
     items_t m_items;
 
     std::unordered_map<Key, typename items_t::iterator> m_cache;
@@ -92,4 +93,4 @@ private:
     mutable std::shared_mutex m_mutex;
 };
 
-} // namespace uh::cluster
+} // namespace uh::cluster::proxy::cache

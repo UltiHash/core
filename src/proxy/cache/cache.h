@@ -9,8 +9,9 @@
  * values. So support size function is required for the value type. And all
  * cache implementations need to refer to the size for eviction decisions.
  */
-
 #pragma once
+
+#include <proxy/cache/entry.h>
 
 #include <chrono>
 #include <concepts>
@@ -20,7 +21,7 @@
 #include <string>
 #include <vector>
 
-namespace uh::cluster {
+namespace uh::cluster::proxy::cache {
 
 namespace detail {
 
@@ -31,51 +32,35 @@ concept has_size = requires(T t) {
 
 } // namespace detail
 
-template <typename Key, typename Value>
-requires detail::has_size<Value> && std::movable<Value>
-class cache {
+template <typename Key, typename Entry>
+requires detail::has_size<Entry> && std::movable<Entry> &&
+         std::is_base_of_v<entry_interface<Entry>, Entry>
+class cache_interface {
 public:
-    using time_point = std::chrono::system_clock::time_point;
-    struct entry {
-        Value value;
+    using timepoint_t = typename entry_interface<Entry>::time_point;
 
-        // TODO: Make expiration duration configurable
-        entry(Value v)
-            : value(std::move(v)),
-              expire_time{std::chrono::system_clock::now() +
-                          std::chrono::seconds(10)} {}
-        // TODO: Let's add expire_time as member variables and corresponding
-        // interfaces
-        //
-        // bool is_fresh();
-        // vod revive();
-        time_point get_expire_time() const { return expire_time; }
+    virtual ~cache_interface() = default;
 
-    private:
-        time_point expire_time;
-    };
-    virtual ~cache() = default;
+    [[nodiscard]] virtual std::shared_ptr<Entry> get(const Key& key) = 0;
 
-    [[nodiscard]] virtual std::shared_ptr<entry> get(const Key& key) = 0;
-
-    [[nodiscard]] virtual std::shared_ptr<entry> remove(const Key& key) = 0;
+    [[nodiscard]] virtual std::shared_ptr<Entry> remove(const Key& key) = 0;
 
     /*
      * Evict entries until the given size is freed. If size is 0, evict all
      */
-    [[nodiscard]] virtual std::vector<std::shared_ptr<entry>>
+    [[nodiscard]] virtual std::vector<std::shared_ptr<Entry>>
     evict(std::size_t size,
-          std::optional<time_point> expire_before = std::nullopt) = 0;
+          std::optional<timepoint_t> expire_before = std::nullopt) = 0;
 
     /*
-     * @return removed entry if key exists, nullptr otherwise
+     * @return removed Entry if key exists, nullptr otherwise
      *
      * TODO: Let's add etag and expire_time as additional arguments
      */
-    [[nodiscard]] virtual std::shared_ptr<entry> put(const Key& key,
-                                                     Value value) = 0;
+    [[nodiscard]] virtual std::shared_ptr<Entry>
+    put(const Key& key, std::shared_ptr<Entry> entry) = 0;
 
     virtual std::size_t size() const = 0;
 };
 
-} // namespace uh::cluster
+} // namespace uh::cluster::proxy::cache

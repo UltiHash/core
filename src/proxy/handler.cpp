@@ -4,16 +4,18 @@
 
 #include <common/telemetry/metrics.h>
 #include <common/utils/random.h>
-#include <entrypoint/http/response.h>
+#include <entrypoint/commands/s3/get_object.h>
 #include <entrypoint/http/command_exception.h>
+#include <entrypoint/http/response.h>
 
 using namespace uh::cluster::ep::http;
 
 namespace uh::cluster::proxy {
 
-handler::handler(std::unique_ptr<request_factory> factory,
-                 std::function<std::unique_ptr<boost::asio::ip::tcp::socket>()> sf,
-                 std::size_t buffer_size)
+handler::handler(
+    std::unique_ptr<request_factory> factory,
+    std::function<std::unique_ptr<boost::asio::ip::tcp::socket>()> sf,
+    std::size_t buffer_size)
     : m_factory(std::move(factory)),
       m_sf(std::move(sf)),
       m_buffer_size(buffer_size) {}
@@ -38,7 +40,8 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             rawreq = co_await raw_request::read(incoming, peer);
 
             auto& r = rawreq.headers;
-            LOG_INFO() << peer << ": incoming request: " << r.method_string() << " " << r.target();
+            LOG_INFO() << peer << ": incoming request: " << r.method_string()
+                       << " " << r.target();
 
             if (intercept(rawreq)) {
                 incoming.set_mode(forward_stream::deleting);
@@ -49,7 +52,8 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             } else {
                 incoming.set_mode(forward_stream::forwarding);
                 outgoing.set_mode(forward_stream::forwarding);
-                std::unique_ptr<request> req = co_await m_factory->create(incoming, rawreq);
+                std::unique_ptr<request> req =
+                    co_await m_factory->create(incoming, rawreq);
 
                 co_await incoming.consume();
 
@@ -76,9 +80,9 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 parser.body_limit((std::numeric_limits<std::uint64_t>::max)());
 
                 auto buffer = co_await outgoing.read_until("\r\n\r\n");
-                std::string txt(buffer.data(), buffer.size());
-                boost::replace_all(txt, "\r", "\\r");
-                boost::replace_all(txt, "\n", "\\n");
+                // std::string txt(buffer.data(), buffer.size());
+                // boost::replace_all(txt, "\r", "\\r");
+                // boost::replace_all(txt, "\n", "\\n");
 
                 beast::error_code ec;
                 parser.put(boost::asio::buffer(buffer), ec);
@@ -88,16 +92,22 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 bs = outgoing.buffer_size();
                 std::size_t read = 0ull;
                 std::size_t len = std::stoul(res.at("Content-Length"));
-                if (r.method() == boost::beast::http::verb::head && (res.result_int() / 100 == 2)) {
+                if (r.method() == boost::beast::http::verb::head &&
+                    (res.result_int() / 100 == 2)) {
                     len = 0;
                 }
 
-                LOG_INFO() << peer << ": sending response " << res.result_int() << " " << res.reason() << " -- " << len;
+                LOG_INFO() << peer << ": sending response " << res.result_int()
+                           << " " << res.reason() << " -- " << len;
+
+                if (get_object::can_handle(*req)) {
+                }
 
                 while (read < len) {
                     co_await outgoing.consume();
 
                     auto r = co_await outgoing.read(len - read);
+                    // r: data
                     read += r.size();
                 }
 
@@ -126,9 +136,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     s.close();
 }
 
-bool handler::intercept(ep::http::raw_request& r) const {
-    return false;
-}
+bool handler::intercept(ep::http::raw_request& r) const { return false; }
 
 coro<void> handler::handle(ep::http::stream& s, ep::http::raw_request& r) {
     co_return;
