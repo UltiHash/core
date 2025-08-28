@@ -1,60 +1,13 @@
 #define BOOST_TEST_MODULE "cache tests"
 
+#include "proxy_cache_config.h"
+
 #include <proxy/cache/lfu_cache.h>
 #include <proxy/cache/lru_cache.h>
 
 #include "test_config.h"
 
 namespace uh::cluster::proxy::cache {
-
-struct s3_object_key {
-    std::string bucket_name;
-    std::string object_name;
-    std::string version;
-
-    bool operator==(const s3_object_key& other) const {
-        return bucket_name == other.bucket_name &&
-               object_name == other.object_name && version == other.version;
-    }
-};
-
-} // namespace uh::cluster::proxy::cache
-
-template <> struct std::hash<uh::cluster::proxy::cache::s3_object_key> {
-    size_t
-    operator()(const uh::cluster::proxy::cache::s3_object_key& key) const {
-        std::size_t seed = 0;
-
-        auto hash_combine = [](std::size_t& seed, const auto& v) {
-            seed ^= std::hash<std::remove_cvref_t<decltype(v)>>{}(v) +
-                    0x9e3779b97f4a7c15ULL + (seed << 6) + (seed >> 2);
-        };
-
-        hash_combine(seed, key.bucket_name);
-        hash_combine(seed, key.object_name);
-        hash_combine(seed, key.version);
-
-        return seed;
-    }
-};
-
-namespace uh::cluster::proxy::cache {
-
-struct entry : public entry_interface<entry> {
-    std::vector<int> value;
-
-    entry(std::vector<int>&& v)
-        : value(std::move(v)) {}
-
-    std::size_t size() const { return value.size(); }
-
-    int& operator[](std::size_t i) { return value[i]; }
-    const int& operator[](std::size_t i) const { return value[i]; }
-
-    static std::shared_ptr<entry> create(std::initializer_list<int> il) {
-        return std::make_shared<entry>(std::vector<int>(il));
-    }
-};
 
 BOOST_AUTO_TEST_SUITE(a_lru_cache)
 

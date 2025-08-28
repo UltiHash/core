@@ -64,7 +64,7 @@ public:
         }
 
         if (p_prev) {
-            m_deletion_queue.put(std::move(p_prev));
+            m_deletion_queue.push(std::move(p_prev));
             // (void)m_deletion_queue;
             // while (p_prev.use_count() == 1)
             //     ;
@@ -120,7 +120,7 @@ private:
             co_await timer.async_wait(boost::asio::use_awaitable);
 
             // TODO: control eviction size with setting get's parameter
-            auto evicted = m_deletion_queue.get();
+            auto evicted = m_deletion_queue.pop(10 * MEBI_BYTE);
             if (!evicted.empty()) {
                 auto accum_handle = accumulate_handles(evicted);
                 try {
