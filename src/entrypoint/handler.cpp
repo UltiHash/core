@@ -1,8 +1,8 @@
 #include "handler.h"
 #include "http/command_exception.h"
-#include <entrypoint/http/stream.h>
 #include <common/utils/downstream_exception.h>
 #include <common/utils/random.h>
+#include <entrypoint/http/stream.h>
 #include <format>
 
 using namespace uh::cluster::ep::http;
@@ -36,7 +36,6 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 metric<success>::increase(1);
 
             } catch (const boost::system::system_error& e) {
-                LOG_ERROR() << peer << ": error: " << e.what();
                 throw;
             } catch (const downstream_exception& e) {
                 LOG_WARN() << peer << ": error: " << e.what();
@@ -70,6 +69,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 LOG_INFO() << peer << " disconnected";
                 break;
             }
+            LOG_ERROR() << peer << ": error: " << e.what();
             throw;
         }
     }
@@ -84,9 +84,9 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     }
 }
 
-coro<response> handler::handle_request(
-        const boost::asio::ip::tcp::endpoint& peer,
-        stream& s, const std::string& id) {
+coro<response>
+handler::handle_request(const boost::asio::ip::tcp::endpoint& peer, stream& s,
+                        const std::string& id) {
 
     co_await s.consume();
     std::unique_ptr<request> req = co_await m_factory.create(s, peer);
