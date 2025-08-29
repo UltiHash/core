@@ -28,7 +28,7 @@ BOOST_AUTO_TEST_CASE(queries_for_added_items) {
     BOOST_CHECK((*pe).size() == 4);
 }
 
-BOOST_AUTO_TEST_CASE(deletes_least_recently_used_items) {
+BOOST_AUTO_TEST_CASE(evicts_least_recently_used_items) {
     auto cache = lru_cache<s3_object_key, entry>();
     s3_object_key key1 = {"bucket1", "object1", "v1"};
     s3_object_key key2 = {"bucket2", "object2", "v2"};
@@ -37,8 +37,7 @@ BOOST_AUTO_TEST_CASE(deletes_least_recently_used_items) {
     (void)cache.put(key1, entry::create({1, 2, 3, 4}));
     (void)cache.put(key2, entry::create({5, 6, 7}));
     // Use Key1 to make it most recently used
-    auto pe = cache.get(key1);
-    (void)pe;
+    (void)cache.get(key1);
     (void)cache.put(key3, data3);
     (void)cache.evict(1);
 
@@ -46,6 +45,30 @@ BOOST_AUTO_TEST_CASE(deletes_least_recently_used_items) {
     BOOST_CHECK(cache.get(key1) != nullptr);
     BOOST_CHECK(cache.get(key2) == nullptr);
     BOOST_CHECK(cache.get(key3) != nullptr);
+}
+
+BOOST_AUTO_TEST_CASE(evicts_except_items_in_use) {
+    auto cache = lru_cache<s3_object_key, entry>();
+    s3_object_key key1 = {"bucket1", "object1", "v1"};
+    s3_object_key key2 = {"bucket2", "object2", "v2"};
+    s3_object_key key3 = {"bucket3", "object3", "v3"};
+    s3_object_key key4 = {"bucket4", "object4", "v4"};
+    (void)cache.put(key1, entry::create({1, 2, 3, 4}));
+    (void)cache.put(key2, entry::create({5, 6, 7}));
+    (void)cache.put(key3, entry::create({8, 9, 10}));
+    (void)cache.put(key4, entry::create({11}));
+    auto pe2 = cache.get(key2);
+    auto pe3 = cache.get(key3);
+    (void)cache.get(key1);
+    (void)cache.get(key1);
+    (void)cache.get(key1);
+    (void)cache.evict(5);
+
+    BOOST_CHECK_EQUAL(cache.size(), 2);
+    BOOST_CHECK(cache.get(key1) == nullptr);
+    BOOST_CHECK(cache.get(key2) != nullptr);
+    BOOST_CHECK(cache.get(key3) != nullptr);
+    BOOST_CHECK(cache.get(key4) == nullptr);
 }
 
 BOOST_AUTO_TEST_CASE(returns_previous_value_on_put_when_key_exists) {
@@ -125,7 +148,7 @@ BOOST_AUTO_TEST_CASE(queries_for_added_items) {
     BOOST_CHECK((*pe).size() == 4);
 }
 
-BOOST_AUTO_TEST_CASE(deletes_least_frequently_used_items) {
+BOOST_AUTO_TEST_CASE(evicts_least_frequently_used_items) {
     auto cache = lfu_cache<s3_object_key, entry>();
     s3_object_key key1 = {"bucket1", "object1", "v1"};
     s3_object_key key2 = {"bucket2", "object2", "v2"};
@@ -160,6 +183,30 @@ BOOST_AUTO_TEST_CASE(evicts_oldest_item_when_frequencies_are_equal) {
     BOOST_CHECK(cache.get(key1) == nullptr);
     BOOST_CHECK(cache.get(key2) == nullptr);
     BOOST_CHECK(cache.get(key3) != nullptr);
+}
+
+BOOST_AUTO_TEST_CASE(evicts_except_items_in_use) {
+    auto cache = lru_cache<s3_object_key, entry>();
+    s3_object_key key1 = {"bucket1", "object1", "v1"};
+    s3_object_key key2 = {"bucket2", "object2", "v2"};
+    s3_object_key key3 = {"bucket3", "object3", "v3"};
+    s3_object_key key4 = {"bucket4", "object4", "v4"};
+    (void)cache.put(key1, entry::create({1, 2, 3, 4}));
+    (void)cache.put(key2, entry::create({5, 6, 7}));
+    (void)cache.put(key3, entry::create({8, 9, 10}));
+    (void)cache.put(key4, entry::create({11}));
+    auto pe2 = cache.get(key2);
+    auto pe3 = cache.get(key3);
+    (void)cache.get(key1);
+    (void)cache.get(key1);
+    (void)cache.get(key1);
+    (void)cache.evict(5);
+
+    BOOST_CHECK_EQUAL(cache.size(), 2);
+    BOOST_CHECK(cache.get(key1) == nullptr);
+    BOOST_CHECK(cache.get(key2) != nullptr);
+    BOOST_CHECK(cache.get(key3) != nullptr);
+    BOOST_CHECK(cache.get(key4) == nullptr);
 }
 
 BOOST_AUTO_TEST_CASE(returns_previous_value_on_put_when_key_exists) {
