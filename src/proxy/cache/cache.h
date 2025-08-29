@@ -34,11 +34,11 @@ concept has_size = requires(T t) {
 
 template <typename Entry>
 concept EntryType = detail::has_size<Entry> && std::movable<Entry> &&
-                    std::is_base_of_v<entry_interface<Entry>, Entry>;
+                    std::is_base_of_v<entry_interface, Entry>;
 
 template <typename Key, EntryType Entry> class cache_interface {
 public:
-    using timepoint_t = typename entry_interface<Entry>::time_point;
+    using timepoint_t = typename entry_interface::time_point;
 
     virtual ~cache_interface() = default;
 

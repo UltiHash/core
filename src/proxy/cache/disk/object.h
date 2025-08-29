@@ -37,7 +37,7 @@ template <> struct std::hash<uh::cluster::proxy::cache::disk::object_metadata> {
 
 namespace uh::cluster::proxy::cache::disk {
 
-struct object_handle : public entry_interface<object_handle> {
+struct object_handle {
     object_handle() = default;
     object_handle(address&& a)
         : addr(std::move(a)) {}

@@ -4,16 +4,8 @@
 
 namespace uh::cluster::proxy::cache {
 
-template <typename Derived> struct entry_interface {
+struct entry_interface {
     using time_point = std::chrono::system_clock::time_point;
-
-    // TODO: Make expiration duration configurable
-    entry_interface()
-        : expire_time{std::chrono::system_clock::now() +
-                      std::chrono::seconds(10)} {
-        static_assert(
-            requires(Derived d) { d.size(); }, "Derived must implement size()");
-    }
 
     // TODO: Add corresponding interfaces
     //

@@ -13,7 +13,7 @@
 
 namespace uh::cluster::proxy::cache {
 
-template <typename Key, typename Entry>
+template <typename Key, EntryType Entry>
 class lfu_cache : public cache_interface<Key, Entry> {
 private:
     struct entry : Entry {
@@ -31,7 +31,7 @@ private:
     };
 
 public:
-    using time_point = typename entry_interface<Entry>::time_point;
+    using time_point = typename entry_interface::time_point;
 
     lfu_cache() = default;
 
