@@ -1,8 +1,10 @@
 #define BOOST_TEST_MODULE "deletion_queue tests"
 
-#include "proxy_cache_config.h"
+#include <util/proxy_cache_config.h>
 
 #include <proxy/cache/disk/deletion_queue.h>
+
+#include <memory>
 
 #include "test_config.h"
 
@@ -12,19 +14,14 @@ BOOST_AUTO_TEST_SUITE(a_deletion_queue)
 
 BOOST_AUTO_TEST_CASE(supports_push_and_pop_items) {
     auto queue = disk::deletion_queue<s3_object_key, char_vector>();
-    s3_object_key key1 = {"bucket1", "object1", "v1"};
-    s3_object_key key2 = {"bucket2", "object2", "v2"};
-    auto e1 = char_vector::create({1, 2, 3});
-    auto e2 = char_vector::create({4, 5, 6, 7});
-    auto e3 = char_vector::create({8, 9, 10, 11, 12});
-    queue.push(std::move(e1));
-    queue.push(std::move(e2));
-    queue.push(std::move(e3));
+    queue.push(char_vector::create({1, 2, 3}));
+    queue.push(char_vector::create({4, 5, 6, 7}));
+    queue.push(char_vector::create({8, 9, 10, 11, 12}));
     auto items = queue.pop(5);
-    BOOST_CHECK_EQUAL(queue.size(), 5); // remained elements' size
-    BOOST_CHECK_EQUAL(items.size(), 2); // number of popped elements
-    BOOST_CHECK_EQUAL((*items[0]).size(), 3);
-    BOOST_CHECK_EQUAL((*items[1]).size(), 4);
+    BOOST_CHECK_EQUAL(queue.data_size(), 5);
+    BOOST_CHECK_EQUAL(items.size(), 2);
+    BOOST_CHECK_EQUAL((*items[0]).data_size(), 3);
+    BOOST_CHECK_EQUAL((*items[1]).data_size(), 4);
     BOOST_CHECK_EQUAL((*items[0])[0], 1);
     BOOST_CHECK_EQUAL((*items[1])[0], 4);
 }
@@ -52,11 +49,11 @@ BOOST_AUTO_TEST_CASE(supports_concurrent_push) {
         thread.join();
     }
 
-    BOOST_CHECK_EQUAL(queue.size(), 1000); // sum of 0..99, ten times
+    BOOST_CHECK_EQUAL(queue.data_size(), 1000); // sum of 0..99, ten times
 
     auto items = queue.pop(1200);
     BOOST_CHECK_EQUAL(items.size(), 1000);
-    BOOST_CHECK_EQUAL(queue.size(), 0);
+    BOOST_CHECK_EQUAL(queue.data_size(), 0);
 }
 
 BOOST_AUTO_TEST_CASE(supports_concurrent_push_and_pop) {
@@ -100,7 +97,7 @@ BOOST_AUTO_TEST_CASE(supports_concurrent_push_and_pop) {
     total_popped += remaining.size();
 
     BOOST_CHECK_EQUAL(total_popped, thread_count * items_per_thread);
-    BOOST_CHECK_EQUAL(queue.size(), 0);
+    BOOST_CHECK_EQUAL(queue.data_size(), 0);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

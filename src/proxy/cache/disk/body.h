@@ -1,11 +1,15 @@
+/*
+ * HTTP writer/reader bodies which supports get/put API only
+ */
 #pragma once
 
-#include <proxy/cache/body.h>
+#include <proxy/cache/asio.h>
 
 #include <proxy/cache/disk/object.h>
 #include <proxy/cache/disk/utils.h>
 
 #include <common/crypto/hash.h>
+#include <common/types/common_types.h>
 #include <common/utils/strings.h>
 #include <entrypoint/http/body.h>
 #include <entrypoint/http/stream.h>
@@ -16,13 +20,13 @@ class reader_body {
 public:
     reader_body(deduplicator_interface& writer)
         : m_dedupe{writer},
-          m_object_handle(std::make_shared<object_handle>()) {}
+          m_addr{} {}
 
     coro<std::size_t> put(std::span<const char> sv) {
-        auto objh = co_await utils::create(m_dedupe, sv);
+        auto addr = co_await utils::store(m_dedupe, sv);
         m_hash.consume(sv);
-        m_object_handle->append(objh);
-        co_return objh.size();
+        m_addr.append(addr);
+        co_return addr.data_size();
     }
 
     /*
@@ -32,103 +36,68 @@ public:
      */
     std::shared_ptr<object_handle> get_object_handle() {
         // TODO: set etag with `to_hex(m_hash.finalize())`
-        return std::move(m_object_handle);
+        return std::make_shared<object_handle>(std::move(m_addr));
     }
 
 private:
     deduplicator_interface& m_dedupe;
 
     md5 m_hash;
-    std::shared_ptr<object_handle> m_object_handle;
+    address m_addr;
 };
 
 class writer_body {
 public:
-    writer_body(storage::global::global_data_view& storage,
+    writer_body(storage::data_view& storage,
                 std::shared_ptr<object_handle> objh,
                 std::size_t buffer_size = 32 * MEBI_BYTE)
         : m_storage(storage),
           m_objh{std::move(objh)},
           m_buffer(buffer_size) {}
 
-    coro<std::span<const char>> get(std::size_t count) {
-        if (m_put_ptr - m_get_ptr < count) {
-            co_await fill();
-        }
-
-        auto size = std::min(count, m_put_ptr - m_get_ptr);
-        auto rv = std::span<const char>{&m_buffer[m_get_ptr], size};
-
-        m_get_ptr += size;
-
-        consume();
-        co_return rv;
-    }
-
-    coro<void> fill() {
-        std::size_t count = 0;
+    coro<std::span<const char>> get() {
+        std::size_t read_size = 0;
 
         address partial_addr;
-        while (m_addr_index < m_objh->addr.size() &&
-               count + m_put_ptr < m_buffer.size()) {
+        while (m_addr_index < m_objh->get_address().size() &&
+               read_size < m_buffer.size()) {
 
-            auto frag = m_objh->addr.get(m_addr_index);
+            auto frag = m_objh->get_address().get(m_addr_index);
             if (m_frag_offset > 0) {
                 frag.pointer += m_frag_offset;
                 frag.size -= m_frag_offset;
             }
-
-            if (frag.size + count + m_put_ptr > m_buffer.size()) {
-                auto remains = m_buffer.size() - (count + m_put_ptr);
-
+            if (frag.size + read_size > m_buffer.size()) {
+                auto remains = m_buffer.size() - read_size;
                 m_frag_offset += remains;
                 frag.size = remains;
                 partial_addr.push(frag);
-                count += frag.size;
-                break;
+            } else {
+                m_frag_offset = 0;
+                partial_addr.push(frag);
+                m_addr_index++;
             }
 
-            m_frag_offset = 0;
-            partial_addr.push(frag);
-            count += frag.size;
-            m_addr_index++;
+            read_size += frag.size;
         }
 
-        if (count > 0) {
-            LOG_DEBUG() << "local_read_handle: fill, reading " << count
+        if (read_size > 0) {
+            LOG_DEBUG() << "local_read_handle: fill, reading " << read_size
                         << " bytes from storage";
-            co_await utils::read(m_storage, *m_objh,
-                                 {&m_buffer[m_put_ptr], count});
-            m_put_ptr += count;
-            m_total += count;
+            co_await utils::read(m_storage, partial_addr,
+                                 {m_buffer.data(), read_size});
         }
+        co_return std::span<const char>{m_buffer.data(), read_size};
     }
 
 private:
-    storage::global::global_data_view& m_storage;
+    storage::data_view& m_storage;
     std::shared_ptr<object_handle> m_objh;
 
     std::vector<char> m_buffer;
-    std::size_t m_get_ptr = 0ull;
-    std::size_t m_put_ptr = 0ull;
 
-    size_t m_addr_index = 0;
+    std::size_t m_addr_index = 0;
     std::size_t m_frag_offset = 0;
-
-    std::size_t m_total = 0;
-
-    void consume() {
-        auto count = m_put_ptr - m_get_ptr;
-        if (count > 0) {
-            LOG_DEBUG() << "local_read_handle: copying "
-                        << (m_put_ptr - m_get_ptr) << " bytes to new buffer";
-            memmove(&m_buffer[0], &m_buffer[m_get_ptr], m_put_ptr - m_get_ptr);
-            m_put_ptr -= m_get_ptr;
-            m_get_ptr = 0;
-        } else {
-            m_put_ptr = m_get_ptr = 0ull;
-        }
-    }
 };
 
 } // namespace uh::cluster::proxy::cache::disk

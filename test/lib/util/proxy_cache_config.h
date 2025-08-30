@@ -38,19 +38,22 @@ template <> struct std::hash<uh::cluster::proxy::cache::s3_object_key> {
 
 namespace uh::cluster::proxy::cache {
 
-template <typename T = int> struct vector_entry : public entry_interface {
+template <typename T = int> struct vector_entry {
     std::vector<T> value;
 
     vector_entry(std::vector<T>&& v)
         : value(std::move(v)) {}
 
-    std::size_t size() const { return value.size() * sizeof(T); }
+    vector_entry(std::initializer_list<T> il)
+        : vector_entry(std::vector<T>(il)) {}
+
+    std::size_t data_size() const { return value.size() * sizeof(T); }
 
     T& operator[](std::size_t i) { return value[i]; }
     const T& operator[](std::size_t i) const { return value[i]; }
 
-    static std::shared_ptr<vector_entry> create(std::initializer_list<T> il) {
-        return std::make_shared<vector_entry>(std::vector<T>(il));
+    static std::shared_ptr<vector_entry<T>> create(std::vector<T>&& v) {
+        return std::make_shared<vector_entry<T>>(std::move(v));
     }
 };
 

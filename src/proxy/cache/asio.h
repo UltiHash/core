@@ -14,7 +14,7 @@ concept ReaderBodyType = requires(T r, std::span<const char> sv) {
 
 template <typename T>
 concept WriterBodyType = requires(T w) {
-    { w.get() } -> std::same_as<std::span<const char>>;
+    { w.get() } -> std::same_as<coro<std::span<const char>>>;
 };
 
 template <typename T>

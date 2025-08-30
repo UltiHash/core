@@ -16,14 +16,14 @@ public:
         // TODO: Implement this method
         std::unique_lock lock(m_mutex);
         m_queue.push(e);
-        m_current_size += e->size();
+        m_current_size += e->data_size();
     }
 
     void push(std::vector<std::shared_ptr<Entry>> ve) {
         std::unique_lock lock(m_mutex);
         for (auto& e : ve) {
             m_queue.push(e);
-            m_current_size += e->size();
+            m_current_size += e->data_size();
         }
     }
 
@@ -33,14 +33,14 @@ public:
         while (!m_queue.empty() && (size != 0)) {
             auto e = m_queue.front();
             m_queue.pop();
-            size = (size > e->size()) ? size - e->size() : 0;
-            m_current_size -= e->size();
+            size = (size > e->data_size()) ? size - e->data_size() : 0;
+            m_current_size -= e->data_size();
             ret.push_back(std::move(e));
         }
         return ret;
     }
 
-    std::size_t size() const {
+    std::size_t data_size() const {
         std::shared_lock lock(m_mutex);
         return m_current_size;
     }

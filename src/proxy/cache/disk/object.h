@@ -42,14 +42,16 @@ struct object_handle {
     object_handle(address&& a)
         : addr(std::move(a)) {}
 
-    address addr;
-
-    std::size_t size() const { return addr.data_size(); }
-
-    void append(const object_handle& other) { addr.append(other.addr); }
-
     object_handle(object_handle&&) = default;
     object_handle& operator=(object_handle&&) = default;
+
+    std::size_t data_size() const { return addr.data_size(); }
+
+    const address& get_address() const { return addr; }
+
+private:
+    address addr;
+    // TODO: add ETag here
 };
 
 } // namespace uh::cluster::proxy::cache::disk

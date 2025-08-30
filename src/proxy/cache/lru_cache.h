@@ -15,11 +15,10 @@ namespace uh::cluster::proxy::cache {
 
 template <typename Key, EntryType Entry>
 class lru_cache : public cache_interface<Key, Entry> {
+private:
+    using cache_interface = cache_interface<Key, Entry>;
+
 public:
-    lru_cache() = default;
-
-    using time_point = typename entry_interface::time_point;
-
     [[nodiscard]] std::shared_ptr<Entry> get(const Key& key) override {
         std::shared_lock lock(m_mutex);
         auto it = m_cache.find(key);
@@ -43,15 +42,12 @@ public:
     }
 
     [[nodiscard]] std::vector<std::shared_ptr<Entry>>
-    evict(std::size_t size,
-          std::optional<time_point> expire_before = std::nullopt) override {
+    evict(std::size_t size) override {
         std::unique_lock lock(m_mutex);
         std::vector<std::shared_ptr<Entry>> ret;
         for (auto it = m_items.rbegin(); it != m_items.rend() && size > 0;) {
-            if (it->second.use_count() == 1 &&
-                (!expire_before.has_value() ||
-                 it->second->get_expire_time() < expire_before.value())) {
-                auto t = it->second->size();
+            if (it->second.use_count() == 1) {
+                auto t = it->second->data_size();
                 size = (t > size) ? 0 : size - t;
                 m_cache.erase(it->first);
                 ret.push_back(std::move(it->second));
@@ -63,13 +59,13 @@ public:
         return ret;
     }
 
-    [[nodiscard]] std::shared_ptr<Entry>
-    put(const Key& key, std::shared_ptr<Entry> entry) override {
+    [[nodiscard]] std::shared_ptr<Entry> put(const Key& key,
+                                             Entry&& entry) override {
         std::unique_lock lock(m_mutex);
         auto it = m_cache.find(key);
         std::shared_ptr<Entry> old_entry = nullptr;
 
-        m_items.emplace_front(key, std::move(entry));
+        m_items.emplace_front(key, std::make_shared<Entry>(std::move(entry)));
         if (it != m_cache.end()) {
             old_entry = std::move(it->second->second);
             it->second = m_items.begin();

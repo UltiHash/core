@@ -16,18 +16,13 @@ namespace uh::cluster::proxy::cache {
 template <typename Key, EntryType Entry>
 class lfu_cache : public cache_interface<Key, Entry> {
 private:
-    struct entry : Entry {
+    struct local_entry : Entry {
         size_t frequency{1};
         std::list<Key>::iterator freq_iterator;
 
-        entry(Entry v, std::list<Key>::iterator it)
+        local_entry(Entry&& v, std::list<Key>::iterator it)
             : Entry(std::move(v)),
               freq_iterator{it} {}
-
-        static std::shared_ptr<entry> create(std::shared_ptr<Entry> e,
-                                             std::list<Key>::iterator it) {
-            return std::make_shared<entry>(*e, it);
-        }
     };
 
 public:
@@ -67,9 +62,7 @@ public:
         return nullptr;
     }
 
-    std::vector<std::shared_ptr<Entry>>
-    evict(std::size_t size,
-          std::optional<time_point> expire_before = std::nullopt) override {
+    std::vector<std::shared_ptr<Entry>> evict(std::size_t size) override {
         std::unique_lock lock(m_mutex);
         std::vector<std::shared_ptr<Entry>> ret;
         for (auto freq_it = m_frequency_lists.begin();
@@ -79,10 +72,8 @@ public:
                  key_it != key_list.rend() && size > 0;) {
                 auto& key = *key_it;
                 auto& item = m_cache[key];
-                if (item.use_count() == 1 &&
-                    (!expire_before.has_value() ||
-                     item->get_expire_time() < expire_before.value())) {
-                    size_t value_size = item->size();
+                if (item.use_count() == 1) {
+                    size_t value_size = item->data_size();
                     size = (value_size > size) ? 0 : size - value_size;
 
                     ret.push_back(std::move(item));
@@ -108,21 +99,21 @@ public:
         return ret;
     }
 
-    [[nodiscard]] std::shared_ptr<Entry>
-    put(const Key& key, std::shared_ptr<Entry> entry) override {
+    [[nodiscard]] std::shared_ptr<Entry> put(const Key& key,
+                                             Entry&& entry) override {
         std::unique_lock lock(m_mutex);
         auto it = m_cache.find(key);
         std::shared_ptr<Entry> old_entry = nullptr;
 
         m_frequency_lists[1].push_front(key);
-        auto new_entry =
-            entry::create(std::move(entry), m_frequency_lists[1].begin());
+        auto new_entry = std::make_shared<local_entry>(
+            std::move(entry), m_frequency_lists[1].begin());
 
         if (it != m_cache.end()) {
             old_entry = std::move(it->second);
-            it->second = new_entry;
+            it->second = std::move(new_entry);
         } else {
-            m_cache[key] = new_entry;
+            m_cache[key] = std::move(new_entry);
         }
         m_min_frequency = 1;
         return old_entry;
@@ -135,7 +126,7 @@ public:
 
 private:
     std::unordered_map<size_t, std::list<Key>> m_frequency_lists;
-    std::unordered_map<Key, std::shared_ptr<entry>> m_cache;
+    std::unordered_map<Key, std::shared_ptr<local_entry>> m_cache;
 
     size_t m_min_frequency = 0;
 
@@ -158,6 +149,9 @@ private:
         item->frequency = new_frequency;
         item->freq_iterator = m_frequency_lists[new_frequency].begin();
     }
+
+public:
+    using iterator_for_ttl = decltype(m_cache)::iterator;
 };
 
 } // namespace uh::cluster::proxy::cache
