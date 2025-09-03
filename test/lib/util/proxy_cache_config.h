@@ -1,6 +1,5 @@
 #pragma once
 
-#include <proxy/cache/entry.h>
 #include <string>
 
 namespace uh::cluster::proxy::cache {

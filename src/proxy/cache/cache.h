@@ -11,8 +11,6 @@
  */
 #pragma once
 
-#include <proxy/cache/entry.h>
-
 #include <chrono>
 #include <concepts>
 #include <cstddef>

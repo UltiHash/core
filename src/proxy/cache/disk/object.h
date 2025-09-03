@@ -1,7 +1,5 @@
 #pragma once
 
-#include <proxy/cache/entry.h>
-
 #include <common/types/address.h>
 #include <string>
 
@@ -58,7 +56,7 @@ struct object_handle {
         return std::chrono::steady_clock::now() >= m_expire_at;
     }
 
-    void refresh(std::chrono::seconds ttl) {
+    void touch(std::chrono::seconds ttl) {
         m_expire_at = std::chrono::steady_clock::now() + ttl;
     }
 

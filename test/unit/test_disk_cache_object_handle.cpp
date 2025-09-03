@@ -18,7 +18,7 @@ BOOST_AUTO_TEST_CASE(expire_and_refresh) {
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
     BOOST_TEST(objh.is_expired());
 
-    objh.refresh(std::chrono::seconds(1));
+    objh.touch(std::chrono::seconds(1));
     BOOST_TEST(!objh.is_expired());
 }
 

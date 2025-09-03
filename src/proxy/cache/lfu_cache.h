@@ -26,8 +26,6 @@ private:
     };
 
 public:
-    using time_point = typename entry_interface::time_point;
-
     lfu_cache() = default;
 
     std::shared_ptr<Entry> get(const Key& key) override {
