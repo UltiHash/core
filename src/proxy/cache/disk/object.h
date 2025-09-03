@@ -39,19 +39,33 @@ namespace uh::cluster::proxy::cache::disk {
 
 struct object_handle {
     object_handle() = default;
-    object_handle(address&& a)
-        : addr(std::move(a)) {}
+    object_handle(address&& a, std::string etag = "",
+                  std::chrono::seconds ttl = std::chrono::seconds(0))
+        : m_addr(std::move(a)),
+          m_etag{std::move(etag)},
+          m_expire_at{std::chrono::steady_clock::now() + ttl} {}
 
     object_handle(object_handle&&) = default;
     object_handle& operator=(object_handle&&) = default;
 
-    std::size_t data_size() const { return addr.data_size(); }
+    std::size_t data_size() const { return m_addr.data_size(); }
 
-    const address& get_address() const { return addr; }
+    const address& get_address() const { return m_addr; }
+
+    const std::string& get_etag() const { return m_etag; }
+
+    bool is_expired() const {
+        return std::chrono::steady_clock::now() >= m_expire_at;
+    }
+
+    void refresh(std::chrono::seconds ttl) {
+        m_expire_at = std::chrono::steady_clock::now() + ttl;
+    }
 
 private:
-    address addr;
-    // TODO: add ETag here
+    address m_addr;
+    std::string m_etag;
+    std::chrono::steady_clock::time_point m_expire_at;
 };
 
 } // namespace uh::cluster::proxy::cache::disk

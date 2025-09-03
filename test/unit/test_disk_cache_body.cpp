@@ -76,11 +76,11 @@ BOOST_AUTO_TEST_CASE(supports_read) {
 
     // 7. Verify body was stored and can be read back
     auto objh = body.get_object_handle();
-    BOOST_TEST(objh->data_size() == data.size());
+    BOOST_TEST(objh.data_size() == data.size());
 
     std::vector<char> buf(data.size());
     boost::asio::co_spawn(m_ioc,
-                          utils::read(data_view, objh->get_address(),
+                          utils::read(data_view, objh.get_address(),
                                       std::span<char>{buf.data(), buf.size()}),
                           boost::asio::use_future)
         .get();

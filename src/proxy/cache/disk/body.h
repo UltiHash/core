@@ -34,9 +34,9 @@ public:
      * May only be called once; further calls will return an empty or invalid
      * value.
      */
-    std::shared_ptr<object_handle> get_object_handle() {
+    object_handle get_object_handle() {
         // TODO: set etag with `to_hex(m_hash.finalize())`
-        return std::make_shared<object_handle>(std::move(m_addr));
+        return object_handle(std::move(m_addr));
     }
 
 private:
@@ -82,8 +82,6 @@ public:
         }
 
         if (read_size > 0) {
-            LOG_DEBUG() << "local_read_handle: fill, reading " << read_size
-                        << " bytes from storage";
             co_await utils::read(m_storage, partial_addr,
                                  {m_buffer.data(), read_size});
         }
