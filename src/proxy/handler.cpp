@@ -15,9 +15,13 @@ namespace uh::cluster::proxy {
 handler::handler(
     std::unique_ptr<request_factory> factory,
     std::function<std::unique_ptr<boost::asio::ip::tcp::socket>()> sf,
+    storage::data_view& dv,
+    cache::disk::manager& mgr,
     std::size_t buffer_size)
     : m_factory(std::move(factory)),
       m_sf(std::move(sf)),
+      m_dv(dv),
+      m_mgr(mgr),
       m_buffer_size(buffer_size) {}
 
 coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
@@ -98,17 +102,30 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                            << " " << res.reason() << " -- " << len;
 
                 if (get_object::can_handle(*req)) {
-                }
+                    cache::disk::reader_body data(m_dv);
+                    while (read < len) {
+                        co_await outgoing.consume();
 
-                while (read < len) {
+                        auto r = co_await outgoing.read(len - read);
+                        co_await data.put(r);
+
+                        // r: data
+                        read += r.size();
+                    }
+
+                    co_await m_mgr.put(cache::disk::object_metadata{ req->object_key() }, data);
                     co_await outgoing.consume();
+                } else {
+                    while (read < len) {
+                        co_await outgoing.consume();
 
-                    auto r = co_await outgoing.read(len - read);
-                    // r: data
-                    read += r.size();
+                        auto r = co_await outgoing.read(len - read);
+                        // r: data
+                        read += r.size();
+                    }
+
+                    co_await outgoing.consume();
                 }
-
-                co_await outgoing.consume();
             }
 
             metric<success>::increase(1);

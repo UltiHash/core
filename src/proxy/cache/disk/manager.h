@@ -32,7 +32,7 @@ public:
      *
      * It removed address information from the given body.
      */
-    coro<void> put(object_metadata& key, reader_body& body) {
+    coro<void> put(object_metadata key, reader_body& body) {
         auto objh = body.get_object_handle();
         auto obj_size = objh.data_size();
 

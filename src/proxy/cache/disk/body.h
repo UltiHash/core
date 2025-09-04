@@ -11,6 +11,7 @@
 #include <common/crypto/hash.h>
 #include <common/types/common_types.h>
 #include <common/utils/strings.h>
+#include <storage/interfaces/data_view.h>
 #include <entrypoint/http/body.h>
 #include <entrypoint/http/stream.h>
 
@@ -18,12 +19,13 @@ namespace uh::cluster::proxy::cache::disk {
 
 class reader_body {
 public:
-    reader_body(deduplicator_interface& writer)
-        : m_dedupe{writer},
+    reader_body(storage::data_view& writer)
+        : m_storage{writer},
           m_addr{} {}
 
     coro<std::size_t> put(std::span<const char> sv) {
-        auto addr = co_await utils::store(m_dedupe, sv);
+
+        auto addr = co_await m_storage.write(sv, {});
         m_hash.consume(sv);
         m_addr.append(addr);
         co_return addr.data_size();
@@ -40,7 +42,7 @@ public:
     }
 
 private:
-    deduplicator_interface& m_dedupe;
+    storage::data_view& m_storage;
 
     md5 m_hash;
     address m_addr;
