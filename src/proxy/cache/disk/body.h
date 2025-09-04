@@ -25,7 +25,7 @@ public:
 
     coro<std::size_t> put(std::span<const char> sv) {
 
-        auto addr = co_await m_storage.write(sv, {});
+        auto addr = co_await m_storage.write(sv, {0});
         m_hash.consume(sv);
         m_addr.append(addr);
         co_return addr.data_size();
