@@ -47,85 +47,113 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             LOG_INFO() << peer << ": incoming request: " << r.method_string()
                        << " " << r.target();
 
-            if (intercept(rawreq)) {
-                incoming.set_mode(forward_stream::deleting);
-                outgoing.set_mode(forward_stream::deleting);
-                co_await handle(incoming, rawreq);
-                co_await incoming.consume();
+            incoming.set_mode(forward_stream::forwarding);
+            outgoing.set_mode(forward_stream::forwarding);
+            std::unique_ptr<request> req =
+                co_await m_factory->create(incoming, rawreq);
+
+            if (get_object::can_handle(*req)) {
+                auto writer = m_mgr.get(cache::disk::object_metadata{ req->object_key() });
+                if (writer) {
+                    LOG_INFO() << peer << ": handling from cache";
+                    incoming.set_mode(forward_stream::deleting);
+                    outgoing.set_mode(forward_stream::deleting);
+
+                    // forwarding request
+                    auto& b = req->body();
+                    auto bs = b.buffer_size();
+
+                    while (!(co_await b.read(bs)).empty()) {
+                        co_await b.consume();
+                    }
+
+                    co_await b.consume();
+
+                    LOG_INFO() << peer << ": done reading complete request";
+
+                    std::span<const char> data = co_await writer->get();
+                    while (!data.empty()) {
+                        LOG_INFO() << peer << ": sending " << data.size() << " bytes response";
+                        co_await incoming.write(data);
+                        data = co_await writer->get();
+                    }
+
+                    LOG_INFO() << peer << ": cache result served";
+                    continue;
+                }
+            }
+
+            LOG_INFO() << peer << ": handling from downstream";
+            co_await incoming.consume();
+
+            if (auto expect = req->header("expect");
+                expect && *expect == "100-continue") {
+                LOG_INFO() << req->peer() << ": forwarding 100 CONTINUE";
+                // TODO timeout
+                co_await outgoing.read_until("\r\n\r\n");
+                co_await outgoing.consume();
+            }
+
+            // forwarding request
+            auto& b = req->body();
+            auto bs = b.buffer_size();
+
+            while (!(co_await b.read(bs)).empty()) {
+                co_await b.consume();
+            }
+
+            co_await b.consume();
+
+            // forwarding response
+            beast::http::response_parser<beast::http::empty_body> parser;
+            parser.body_limit((std::numeric_limits<std::uint64_t>::max)());
+
+            auto buffer = co_await outgoing.read_until("\r\n\r\n");
+
+            beast::error_code ec;
+            parser.put(boost::asio::buffer(buffer), ec);
+
+            auto res = parser.release();
+
+            bs = outgoing.buffer_size();
+            std::size_t read = 0ull;
+            std::size_t len = std::stoul(res.at("Content-Length"));
+            if (r.method() == boost::beast::http::verb::head &&
+                (res.result_int() / 100 == 2)) {
+                len = 0;
+            }
+
+            LOG_INFO() << peer << ": sending response " << res.result_int()
+                        << " " << res.reason() << " -- " << len;
+
+            if (get_object::can_handle(*req)) {
+                cache::disk::reader_body data(m_dv);
+                LOG_INFO() << peer << ": add " << buffer.size() << " response header";
+                co_await data.put(buffer);
+
+                while (read < len) {
+                    co_await outgoing.consume();
+
+                    auto r = co_await outgoing.read(len - read);
+                    LOG_INFO() << peer << ": add " << r.size() << " response data";
+                    co_await data.put(r);
+
+                    // r: data
+                    read += r.size();
+                }
+
+                co_await m_mgr.put(cache::disk::object_metadata{ req->object_key() }, data);
                 co_await outgoing.consume();
             } else {
-                incoming.set_mode(forward_stream::forwarding);
-                outgoing.set_mode(forward_stream::forwarding);
-                std::unique_ptr<request> req =
-                    co_await m_factory->create(incoming, rawreq);
-
-                co_await incoming.consume();
-
-                if (auto expect = req->header("expect");
-                    expect && *expect == "100-continue") {
-                    LOG_INFO() << req->peer() << ": forwarding 100 CONTINUE";
-                    // TODO timeout
-                    co_await outgoing.read_until("\r\n\r\n");
+                while (read < len) {
                     co_await outgoing.consume();
+
+                    auto r = co_await outgoing.read(len - read);
+                    // r: data
+                    read += r.size();
                 }
 
-                // forwarding request
-                auto& b = req->body();
-                auto bs = b.buffer_size();
-
-                while (!(co_await b.read(bs)).empty()) {
-                    co_await b.consume();
-                }
-
-                co_await b.consume();
-
-                // forwarding response
-                beast::http::response_parser<beast::http::empty_body> parser;
-                parser.body_limit((std::numeric_limits<std::uint64_t>::max)());
-
-                auto buffer = co_await outgoing.read_until("\r\n\r\n");
-
-                beast::error_code ec;
-                parser.put(boost::asio::buffer(buffer), ec);
-
-                auto res = parser.release();
-
-                bs = outgoing.buffer_size();
-                std::size_t read = 0ull;
-                std::size_t len = std::stoul(res.at("Content-Length"));
-                if (r.method() == boost::beast::http::verb::head &&
-                    (res.result_int() / 100 == 2)) {
-                    len = 0;
-                }
-
-                LOG_INFO() << peer << ": sending response " << res.result_int()
-                           << " " << res.reason() << " -- " << len;
-
-                if (get_object::can_handle(*req)) {
-                    cache::disk::reader_body data(m_dv);
-                    while (read < len) {
-                        co_await outgoing.consume();
-
-                        auto r = co_await outgoing.read(len - read);
-                        co_await data.put(r);
-
-                        // r: data
-                        read += r.size();
-                    }
-
-                    co_await m_mgr.put(cache::disk::object_metadata{ req->object_key() }, data);
-                    co_await outgoing.consume();
-                } else {
-                    while (read < len) {
-                        co_await outgoing.consume();
-
-                        auto r = co_await outgoing.read(len - read);
-                        // r: data
-                        read += r.size();
-                    }
-
-                    co_await outgoing.consume();
-                }
+                co_await outgoing.consume();
             }
 
             metric<success>::increase(1);
