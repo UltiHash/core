@@ -80,9 +80,6 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 parser.body_limit((std::numeric_limits<std::uint64_t>::max)());
 
                 auto buffer = co_await outgoing.read_until("\r\n\r\n");
-                // std::string txt(buffer.data(), buffer.size());
-                // boost::replace_all(txt, "\r", "\\r");
-                // boost::replace_all(txt, "\n", "\\n");
 
                 beast::error_code ec;
                 parser.put(boost::asio::buffer(buffer), ec);
