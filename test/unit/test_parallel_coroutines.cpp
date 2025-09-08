@@ -77,3 +77,41 @@ BOOST_AUTO_TEST_CASE(supports_variable_number_of_operations) {
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(a_parallel_group)
+
+BOOST_AUTO_TEST_CASE(supports_variable_number_of_operations) {
+    boost::asio::io_context ctx;
+
+    boost::asio::posix::stream_descriptor out(ctx, ::dup(STDOUT_FILENO));
+    boost::asio::posix::stream_descriptor err(ctx, ::dup(STDERR_FILENO));
+
+    using op_type = decltype(out.async_write_some(boost::asio::buffer("", 0),
+                                                  boost::asio::deferred));
+
+    std::vector<op_type> ops;
+
+    ops.push_back(out.async_write_some(boost::asio::buffer("first\r\n", 7),
+                                       boost::asio::deferred));
+
+    ops.push_back(err.async_write_some(boost::asio::buffer("second\r\n", 8),
+                                       boost::asio::deferred));
+
+    boost::asio::experimental::make_parallel_group(ops).async_wait(
+        boost::asio::experimental::wait_for_all(),
+        [](std::vector<std::size_t> completion_order,
+           std::vector<boost::system::error_code> ec,
+           std::vector<std::size_t> n) {
+            BOOST_CHECK(completion_order.size() == 2);
+            for (std::size_t i = 0; i < completion_order.size(); ++i) {
+                if (auto idx = completion_order[i]; idx == 0)
+                    BOOST_CHECK(n[idx] == 7);
+                else
+                    BOOST_CHECK(n[idx] == 8);
+            }
+        });
+
+    ctx.run_for(1s);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
