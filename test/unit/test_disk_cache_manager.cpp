@@ -15,7 +15,7 @@ BOOST_AUTO_TEST_CASE(put_and_get_with_metadata) {
     manager mgr{manager::create(m_ioc, data_view, 256)};
 
     std::string data = random_string(64);
-    reader_body rbody(dedup);
+    reader_body rbody(data_view);
 
     boost::asio::co_spawn(
         m_ioc, rbody.put(std::span<const char>(data.data(), data.size())),
@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_CASE(eviction_test) {
         std::string data = random_string(32);
         datas.push_back(data);
 
-        reader_body rbody(dedup);
+        reader_body rbody(data_view);
         boost::asio::co_spawn(
             m_ioc, rbody.put(std::span<const char>(data.data(), data.size())),
             boost::asio::use_future)

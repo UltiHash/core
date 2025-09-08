@@ -49,7 +49,7 @@ public:
         if (required_size > 0) {
             auto evicted = m_cache->evict(required_size);
             auto addr = gather_address(evicted);
-            co_await utils::erase(m_storage, addr);
+            co_await m_storage.unlink(addr);
 
             // apply size change "after ERASE", "before PUT"
             std::cout << "addr.data_size(): " << addr.data_size()
@@ -124,7 +124,7 @@ private:
             if (!evicted.empty()) {
                 auto addr = gather_address(evicted);
                 try {
-                    co_await utils::erase(m_storage, addr);
+                    co_await m_storage.unlink(addr);
                     m_current_size.fetch_sub(addr.data_size(),
                                              std::memory_order_acq_rel);
                 } catch (const std::exception& e) {

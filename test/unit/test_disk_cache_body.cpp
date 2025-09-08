@@ -69,7 +69,7 @@ BOOST_AUTO_TEST_CASE(supports_read) {
     BOOST_TEST(content_length == data.size());
 
     // 6. Read body using async_read and reader_body
-    reader_body body(dedup);
+    reader_body body(data_view);
     boost::asio::co_spawn(m_ioc, async_read(stream, body, content_length),
                           boost::asio::use_future)
         .get();
@@ -79,10 +79,11 @@ BOOST_AUTO_TEST_CASE(supports_read) {
     BOOST_TEST(objh.data_size() == data.size());
 
     std::vector<char> buf(data.size());
-    boost::asio::co_spawn(m_ioc,
-                          utils::read(data_view, objh.get_address(),
-                                      std::span<char>{buf.data(), buf.size()}),
-                          boost::asio::use_future)
+    boost::asio::co_spawn(
+        m_ioc,
+        data_view.read_address(objh.get_address(),
+                               std::span<char>{buf.data(), buf.size()}),
+        boost::asio::use_future)
         .get();
     BOOST_TEST(std::string(buf.data(), buf.size()) == data);
 }
@@ -96,12 +97,10 @@ BOOST_AUTO_TEST_CASE(supports_write) {
     std::string expected_response = header + data;
     std::cout << expected_response << std::endl;
 
-    // Write data to disk using utils::store and wrap returned
-    // address using objh, wrap objh using writer_body
     auto addr = boost::asio::co_spawn(
                     m_ioc,
-                    utils::store(
-                        dedup, std::span<const char>{data.data(), data.size()}),
+                    data_view.write(
+                        std::span<const char>{data.data(), data.size()}, {0}),
                     boost::asio::use_future)
                     .get();
     auto objh = std::make_shared<object_handle>(std::move(addr));

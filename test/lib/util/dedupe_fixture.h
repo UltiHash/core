@@ -21,7 +21,7 @@ struct dedupe_fixture : public coro_fixture {
           data_store{config, dir.path().string(), DATA_STORE_ID, 0},
           data_view{data_store},
           cache{m_ioc, data_view, 4000ul},
-          dedup{{}, data_view, cache} {
+          dedupe{{}, data_view, cache} {
 
         auto log_config = log::config{
             .sinks = {log::sink_config{.type = log::sink_type::cout,
@@ -35,7 +35,7 @@ struct dedupe_fixture : public coro_fixture {
     mock_data_store data_store;
     mock_data_view data_view;
     storage::global::cache cache;
-    local_deduplicator dedup;
+    local_deduplicator dedupe;
 };
 
 } // namespace uh::cluster

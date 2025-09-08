@@ -11,15 +11,15 @@
 
 namespace uh::cluster::proxy::cache::disk::utils {
 
-inline coro<void> erase(storage::data_view& data_view, const address& addr) {
-    co_await data_view.unlink(addr);
+inline coro<void> erase(storage::data_view& storage, const address& addr) {
+    co_await storage.unlink(addr);
 }
 
-inline coro<address> store(deduplicator_interface& dedupe,
+inline coro<address> store(storage::data_view& storage,
                            std::span<const char> sv) {
-    auto resp =
-        co_await dedupe.deduplicate(std::string_view{sv.data(), sv.size()});
-    co_return std::move(resp.addr);
+    auto addr =
+        co_await storage.write(std::string_view{sv.data(), sv.size()}, {0});
+    co_return std::move(addr);
 }
 
 inline coro<void> read(storage::data_view& storage, const address& addr,

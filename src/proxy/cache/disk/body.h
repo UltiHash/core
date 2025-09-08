@@ -11,9 +11,9 @@
 #include <common/crypto/hash.h>
 #include <common/types/common_types.h>
 #include <common/utils/strings.h>
-#include <storage/interfaces/data_view.h>
 #include <entrypoint/http/body.h>
 #include <entrypoint/http/stream.h>
+#include <storage/interfaces/data_view.h>
 
 namespace uh::cluster::proxy::cache::disk {
 
@@ -84,8 +84,8 @@ public:
         }
 
         if (read_size > 0) {
-            co_await utils::read(m_storage, partial_addr,
-                                 {m_buffer.data(), read_size});
+            co_await m_storage.read_address(partial_addr,
+                                            {m_buffer.data(), read_size});
         }
         co_return std::span<const char>{m_buffer.data(), read_size};
     }

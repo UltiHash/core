@@ -35,8 +35,8 @@ public:
         ioc = std::make_unique<boost::asio::io_context>(4);
         cache =
             std::make_unique<storage::global::cache>(*ioc, *data_view, 4000ul);
-        dedup = std::make_unique<local_deduplicator>(deduplicator_config{},
-                                                     *data_view, *cache);
+        dedupe = std::make_unique<local_deduplicator>(deduplicator_config{},
+                                                      *data_view, *cache);
     }
 
     void TearDown(const ::benchmark::State& state) override {}
@@ -52,7 +52,7 @@ protected:
     std::unique_ptr<mock_data_view> data_view;
     std::unique_ptr<boost::asio::io_context> ioc;
     std::unique_ptr<storage::global::cache> cache;
-    std::unique_ptr<local_deduplicator> dedup;
+    std::unique_ptr<local_deduplicator> dedupe;
 };
 
 BENCHMARK_DEFINE_F(deduplicator_benchmark, profile_dedup_with_same_data)
@@ -60,7 +60,7 @@ BENCHMARK_DEFINE_F(deduplicator_benchmark, profile_dedup_with_same_data)
 
     std::string input_data = random_string(state.range(0));
     auto f = [&]() -> coro<dedupe_response> {
-        co_return co_await dedup->deduplicate(input_data);
+        co_return co_await dedupe->deduplicate(input_data);
     };
 
     std::future<dedupe_response> res = spawn(f);
@@ -69,7 +69,7 @@ BENCHMARK_DEFINE_F(deduplicator_benchmark, profile_dedup_with_same_data)
 
     for (auto _ : state) {
         auto f = [&]() -> coro<dedupe_response> {
-            co_return co_await dedup->deduplicate(input_data);
+            co_return co_await dedupe->deduplicate(input_data);
         };
 
         std::future<dedupe_response> res = spawn(f);

@@ -12,7 +12,7 @@ BOOST_FIXTURE_TEST_CASE(deduplicate, dedupe_fixture) {
     auto data = random_string(66);
 
     auto f = [&]() -> coro<dedupe_response> {
-        co_return co_await dedup.deduplicate(data);
+        co_return co_await dedupe.deduplicate(data);
     };
     {
         std::future<dedupe_response> res = spawn(f);
