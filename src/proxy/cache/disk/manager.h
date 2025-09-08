@@ -36,24 +36,18 @@ public:
         auto objh = body.get_object_handle();
         auto obj_size = objh.data_size();
 
-        std::cout << obj_size << std::endl;
-
         auto total_size =
             m_current_size.load(std::memory_order_acquire) + obj_size;
-        auto threshold = m_capacity - m_eviction_margin;
+        auto threshold = m_capacity;
 
         auto required_size =
             total_size > threshold ? total_size - threshold : 0;
-        std::cout << "required_size: " << required_size
-                  << ", obj_size: " << obj_size << std::endl;
         if (required_size > 0) {
             auto evicted = m_cache->evict(required_size);
             auto addr = gather_address(evicted);
             co_await m_storage.unlink(addr);
 
             // apply size change "after ERASE", "before PUT"
-            std::cout << "addr.data_size(): " << addr.data_size()
-                      << ", obj_size: " << obj_size << std::endl;
             if (addr.data_size() > obj_size) {
                 m_current_size.fetch_sub(addr.data_size() - obj_size,
                                          std::memory_order_acq_rel);
@@ -91,7 +85,6 @@ private:
     data_view& m_storage;
     std::unique_ptr<cache_interface_t> m_cache;
     std::size_t m_capacity;
-    std::size_t m_eviction_margin;
     std::atomic<std::size_t> m_current_size{0};
 
     deletion_queue_t m_deletion_queue;
@@ -104,7 +97,6 @@ private:
         : m_storage{storage},
           m_cache{std::move(c)},
           m_capacity{capacity},
-          m_eviction_margin{eviction_margin},
           m_task{"disk_cache eviction", ioc} {
         m_task.spawn([this]() { return eviction_task(); });
     }

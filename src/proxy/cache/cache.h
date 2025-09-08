@@ -43,7 +43,7 @@ public:
     [[nodiscard]] virtual std::shared_ptr<Entry> remove(const Key& key) = 0;
 
     /*
-     * Evict entries until the given size is freed. If size is 0, evict all
+     * Evict entries until the given size is freed
      */
     [[nodiscard]] virtual std::vector<std::shared_ptr<Entry>>
     evict(std::size_t size) = 0;
@@ -55,8 +55,6 @@ public:
      * local_entry using it)
      *
      * @return removed Entry if key exists, nullptr otherwise
-     *
-     * TODO: Let's add etag and expire_time as additional arguments
      */
     [[nodiscard]] virtual std::shared_ptr<Entry> put(const Key& key,
                                                      Entry&& entry) = 0;

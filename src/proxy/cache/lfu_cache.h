@@ -29,7 +29,7 @@ public:
     lfu_cache() = default;
 
     std::shared_ptr<Entry> get(const Key& key) override {
-        std::shared_lock lock(m_mutex);
+        std::unique_lock lock(m_mutex);
         auto it = m_cache.find(key);
         if (it == m_cache.end()) {
             return nullptr;

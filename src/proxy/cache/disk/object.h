@@ -37,11 +37,8 @@ namespace uh::cluster::proxy::cache::disk {
 
 struct object_handle {
     object_handle() = default;
-    object_handle(address&& a, std::string etag = "",
-                  std::chrono::seconds ttl = std::chrono::seconds(0))
-        : m_addr(std::move(a)),
-          m_etag{std::move(etag)},
-          m_expire_at{std::chrono::steady_clock::now() + ttl} {}
+    object_handle(address&& a)
+        : m_addr(std::move(a)) {}
 
     object_handle(object_handle&&) = default;
     object_handle& operator=(object_handle&&) = default;
@@ -50,20 +47,8 @@ struct object_handle {
 
     const address& get_address() const { return m_addr; }
 
-    const std::string& get_etag() const { return m_etag; }
-
-    bool is_expired() const {
-        return std::chrono::steady_clock::now() >= m_expire_at;
-    }
-
-    void touch(std::chrono::seconds ttl) {
-        m_expire_at = std::chrono::steady_clock::now() + ttl;
-    }
-
 private:
     address m_addr;
-    std::string m_etag;
-    std::chrono::steady_clock::time_point m_expire_at;
 };
 
 } // namespace uh::cluster::proxy::cache::disk

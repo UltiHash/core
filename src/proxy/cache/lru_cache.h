@@ -17,7 +17,7 @@ template <typename Key, EntryType Entry>
 class lru_cache : public cache_interface<Key, Entry> {
 public:
     [[nodiscard]] std::shared_ptr<Entry> get(const Key& key) override {
-        std::shared_lock lock(m_mutex);
+        std::unique_lock lock(m_mutex);
         auto it = m_cache.find(key);
         if (it == m_cache.end()) {
             return nullptr;
@@ -59,15 +59,14 @@ public:
     [[nodiscard]] std::shared_ptr<Entry> put(const Key& key,
                                              Entry&& entry) override {
         std::unique_lock lock(m_mutex);
-        auto it = m_cache.find(key);
-        std::shared_ptr<Entry> old_entry = nullptr;
-
         m_items.emplace_front(key, std::make_shared<Entry>(std::move(entry)));
-        if (it != m_cache.end()) {
+        auto iter = m_items.begin();
+
+        auto [it, inserted] = m_cache.insert({key, iter});
+        std::shared_ptr<Entry> old_entry = nullptr;
+        if (!inserted) {
             old_entry = std::move(it->second->second);
-            it->second = m_items.begin();
-        } else {
-            m_cache[key] = m_items.begin();
+            it->second = iter;
         }
         return old_entry;
     }
