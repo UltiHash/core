@@ -18,10 +18,10 @@ namespace uh::cluster::proxy::cache::disk {
 
 class manager {
 public:
-    using cache_interface = cache_interface<object_metadata, object_handle>;
-    using lru_cache = lru_cache<object_metadata, object_handle>;
-    using lfu_cache = lfu_cache<object_metadata, object_handle>;
-    using deletion_queue = deletion_queue<object_metadata, object_handle>;
+    using cache_interface_t = cache_interface<object_metadata, object_handle>;
+    using lru_cache_t = lru_cache<object_metadata, object_handle>;
+    using lfu_cache_t = lfu_cache<object_metadata, object_handle>;
+    using deletion_queue_t = deletion_queue<object_metadata, object_handle>;
 
     using data_view = storage::data_view;
     using stream = ep::http::stream;
@@ -83,23 +83,23 @@ public:
     static manager create(boost::asio::io_context& ioc, data_view& storage,
                           std::size_t capacity,
                           std::size_t eviction_margin = 0) {
-        return manager(ioc, storage, std::make_unique<lru_cache>(), capacity,
+        return manager(ioc, storage, std::make_unique<lru_cache_t>(), capacity,
                        eviction_margin);
     }
 
 private:
     data_view& m_storage;
-    std::unique_ptr<cache_interface> m_cache;
+    std::unique_ptr<cache_interface_t> m_cache;
     std::size_t m_capacity;
     std::size_t m_eviction_margin;
     std::atomic<std::size_t> m_current_size{0};
 
-    deletion_queue m_deletion_queue;
+    deletion_queue_t m_deletion_queue;
     // TODO: spawn a background task to remove
     coro_task m_task;
 
     manager(boost::asio::io_context& ioc, data_view& storage,
-            std::unique_ptr<cache_interface> c, std::size_t capacity,
+            std::unique_ptr<cache_interface_t> c, std::size_t capacity,
             std::size_t eviction_margin)
         : m_storage{storage},
           m_cache{std::move(c)},

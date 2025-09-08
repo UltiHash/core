@@ -15,9 +15,6 @@ namespace uh::cluster::proxy::cache {
 
 template <typename Key, EntryType Entry>
 class lru_cache : public cache_interface<Key, Entry> {
-private:
-    using cache_interface = cache_interface<Key, Entry>;
-
 public:
     [[nodiscard]] std::shared_ptr<Entry> get(const Key& key) override {
         std::shared_lock lock(m_mutex);

@@ -147,9 +147,6 @@ private:
         item->frequency = new_frequency;
         item->freq_iterator = m_frequency_lists[new_frequency].begin();
     }
-
-public:
-    using iterator_for_ttl = decltype(m_cache)::iterator;
 };
 
 } // namespace uh::cluster::proxy::cache
