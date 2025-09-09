@@ -3,9 +3,9 @@
 #include <common/utils/time_utils.h>
 
 #include <entrypoint/formats.h>
-#include <entrypoint/utils.h>
 #include <entrypoint/http/command_exception.h>
 #include <entrypoint/http/range.h>
+#include <entrypoint/utils.h>
 
 using namespace uh::cluster::ep::http;
 
@@ -38,7 +38,7 @@ public:
         }
 
         auto size = std::min(count, m_put_ptr - m_get_ptr);
-        auto rv = std::span<const char>{ &m_buffer[m_get_ptr], size };
+        auto rv = std::span<const char>{&m_buffer[m_get_ptr], size};
 
         m_get_ptr += size;
 
@@ -53,7 +53,8 @@ public:
         std::size_t count = 0;
 
         address partial_addr;
-        while (m_addr_index < m_obj->addr->size() && count + m_put_ptr < m_buffer.size()) {
+        while (m_addr_index < m_obj->addr->size() &&
+               count + m_put_ptr < m_buffer.size()) {
 
             auto frag = m_obj->addr->get(m_addr_index);
             if (m_frag_offset > 0) {
@@ -78,8 +79,10 @@ public:
         }
 
         if (count > 0) {
-            LOG_DEBUG() << "local_read_handle: fill, reading " << count << " bytes from storage";
-            co_await m_storage.read_address(partial_addr, { &m_buffer[m_put_ptr], count });
+            LOG_DEBUG() << "local_read_handle: fill, reading " << count
+                        << " bytes from storage";
+            co_await m_storage.read_address(partial_addr,
+                                            {&m_buffer[m_put_ptr], count});
             m_put_ptr += count;
             m_total += count;
             m_size -= count;
@@ -89,7 +92,8 @@ public:
     coro<void> consume() override {
         auto count = m_put_ptr - m_get_ptr;
         if (count > 0) {
-            LOG_DEBUG() << "local_read_handle: copying " << (m_put_ptr - m_get_ptr) << " bytes to new buffer";
+            LOG_DEBUG() << "local_read_handle: copying "
+                        << (m_put_ptr - m_get_ptr) << " bytes to new buffer";
             memmove(&m_buffer[0], &m_buffer[m_get_ptr], m_put_ptr - m_get_ptr);
             m_put_ptr -= m_get_ptr;
             m_get_ptr = 0;
@@ -101,6 +105,7 @@ public:
     }
 
     std::size_t buffer_size() const override { return m_buffer.size(); }
+
 private:
     void report_stats() {
         metric<entrypoint_egressed_data_counter, byte>::increase(m_total);
@@ -139,12 +144,12 @@ coro<response> get_object::handle(request& req) {
     response res;
 
     auto version = req.query("versionId");
-    auto obj = co_await m_dir.get_object(req.bucket(), req.object_key(), version);
+    auto obj =
+        co_await m_dir.get_object(req.bucket(), req.object_key(), version);
 
     if (version && (obj.empty() || obj->state == ep::object_state::deleted)) {
         res = error_response(
-            status::method_not_allowed,
-            "MethodNotAllowed",
+            status::method_not_allowed, "MethodNotAllowed",
             "The specified method is not allowed against this resource.");
 
         res.set("X-Amz-Delete-Marker", "true");

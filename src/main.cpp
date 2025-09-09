@@ -28,7 +28,7 @@ static std::any make_service(boost::asio::io_context& ioc, const config& c) {
         return std::make_shared<coordinator::service>( //
             ioc, c.service, c.coordinator);
     case PROXY_SERVICE:
-        return std::make_shared<proxy::service>(ioc, c.proxy);
+        return std::make_shared<proxy::service>(ioc, c.service, c.proxy);
     default:
         throw std::runtime_error("unknown service role: " + serialize(c.role));
     }

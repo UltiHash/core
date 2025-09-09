@@ -16,8 +16,12 @@ public:
         }
     }
 
-    auto spawn(auto& func) {
-        return co_spawn(m_ioc, func, boost::asio::use_future);
+    template <typename Func,
+              typename CompletionToken = decltype(boost::asio::use_future)>
+    auto spawn(Func&& func,
+               CompletionToken&& token = std::move(boost::asio::use_future)) {
+        return co_spawn(m_ioc, std::forward<Func>(func),
+                        std::forward<CompletionToken>(token));
     }
 
     auto& get_io_context() { return m_ioc; }
@@ -31,7 +35,7 @@ public:
         }
     }
 
-private:
+protected:
     boost::asio::io_context m_ioc;
     boost::asio::executor_work_guard<decltype(m_ioc.get_executor())>
         m_work_guard;
