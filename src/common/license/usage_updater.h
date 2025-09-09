@@ -25,9 +25,7 @@ public:
           m_usage{usage},
           m_license(license),
           m_backend_client{std::make_unique<T>(std::forward<T>(client))},
-          m_task{"usage update", ioc} {
-        m_task.spawn(hourly_update().start_trace());
-    }
+          m_task{"usage update", ioc, hourly_update().start_trace()} {}
 
     coro<void>
     update(std::chrono::time_point<std::chrono::system_clock> full_hour) {
@@ -83,7 +81,7 @@ private:
     usage& m_usage;
     license_updater& m_license;
     std::unique_ptr<backend_client> m_backend_client;
-    coro_task m_task;
+    scoped_task m_task;
 
     coro<std::string> generate_json(const utc_time& interval_infimum,
                                     const utc_time& interval_supremum) {

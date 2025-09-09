@@ -89,7 +89,7 @@ private:
 
     deletion_queue_t m_deletion_queue;
     // TODO: spawn a background task to remove
-    coro_task m_task;
+    scoped_task m_task;
 
     manager(boost::asio::io_context& ioc, data_view& storage,
             std::unique_ptr<cache_interface_t> c, std::size_t capacity,
@@ -97,9 +97,7 @@ private:
         : m_storage{storage},
           m_cache{std::move(c)},
           m_capacity{capacity},
-          m_task{"disk_cache eviction", ioc} {
-        m_task.spawn([this]() { return eviction_task(); });
-    }
+          m_task{"disk_cache eviction", ioc, eviction_task()} {}
 
     coro<void> eviction_task() {
         auto state = co_await boost::asio::this_coro::cancellation_state;

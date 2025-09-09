@@ -20,7 +20,7 @@ public:
           m_min_delay_ms(min_delay_ms),
           m_max_delay_ms(max_delay_ms) {}
 
-    coro<T> run(std::function<coro<T>()> task) {
+    coro<T> run(std::function<coro<T>()> f) {
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_int_distribution<> dis(m_min_delay_ms, m_max_delay_ms);
@@ -30,7 +30,7 @@ public:
         int retry_count = 0;
         while (retry_count++ < m_max_retries) {
             try {
-                auto rv = co_await task();
+                auto rv = co_await f();
                 co_return rv;
             } catch (const std::system_error& se) {
 

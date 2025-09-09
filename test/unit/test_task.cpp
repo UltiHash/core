@@ -11,14 +11,12 @@ namespace uh::cluster {
 class task_owner {
 public:
     task_owner(boost::asio::io_context& ioc)
-        : m_task{"task", ioc} {
-        m_task.spawn(job().start_trace());
-    }
+        : m_task{"task", ioc, job().start_trace()} {}
 
     ~task_owner() {}
 
 private:
-    coro_task m_task;
+    scoped_task m_task;
 
     coro<void> job() {
         auto state = co_await boost::asio::this_coro::cancellation_state;

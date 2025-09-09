@@ -34,10 +34,8 @@ public:
         : m_config(std::move(config)),
           m_ioc(ioc),
           m_handler(std::move(handler)),
-          m_connection_lister{
-              std::make_unique<coro_task>("connection_listner", ioc)} {
-        m_connection_lister->spawn(listen());
-    }
+          m_connection_lister{std::make_unique<scoped_task>(
+              "connection_listner", ioc, listen())} {}
 
     [[nodiscard]] const server_config& get_server_config() const {
         return m_config;
@@ -48,7 +46,7 @@ public:
         m_connection_lister.reset();
 
         LOG_INFO() << "canceling sessions...";
-        std::vector<std::shared_ptr<coro_task>> sessions_copy;
+        std::vector<std::shared_ptr<task>> sessions_copy;
         {
             std::lock_guard<std::mutex> lock(m_sessions_mutex);
             sessions_copy.assign(m_sessions.begin(), m_sessions.end());
@@ -76,7 +74,7 @@ private:
         std::lock_guard<std::mutex> lock(m_sessions_mutex);
 
         auto [it, inserted] =
-            m_sessions.emplace(std::make_shared<coro_task>(name, ioc));
+            m_sessions.emplace(std::make_shared<task>(name, ioc));
         if (inserted == false) {
             LOG_ERROR() << "session with name '" << name
                         << "' already exists, cannot create a new one";
@@ -91,7 +89,7 @@ private:
             [this, self = *it](std::exception_ptr _) { remove_session(self); });
     }
 
-    void remove_session(std::shared_ptr<coro_task> session) {
+    void remove_session(std::shared_ptr<task> session) {
         LOG_DEBUG() << "remove session: waiting for lock";
         std::lock_guard<std::mutex> lock(m_sessions_mutex);
         try {
@@ -99,7 +97,8 @@ private:
             auto it = m_sessions.find(session);
             if (it != m_sessions.end()) {
                 m_sessions.erase(it);
-                LOG_DEBUG() << "session removed";
+                LOG_DEBUG() << "session removed, remained sessions: "
+                            << m_sessions.size();
                 m_sessions_cv.notify_all();
             }
         } catch (const std::exception& e) {
@@ -138,11 +137,12 @@ private:
             boost::asio::ip::tcp::socket s =
                 co_await acceptor.async_accept(boost::asio::use_awaitable);
 
-            std::string name = std::format("session {}:{}",
-                s.remote_endpoint().address().to_string(),
+            std::string name = std::format(
+                "session {}:{}", s.remote_endpoint().address().to_string(),
                 s.remote_endpoint().port());
 
-            create_session(std::move(name), m_ioc, m_handler->handle(std::move(s)));
+            create_session(std::move(name), m_ioc,
+                           m_handler->handle(std::move(s)));
         }
     }
 
@@ -152,8 +152,8 @@ private:
 
     std::mutex m_sessions_mutex;
     std::condition_variable m_sessions_cv;
-    std::unordered_set<std::shared_ptr<coro_task>> m_sessions;
-    std::unique_ptr<coro_task> m_connection_lister;
+    std::unordered_set<std::shared_ptr<task>> m_sessions;
+    std::unique_ptr<scoped_task> m_connection_lister;
 };
 
 //------------------------------------------------------------------------------

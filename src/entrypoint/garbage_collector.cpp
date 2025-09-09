@@ -7,9 +7,7 @@ garbage_collector::garbage_collector(boost::asio::io_context& ioc,
                                      storage::global::global_data_view& gdv)
     : m_dir(dir),
       m_gdv(gdv),
-      m_task{"garbage collector", ioc} {
-    m_task.spawn(collect().start_trace());
-}
+      m_task{"garbage collector", ioc, collect().start_trace()} {}
 
 coro<void> garbage_collector::collect() {
     boost::asio::steady_timer timer(co_await boost::asio::this_coro::executor);

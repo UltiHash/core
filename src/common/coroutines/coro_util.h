@@ -71,8 +71,6 @@ run_for_all(boost::asio::io_context& ioc, Func func,
     }
 }
 
-class coro_task;
-
 namespace impl {
 inline auto make_logging_completion_notifier(
     const std::string& name, std::promise<void>& promise,
@@ -116,9 +114,9 @@ inline auto make_logging_completion_notifier(
 }
 } // namespace impl
 
-class coro_task {
+class task {
 public:
-    coro_task(std::string name, boost::asio::io_context& ioc)
+    task(std::string name, boost::asio::io_context& ioc)
         : m_name{std::move(name)},
           m_strand(boost::asio::make_strand(ioc)),
           m_promise{},
@@ -127,6 +125,7 @@ public:
     template <typename T>
     void spawn(T&& t,
                std::function<void(std::exception_ptr)> on_finish = nullptr) {
+        m_spawned = true;
         boost::asio::co_spawn(
             m_strand, std::forward<T>(t),
             boost::asio::bind_cancellation_slot(
@@ -134,14 +133,15 @@ public:
                                      m_name, m_promise, on_finish)));
     }
 
-    coro_task(const coro_task&) = delete;
-    coro_task& operator=(const coro_task&) = delete;
-    coro_task(coro_task&&) = delete;
-    coro_task& operator=(coro_task&&) = delete;
+    task(const task&) = delete;
+    task& operator=(const task&) = delete;
+    task(task&&) = delete;
+    task& operator=(task&&) = delete;
 
-    ~coro_task() {
-        cancel();
-        wait();
+    ~task() {
+        if (m_spawned) {
+            wait();
+        }
     }
 
     void cancel() {
@@ -155,6 +155,14 @@ public:
         });
         future.get();
     }
+
+private:
+    std::string m_name;
+    boost::asio::strand<boost::asio::io_context::executor_type> m_strand;
+    std::promise<void> m_promise;
+    std::future<void> m_future;
+    boost::asio::cancellation_signal m_signal;
+    bool m_spawned{false};
 
     void wait(std::optional<std::chrono::steady_clock::duration> timeout =
                   std::nullopt) {
@@ -173,13 +181,22 @@ public:
             LOG_ERROR() << "[" << m_name << "] unknown exception in wait()";
         }
     }
+};
 
-private:
-    std::string m_name;
-    boost::asio::strand<boost::asio::io_context::executor_type> m_strand;
-    std::promise<void> m_promise;
-    std::future<void> m_future;
-    boost::asio::cancellation_signal m_signal;
+class scoped_task : public task {
+public:
+    template <typename T>
+    scoped_task(std::string name, boost::asio::io_context& ioc, T&& t)
+        : task(name, ioc) {
+        task::spawn(std::forward<T>(t));
+    }
+
+    scoped_task(const scoped_task&) = delete;
+    scoped_task& operator=(const scoped_task&) = delete;
+    scoped_task(scoped_task&&) = delete;
+    scoped_task& operator=(scoped_task&&) = delete;
+
+    ~scoped_task() { task::cancel(); }
 };
 
 } // namespace uh::cluster
