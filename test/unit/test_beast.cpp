@@ -61,13 +61,35 @@ BOOST_AUTO_TEST_CASE(parses_header_and_body_seperately) {
     parser.put(boost::asio::buffer(header.data(), header.size()), ec);
     BOOST_TEST(!ec);
 
+    BOOST_TEST(parser.is_header_done());
+
     parser.put(boost::asio::buffer(body.data(), body.size()), ec);
     BOOST_TEST(!ec);
 
     parser.put_eof(ec);
     BOOST_TEST(!ec);
+}
+
+BOOST_AUTO_TEST_CASE(parses_header_using_empty_body_parser) {
+    std::string header = "POST /112 HTTP/1.1\r\n"
+                         "Host: 127.0.0.1:8080\r\n"
+                         "User-Agent: curl/7.68.0\r\n"
+                         "Accept: */*\r\nContent-Length: 13\r\n"
+                         "Content-Type: application/x-www-form-urlencoded\r\n"
+                         "\r\n";
+
+    http::request_parser<boost::beast::http::empty_body> parser;
+    parser.body_limit((std::numeric_limits<std::uint64_t>::max)());
+    boost::beast::error_code ec;
+
+    // parse header
+    parser.put(boost::asio::buffer(header.data(), header.size()), ec);
+    BOOST_TEST(!ec);
 
     BOOST_TEST(parser.is_header_done());
+
+    std::size_t content_length = std::stoul(parser.get().at("Content-Length"));
+    BOOST_TEST(content_length == 13);
 }
 
 BOOST_AUTO_TEST_CASE(parses_s3_header) {

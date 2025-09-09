@@ -1,13 +1,13 @@
 #!/bin/bash
 
-dedup=1
+dedupe=1
 storage_cfg='[{"id":0,"type":"ROUND_ROBIN","storages":1}]'
 # storage_cfg='[{"id":0,"type":"ERASURE_CODING","storages":3,"data_shards":2,"parity_shards":1,"stripe_size_kib":64}]'
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        -d|--dedup)
-            dedup="$2"
+        -d|--dedupe)
+            dedupe="$2"
             shift 2
             ;;
         -s|--storage-cfg)
@@ -176,7 +176,7 @@ pid_coordinator=$!
 
 export OTEL_RESOURCE_ATTRIBUTES="service.name=deduplicator"
 pid_deduplicators=()
-for ((id = 0; id < $dedup; ++id)); do
+for ((id = 0; id < $dedupe; ++id)); do
     mkdir -p $UH_DATA/deduplicator-$id
     $UH_CLUSTER --workdir $UH_DATA/deduplicator-$id deduplicator --port $((9200 + id)) &> $log_dir/deduplicator-$id.log &
     pid_deduplicators+=($!)

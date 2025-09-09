@@ -19,7 +19,8 @@ namespace beast = boost::beast;
 using verb = beast::http::verb;
 
 struct raw_request {
-    static coro<raw_request> read(stream& s, boost::asio::ip::tcp::endpoint peer);
+    static coro<raw_request> read(stream& s,
+                                  boost::asio::ip::tcp::endpoint peer);
     static raw_request
     from_string(beast::http::request<beast::http::empty_body> header,
                 boost::asio::ip::tcp::endpoint peer);
@@ -40,12 +41,6 @@ struct raw_request {
 
     beast::http::request<beast::http::empty_body> headers;
 };
-
-/**
- * Return bucket and object key.
- */
-std::tuple<std::string, std::string>
-extract_bucket_and_object(boost::urls::url url);
 
 std::map<std::string_view, std::string_view>
 parse_values_string(std::string_view values, char pair_separator = ',',

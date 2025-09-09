@@ -1,6 +1,7 @@
 #pragma once
 
 #include <common/network/server.h>
+#include <storage/global/config.h>
 
 namespace uh::cluster::proxy {
 
@@ -15,6 +16,7 @@ struct config {
     std::size_t connections = 16;
     std::size_t num_threads = 4;
     std::size_t buffer_size = 64 * KIBI_BYTE;
+    global_data_view_config gdv;
 };
 
 } // namespace uh::cluster::proxy

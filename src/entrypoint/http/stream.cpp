@@ -19,20 +19,22 @@ coro<std::span<const char>> socket_stream::read(std::size_t count) {
     }
 
     auto size = std::min(count, m_put_ptr - m_get_ptr);
-    auto rv = std::span<const char>{ &m_buffer[m_get_ptr], size };
+    auto rv = std::span<const char>{&m_buffer[m_get_ptr], size};
 
     m_get_ptr += size;
 
     co_return rv;
 }
 
-coro<std::span<const char>> socket_stream::read_until(std::string_view delimiter) {
+coro<std::span<const char>>
+socket_stream::read_until(std::string_view delimiter) {
     std::size_t last_put = m_put_ptr;
 
     do {
         std::string_view current(&m_buffer[m_get_ptr], &m_buffer[m_put_ptr]);
         if (auto pos = current.find(delimiter); pos != std::string::npos) {
-            auto rv = std::span<const char>{ &m_buffer[m_get_ptr], pos + delimiter.size() };
+            auto rv = std::span<const char>{&m_buffer[m_get_ptr],
+                                            pos + delimiter.size()};
             m_get_ptr += pos + delimiter.size();
             co_return rv;
         }
@@ -57,16 +59,14 @@ coro<void> socket_stream::consume() {
 
 std::string socket_stream::peer() const {
     return std::format("session {}:{}",
-        m_s.remote_endpoint().address().to_string(),
-        m_s.remote_endpoint().port());
+                       m_s.remote_endpoint().address().to_string(),
+                       m_s.remote_endpoint().port());
 }
 
-std::size_t socket_stream::buffer_size() const {
-    return m_buffer_size;
-}
+std::size_t socket_stream::buffer_size() const { return m_buffer_size; }
 
 std::span<const char> socket_stream::buffer() const {
-    return { &m_buffer[0], m_get_ptr };
+    return {&m_buffer[0], m_get_ptr};
 }
 
 coro<void> socket_stream::fill() {
