@@ -12,9 +12,12 @@ messenger_core::messenger_core(boost::asio::io_context& ioc,
     try {
         auto endpoint = boost::asio::ip::tcp::endpoint{
             boost::asio::ip::make_address(ip_addr), port};
+        LOG_DEBUG() << "connect to: " << endpoint;
         m_tcp_stream.expires_after(
             time_settings::instance().connection_timeout);
+        LOG_DEBUG() << "timeout set " << endpoint;
         m_tcp_stream.async_connect(endpoint, boost::asio::use_future).get();
+        LOG_DEBUG() << "connected " << endpoint;
         clear_buffers();
     } catch (const boost::system::system_error& e) {
         if (m_origin == origin::DOWNSTREAM)
