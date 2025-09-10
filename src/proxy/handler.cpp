@@ -52,9 +52,9 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 co_await m_factory->create(incoming, rawreq);
 
             if (get_object::can_handle(*req)) {
-                auto writer =
+                auto wbody =
                     m_mgr.get(cache::disk::object_metadata{req->object_key()});
-                if (writer) {
+                if (wbody) {
                     LOG_INFO() << peer << ": handling from cache";
                     incoming.set_mode(forward_stream::deleting);
                     outgoing.set_mode(forward_stream::deleting);
@@ -71,7 +71,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
                     LOG_INFO() << peer << ": done reading complete request";
 
-                    co_await cache::async_write(incoming, *writer);
+                    co_await cache::async_write(incoming, *wbody);
 
                     LOG_INFO() << peer << ": cache result served";
                     continue;
@@ -121,22 +121,22 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                        << " " << res.reason() << " -- " << len;
 
             if (get_object::can_handle(*req)) {
-                cache::disk::reader_body data(m_dv);
                 LOG_INFO() << peer << ": add " << buffer.size()
                            << " response header";
-                co_await data.put(buffer);
+                cache::disk::reader_body rbody(m_dv);
+                co_await rbody.put(buffer);
 
-                co_await cache::async_read(outgoing, data, len);
+                co_await cache::async_read(outgoing, rbody, len);
 
                 co_await m_mgr.put(
-                    cache::disk::object_metadata{req->object_key()}, data);
+                    cache::disk::object_metadata{req->object_key()}, rbody);
             } else {
                 std::size_t read = 0ull;
                 while (read < len) {
                     co_await outgoing.consume();
 
                     auto r = co_await outgoing.read(len - read);
-                    // r: data
+                    // r: rbody
                     read += r.size();
                 }
 
