@@ -69,9 +69,7 @@ public:
 
           m_storages{std::move(storages)},
           m_storage_states{std::move(storage_states)},
-          m_task{"repairing", ioc} {
-        m_task.spawn(repair().start_trace());
-    }
+          m_task{"repairing", ioc, repair().start_trace()} {}
 
     ~repairer() {
         LOG_DEBUG() << "Repairer destroyed for group " << m_config.id;
@@ -86,7 +84,7 @@ private:
 
     std::vector<std::shared_ptr<storage_interface>> m_storages;
     std::vector<storage_state> m_storage_states;
-    coro_task m_task;
+    scoped_task m_task;
 
     coro<void> repair() {
         LOG_DEBUG() << "Repairing started for group " << m_config.id;

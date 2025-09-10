@@ -68,23 +68,21 @@ service::service(boost::asio::io_context& ioc, const service_config& sc,
       m_users(ioc, m_config.database),
       m_license_watcher(m_etcd),
       m_limits(m_license_watcher),
-      m_server(
-          m_config.server,
-          std::make_unique<handler>(
-              command_factory(*m_dedupe, m_directory, m_uploads,
-                              m_gdv, m_limits, m_users, m_license_watcher),
-              http::request_factory(m_users),
-              std::make_unique<policy::module>(m_directory),
-              std::make_unique<cors::module>(cors::config{}, m_directory)),
-          ioc),
+      m_server(m_config.server,
+               std::make_unique<handler>(
+                   command_factory(*m_dedupe, m_directory, m_uploads, m_gdv,
+                                   m_limits, m_users, m_license_watcher),
+                   http::request_factory(m_users),
+                   std::make_unique<policy::module>(m_directory),
+                   std::make_unique<cors::module>(cors::config{}, m_directory)),
+               ioc),
       // TODO: add support for non-persistent service_id
       m_service_registry(m_etcd, ns::root.entrypoint.hostports[m_service_id],
                          m_config.server.port),
 
       m_gc(ioc, m_directory, m_gdv),
-      m_task{"update storage metrics", ioc} {
-
-    m_task.spawn(update_limits(m_directory, m_limits).start_trace());
+      m_task{"update storage metrics", ioc,
+             update_limits(m_directory, m_limits).start_trace()} {
 
     metric<entrypoint_original_data_volume_gauge, byte, int64_t>::
         register_gauge_callback(

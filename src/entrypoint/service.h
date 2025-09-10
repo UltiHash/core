@@ -42,7 +42,7 @@ private:
     server m_server;
     service_registry m_service_registry;
     garbage_collector m_gc;
-    coro_task m_task;
+    scoped_task m_task;
 };
 
 } // namespace uh::cluster::ep
