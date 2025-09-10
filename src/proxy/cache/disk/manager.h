@@ -66,12 +66,13 @@ public:
         std::cout << "Total size after put: " << m_current_size << std::endl;
     }
 
-    std::optional<writer_body> get(object_metadata key) {
+    std::unique_ptr<double_buffered_writer_body> get(object_metadata key) {
         auto entry = m_cache->get(key);
         if (!entry) {
-            return std::nullopt;
+            return nullptr;
         }
-        return writer_body{m_storage, std::move(entry)};
+        return std::make_unique<double_buffered_writer_body>(m_storage,
+                                                             std::move(entry));
     }
 
     static manager create(boost::asio::io_context& ioc, data_view& storage,

@@ -1,9 +1,12 @@
 #pragma once
 
+#include <boost/asio/experimental/awaitable_operators.hpp>
 #include <common/types/common_types.h>
 #include <concepts>
 #include <entrypoint/http/body.h>
 #include <entrypoint/http/stream.h>
+
+using namespace boost::asio::experimental::awaitable_operators;
 
 namespace uh::cluster::proxy::cache {
 
@@ -79,11 +82,28 @@ template <typename T> coro<void> async_write(ep::http::stream& s, T& t) {
         }
     }();
 
-    while (true) {
-        std::span<const char> data = co_await writer.get();
-        if (data.empty())
-            break;
-        co_await s.write(data);
+    if constexpr (T::support_double_buffer::value) {
+        std::span<const char> data;
+        while (true) {
+            if (data.empty()) {
+                data = co_await writer.get();
+            } else {
+                auto [d, _] = co_await (writer.get() && s.write(data));
+                if (d.empty()) {
+                    co_await s.write(data);
+                    break;
+                } else {
+                    data = d;
+                }
+            }
+        }
+    } else {
+        while (true) {
+            std::span<const char> data = co_await writer.get();
+            if (data.empty())
+                break;
+            co_await s.write(data);
+        }
     }
 }
 
