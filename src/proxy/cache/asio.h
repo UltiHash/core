@@ -41,8 +41,9 @@ template <BodyType Body> typename Body::writer make_writer(Body& b) {
  *
  * size can be replaced with parser implementation
  */
-template <typename T>
-coro<void> async_read(ep::http::stream& s, T& t, std::size_t size) {
+template <typename S, typename T>
+requires std::is_base_of_v<ep::http::stream, S>
+coro<void> async_read(S& s, T& t, std::size_t size) {
     auto&& reader = [&]() -> auto&& {
         if constexpr (BodyType<T>) {
             return make_reader(t);
@@ -53,6 +54,7 @@ coro<void> async_read(ep::http::stream& s, T& t, std::size_t size) {
                           "T must satisfy BodyType or ReaderBodyType");
         }
     }();
+
     while (size > 0) {
         auto sv = co_await s.read(size);
         if (sv.empty())
@@ -83,20 +85,11 @@ template <typename T> coro<void> async_write(ep::http::stream& s, T& t) {
     }();
 
     if constexpr (T::support_double_buffer::value) {
-        std::span<const char> data;
-        while (true) {
-            if (data.empty()) {
-                data = co_await writer.get();
-            } else {
-                auto [d, _] = co_await (writer.get() && s.write(data));
-                if (d.empty()) {
-                    co_await s.write(data);
-                    break;
-                } else {
-                    data = d;
-                }
-            }
-        }
+        std::span<const char> data = co_await writer.get();
+        do {
+            auto [d, _] = co_await (writer.get() && s.write(data));
+            data = d;
+        } while (!data.empty());
     } else {
         while (true) {
             std::span<const char> data = co_await writer.get();
