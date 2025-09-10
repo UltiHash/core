@@ -7,6 +7,7 @@
 #include <entrypoint/commands/s3/get_object.h>
 #include <entrypoint/http/command_exception.h>
 #include <entrypoint/http/response.h>
+#include <proxy/cache/asio.h>
 
 using namespace uh::cluster::ep::http;
 
@@ -15,9 +16,7 @@ namespace uh::cluster::proxy {
 handler::handler(
     std::unique_ptr<request_factory> factory,
     std::function<std::unique_ptr<boost::asio::ip::tcp::socket>()> sf,
-    storage::data_view& dv,
-    cache::disk::manager& mgr,
-    std::size_t buffer_size)
+    storage::data_view& dv, cache::disk::manager& mgr, std::size_t buffer_size)
     : m_factory(std::move(factory)),
       m_sf(std::move(sf)),
       m_dv(dv),
@@ -53,7 +52,8 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 co_await m_factory->create(incoming, rawreq);
 
             if (get_object::can_handle(*req)) {
-                auto writer = m_mgr.get(cache::disk::object_metadata{ req->object_key() });
+                auto writer =
+                    m_mgr.get(cache::disk::object_metadata{req->object_key()});
                 if (writer) {
                     LOG_INFO() << peer << ": handling from cache";
                     incoming.set_mode(forward_stream::deleting);
@@ -71,12 +71,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
                     LOG_INFO() << peer << ": done reading complete request";
 
-                    std::span<const char> data = co_await writer->get();
-                    while (!data.empty()) {
-                        LOG_INFO() << peer << ": sending " << data.size() << " bytes response";
-                        co_await incoming.write(data);
-                        data = co_await writer->get();
-                    }
+                    co_await cache::async_write(incoming, *writer);
 
                     LOG_INFO() << peer << ": cache result served";
                     continue;
@@ -116,7 +111,6 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             auto res = parser.release();
 
             bs = outgoing.buffer_size();
-            std::size_t read = 0ull;
             std::size_t len = std::stoul(res.at("Content-Length"));
             if (r.method() == boost::beast::http::verb::head &&
                 (res.result_int() / 100 == 2)) {
@@ -124,27 +118,20 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             }
 
             LOG_INFO() << peer << ": sending response " << res.result_int()
-                        << " " << res.reason() << " -- " << len;
+                       << " " << res.reason() << " -- " << len;
 
             if (get_object::can_handle(*req)) {
                 cache::disk::reader_body data(m_dv);
-                LOG_INFO() << peer << ": add " << buffer.size() << " response header";
+                LOG_INFO() << peer << ": add " << buffer.size()
+                           << " response header";
                 co_await data.put(buffer);
 
-                while (read < len) {
-                    co_await outgoing.consume();
+                co_await cache::async_read(outgoing, data, len);
 
-                    auto r = co_await outgoing.read(len - read);
-                    LOG_INFO() << peer << ": add " << r.size() << " response data";
-                    co_await data.put(r);
-
-                    // r: data
-                    read += r.size();
-                }
-
-                co_await m_mgr.put(cache::disk::object_metadata{ req->object_key() }, data);
-                co_await outgoing.consume();
+                co_await m_mgr.put(
+                    cache::disk::object_metadata{req->object_key()}, data);
             } else {
+                std::size_t read = 0ull;
                 while (read < len) {
                     co_await outgoing.consume();
 

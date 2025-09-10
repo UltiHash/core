@@ -29,12 +29,11 @@ BOOST_AUTO_TEST_CASE(put_and_get_with_metadata) {
     boost::asio::co_spawn(m_ioc, mgr.put(key, rbody), boost::asio::use_future)
         .get();
 
-    auto wbody_opt = mgr.get(key);
-    BOOST_TEST(wbody_opt.has_value());
+    auto writer = mgr.get(key);
+    BOOST_TEST(writer != nullptr);
 
-    auto& wbody = wbody_opt.value();
     auto buf =
-        boost::asio::co_spawn(m_ioc, wbody.get(), boost::asio::use_future)
+        boost::asio::co_spawn(m_ioc, writer->get(), boost::asio::use_future)
             .get();
 
     BOOST_TEST(buf.size() == data.size());
@@ -67,8 +66,8 @@ BOOST_AUTO_TEST_CASE(eviction_test) {
             .get();
     }
 
-    auto wbody_opt = mgr.get(keys.front());
-    BOOST_TEST(!wbody_opt.has_value());
+    auto writer = mgr.get(keys.front());
+    BOOST_TEST(writer == nullptr);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
