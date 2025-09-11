@@ -85,11 +85,11 @@ template <typename T> coro<void> async_write(ep::http::stream& s, T& t) {
     }();
 
     if constexpr (T::support_double_buffer::value) {
-        std::span<const char> data = co_await writer.get();
-        do {
+        auto data = co_await writer.get();
+        while (!data.empty()) {
             auto [d, _] = co_await (writer.get() && s.write(data));
             data = d;
-        } while (!data.empty());
+        }
     } else {
         while (true) {
             std::span<const char> data = co_await writer.get();
