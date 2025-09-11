@@ -22,6 +22,7 @@ struct config {
     std::size_t length;
     std::optional<std::string> output_file;
     bool no_output = false;
+    std::size_t jobs = 1;
 
     std::string file;
 
@@ -50,6 +51,7 @@ std::optional<::config> read_config(int argc, char** argv) {
 
     auto* sub_write = app.add_subcommand("write", "write a buffer");
     sub_write->add_option("file", rv.file, "read buffer from file");
+    sub_write->add_option("-j,--jobs", rv.jobs, "number of jobs")->default_val(rv.jobs);
 
     uh::cluster::configure(app, rv.log_level);
 
@@ -65,6 +67,7 @@ std::optional<::config> read_config(int argc, char** argv) {
         rv.cmd = ::config::command::read;
     } else if (sub_write->parsed()) {
         rv.cmd = ::config::command::write;
+        std::cout << "write\n";
     }
 
     return rv;
@@ -114,11 +117,9 @@ uh::cluster::coro<void> read_addr(uh::cluster::storage_interface& svc,
     }
 }
 
-uh::cluster::coro<void> write_file(uh::cluster::storage_interface& svc,
-                                   const std::string& file) {
-    auto buffer = read_file(file);
-
-    timer t;
+uh::cluster::coro<void> partial_write(uh::cluster::storage_interface& svc,
+                                      std::span<const char> buffer)
+{
     auto alloc = co_await svc.allocate(buffer.size());
 
     std::size_t first_stripe = alloc.offset / DEFAULT_PAGE_SIZE;
@@ -131,18 +132,42 @@ uh::cluster::coro<void> write_file(uh::cluster::storage_interface& svc,
         refcounts.emplace_back(stripe_id, 1);
     }
 
+    std::cout << "uploading " << buffer.size() << " to " << alloc.offset << "\n";
     co_await svc.write(alloc, {buffer}, refcounts);
-    address addr;
-    addr.push({alloc.offset, buffer.size()});
+}
 
+uh::cluster::coro<void> write_file(
+        boost::asio::io_context& executor,
+        uh::cluster::storage_interface& svc,
+        const std::string& file,
+        std::size_t jobs) {
+    auto buffer = read_file(file);
+
+    if (buffer.size() % jobs != 0) {
+        throw std::runtime_error("not a multiple of jobs");
+    }
+
+    timer t;
+
+    std::list<std::future<void>> futures;
+
+    std::size_t chunk_size = buffer.size() / jobs;
+    for (unsigned i = 0; i < jobs; ++i) {
+        futures.push_back(boost::asio::co_spawn(executor, partial_write(svc, { buffer.data() + i * chunk_size, chunk_size } ), boost::asio::use_future));
+    }
+
+    std::cout << "waiting for futures\n";
+    for (auto& f : futures) { f.get(); }
     auto time = t.passed();
 
     auto mb = buffer.size() / MEBI_BYTE;
 
-    std::cout << "wrote " << buffer.size() << " bytes from file '" << file
-              << "' to address " << addr.to_string() << "\n";
+    std::cout << "wrote " << buffer.size() << " bytes from file '" << file << "'\n";
     std::cout << "throughput: " << (mb / time.count()) << " MB/s\n";
+    co_return;
 }
+
+using namespace std::chrono_literals;
 
 int main(int argc, char** argv) {
     try {
@@ -158,8 +183,21 @@ int main(int argc, char** argv) {
             }
         };
 
+        auto work = boost::asio::make_work_guard(executor);
+        std::thread t([&]() {
+            std::cout << "running executor\n";
+            executor.run(); } );
+        std::thread t2([&]() {
+            std::cout << "running executor\n";
+            executor.run(); } );
+        std::thread t3([&]() {
+            std::cout << "running executor\n";
+            executor.run(); } );
+
+        std::cout << "connection\n";
         uh::cluster::remote_storage storage(
             uh::cluster::client(executor, cfg->hostname, cfg->port, 1));
+        std::cout << "connection done\n";
 
         switch (cfg->cmd) {
         case ::config::command::read:
@@ -170,7 +208,8 @@ int main(int argc, char** argv) {
                                   handler);
             break;
         case ::config::command::write:
-            boost::asio::co_spawn(executor, write_file(storage, cfg->file),
+            std::cout << "running write\n";
+            boost::asio::co_spawn(executor, write_file(executor, storage, cfg->file, cfg->jobs),
                                   handler);
             break;
 
@@ -178,7 +217,10 @@ int main(int argc, char** argv) {
             throw std::runtime_error("unsupported command");
         }
 
-        executor.run();
+        work.reset();
+        t.join();
+        t2.join();
+        t3.join();
 
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << "\n";

@@ -17,7 +17,7 @@ class local_read_handle : public uh::cluster::ep::http::body {
 public:
     local_read_handle(storage::global::global_data_view& storage,
                       directory::object_lock&& obj,
-                      std::size_t buffer_size = 32 * MEBI_BYTE)
+                      std::size_t buffer_size = 64 * MEBI_BYTE)
         : m_storage(storage),
           m_obj(std::move(obj)),
           m_buffer(buffer_size),
