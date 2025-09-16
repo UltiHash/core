@@ -47,10 +47,12 @@ traced_awaitable<void, Executor>
 operator&&(traced_awaitable<void, Executor> t,
            traced_awaitable<void, Executor> u) {
     auto ex = co_await this_coro::executor;
+    auto context = co_await this_coro::context;
 
     auto [order, ex0, ex1] =
-        co_await make_parallel_group(co_spawn(ex, std::move(t), deferred),
-                                     co_spawn(ex, std::move(u), deferred))
+        co_await make_parallel_group(
+            co_spawn(ex, std::move(t.continue_trace(context)), deferred),
+            co_spawn(ex, std::move(u.continue_trace(context)), deferred))
             .async_wait(wait_for_one_error(), deferred);
 
     if (ex0 && ex1)
@@ -71,11 +73,15 @@ template <typename U, typename Executor>
 traced_awaitable<U, Executor> operator&&(traced_awaitable<void, Executor> t,
                                          traced_awaitable<U, Executor> u) {
     auto ex = co_await this_coro::executor;
+    auto context = co_await this_coro::context;
 
     auto [order, ex0, ex1, r1] =
         co_await make_parallel_group(
-            co_spawn(ex, std::move(t), deferred),
-            co_spawn(ex, detail::awaitable_wrap(std::move(u)), deferred))
+            co_spawn(ex, std::move(t.continue_trace(context)), deferred),
+            co_spawn(
+                ex,
+                detail::awaitable_wrap(std::move(u.continue_trace(context))),
+                deferred))
             .async_wait(wait_for_one_error(), deferred);
 
     if (ex0 && ex1)
@@ -96,11 +102,15 @@ template <typename T, typename Executor>
 traced_awaitable<T, Executor> operator&&(traced_awaitable<T, Executor> t,
                                          traced_awaitable<void, Executor> u) {
     auto ex = co_await this_coro::executor;
+    auto context = co_await this_coro::context;
 
     auto [order, ex0, r0, ex1] =
         co_await make_parallel_group(
-            co_spawn(ex, detail::awaitable_wrap(std::move(t)), deferred),
-            co_spawn(ex, std::move(u), deferred))
+            co_spawn(
+                ex,
+                detail::awaitable_wrap(std::move(t.continue_trace(context))),
+                deferred),
+            co_spawn(ex, std::move(u.continue_trace(context)), deferred))
             .async_wait(wait_for_one_error(), deferred);
 
     if (ex0 && ex1)
@@ -121,11 +131,18 @@ template <typename T, typename U, typename Executor>
 traced_awaitable<std::tuple<T, U>, Executor>
 operator&&(traced_awaitable<T, Executor> t, traced_awaitable<U, Executor> u) {
     auto ex = co_await this_coro::executor;
+    auto context = co_await this_coro::context;
 
     auto [order, ex0, r0, ex1, r1] =
         co_await make_parallel_group(
-            co_spawn(ex, detail::awaitable_wrap(std::move(t)), deferred),
-            co_spawn(ex, detail::awaitable_wrap(std::move(u)), deferred))
+            co_spawn(
+                ex,
+                detail::awaitable_wrap(std::move(t.continue_trace(context))),
+                deferred),
+            co_spawn(
+                ex,
+                detail::awaitable_wrap(std::move(u.continue_trace(context))),
+                deferred))
             .async_wait(wait_for_one_error(), deferred);
 
     if (ex0 && ex1)
@@ -148,11 +165,15 @@ traced_awaitable<std::tuple<T..., std::monostate>, Executor>
 operator&&(traced_awaitable<std::tuple<T...>, Executor> t,
            traced_awaitable<void, Executor> u) {
     auto ex = co_await this_coro::executor;
+    auto context = co_await this_coro::context;
 
     auto [order, ex0, r0, ex1, r1] =
         co_await make_parallel_group(
-            co_spawn(ex, detail::awaitable_wrap(std::move(t)), deferred),
-            co_spawn(ex, std::move(u), deferred))
+            co_spawn(
+                ex,
+                detail::awaitable_wrap(std::move(t.continue_trace(context))),
+                deferred),
+            co_spawn(ex, std::move(u.continue_trace(context)), deferred))
             .async_wait(wait_for_one_error(), deferred);
 
     if (ex0 && ex1)
@@ -174,11 +195,18 @@ traced_awaitable<std::tuple<T..., U>, Executor>
 operator&&(traced_awaitable<std::tuple<T...>, Executor> t,
            traced_awaitable<U, Executor> u) {
     auto ex = co_await this_coro::executor;
+    auto context = co_await this_coro::context;
 
     auto [order, ex0, r0, ex1, r1] =
         co_await make_parallel_group(
-            co_spawn(ex, detail::awaitable_wrap(std::move(t)), deferred),
-            co_spawn(ex, detail::awaitable_wrap(std::move(u)), deferred))
+            co_spawn(
+                ex,
+                detail::awaitable_wrap(std::move(t.continue_trace(context))),
+                deferred),
+            co_spawn(
+                ex,
+                detail::awaitable_wrap(std::move(u.continue_trace(context))),
+                deferred))
             .async_wait(wait_for_one_error(), deferred);
 
     if (ex0 && ex1)
@@ -202,10 +230,12 @@ traced_awaitable<std::variant<std::monostate, std::monostate>, Executor>
 operator||(traced_awaitable<void, Executor> t,
            traced_awaitable<void, Executor> u) {
     auto ex = co_await this_coro::executor;
+    auto context = co_await this_coro::context;
 
     auto [order, ex0, ex1] =
-        co_await make_parallel_group(co_spawn(ex, std::move(t), deferred),
-                                     co_spawn(ex, std::move(u), deferred))
+        co_await make_parallel_group(
+            co_spawn(ex, std::move(t.continue_trace(context)), deferred),
+            co_spawn(ex, std::move(u.continue_trace(context)), deferred))
             .async_wait(wait_for_one_success(), deferred);
 
     if (order[0] == 0) {
@@ -237,11 +267,15 @@ traced_awaitable<std::variant<std::monostate, U>, Executor>
 operator||(traced_awaitable<void, Executor> t,
            traced_awaitable<U, Executor> u) {
     auto ex = co_await this_coro::executor;
+    auto context = co_await this_coro::context;
 
     auto [order, ex0, ex1, r1] =
         co_await make_parallel_group(
-            co_spawn(ex, std::move(t), deferred),
-            co_spawn(ex, detail::awaitable_wrap(std::move(u)), deferred))
+            co_spawn(ex, std::move(t.continue_trace(context)), deferred),
+            co_spawn(
+                ex,
+                detail::awaitable_wrap(std::move(u.continue_trace(context))),
+                deferred))
             .async_wait(wait_for_one_success(), deferred);
 
     if (order[0] == 0) {
@@ -273,11 +307,15 @@ traced_awaitable<std::variant<T, std::monostate>, Executor>
 operator||(traced_awaitable<T, Executor> t,
            traced_awaitable<void, Executor> u) {
     auto ex = co_await this_coro::executor;
+    auto context = co_await this_coro::context;
 
     auto [order, ex0, r0, ex1] =
         co_await make_parallel_group(
-            co_spawn(ex, detail::awaitable_wrap(std::move(t)), deferred),
-            co_spawn(ex, std::move(u), deferred))
+            co_spawn(
+                ex,
+                detail::awaitable_wrap(std::move(t.continue_trace(context))),
+                deferred),
+            co_spawn(ex, std::move(u.continue_trace(context)), deferred))
             .async_wait(wait_for_one_success(), deferred);
 
     if (order[0] == 0) {
@@ -308,11 +346,18 @@ template <typename T, typename U, typename Executor>
 traced_awaitable<std::variant<T, U>, Executor>
 operator||(traced_awaitable<T, Executor> t, traced_awaitable<U, Executor> u) {
     auto ex = co_await this_coro::executor;
+    auto context = co_await this_coro::context;
 
     auto [order, ex0, r0, ex1, r1] =
         co_await make_parallel_group(
-            co_spawn(ex, detail::awaitable_wrap(std::move(t)), deferred),
-            co_spawn(ex, detail::awaitable_wrap(std::move(u)), deferred))
+            co_spawn(
+                ex,
+                detail::awaitable_wrap(std::move(t.continue_trace(context))),
+                deferred),
+            co_spawn(
+                ex,
+                detail::awaitable_wrap(std::move(u.continue_trace(context))),
+                deferred))
             .async_wait(wait_for_one_success(), deferred);
 
     if (order[0] == 0) {
@@ -365,11 +410,15 @@ traced_awaitable<std::variant<T..., std::monostate>, Executor>
 operator||(traced_awaitable<std::variant<T...>, Executor> t,
            traced_awaitable<void, Executor> u) {
     auto ex = co_await this_coro::executor;
+    auto context = co_await this_coro::context;
 
     auto [order, ex0, r0, ex1] =
         co_await make_parallel_group(
-            co_spawn(ex, detail::awaitable_wrap(std::move(t)), deferred),
-            co_spawn(ex, std::move(u), deferred))
+            co_spawn(
+                ex,
+                detail::awaitable_wrap(std::move(t.continue_trace(context))),
+                deferred),
+            co_spawn(ex, std::move(u.continue_trace(context)), deferred))
             .async_wait(wait_for_one_success(), deferred);
 
     using widen = detail::widen_variant<T..., std::monostate>;
@@ -402,11 +451,18 @@ traced_awaitable<std::variant<T..., U>, Executor>
 operator||(traced_awaitable<std::variant<T...>, Executor> t,
            traced_awaitable<U, Executor> u) {
     auto ex = co_await this_coro::executor;
+    auto context = co_await this_coro::context;
 
     auto [order, ex0, r0, ex1, r1] =
         co_await make_parallel_group(
-            co_spawn(ex, detail::awaitable_wrap(std::move(t)), deferred),
-            co_spawn(ex, detail::awaitable_wrap(std::move(u)), deferred))
+            co_spawn(
+                ex,
+                detail::awaitable_wrap(std::move(t.continue_trace(context))),
+                deferred),
+            co_spawn(
+                ex,
+                detail::awaitable_wrap(std::move(u.continue_trace(context))),
+                deferred))
             .async_wait(wait_for_one_success(), deferred);
 
     using widen = detail::widen_variant<T..., U>;
