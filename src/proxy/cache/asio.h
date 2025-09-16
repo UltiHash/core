@@ -1,10 +1,10 @@
 #pragma once
 
-#include <boost/asio/experimental/awaitable_operators.hpp>
 #include <common/types/common_types.h>
 #include <concepts>
 #include <entrypoint/http/body.h>
 #include <entrypoint/http/stream.h>
+#include <proxy/cache/awaitable_operators.h>
 
 using namespace boost::asio::experimental::awaitable_operators;
 
