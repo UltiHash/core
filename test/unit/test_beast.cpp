@@ -333,3 +333,170 @@ BOOST_AUTO_TEST_CASE(supports_vector_of_const_buffers) {
 BOOST_AUTO_TEST_SUITE_END()
 
 } // namespace uh::cluster
+
+using namespace boost::beast::http;
+#include "double_buffer_body.h"
+#include <boost/beast/http/error.hpp>
+
+/** Relay an HTTP message.
+
+    This function efficiently relays an HTTP message from a downstream
+    client to an upstream server, or from an upstream server to a
+    downstream client. After the message header is read from the input,
+    a user provided transformation function is invoked which may change
+    the contents of the header before forwarding to the output. This may
+    be used to adjust fields such as Server, or proxy fields.
+
+    @param output The stream to write to.
+
+    @param input The stream to read from.
+
+    @param buffer The buffer to use for the input.
+
+    @param transform The header transformation to apply. The function will
+    be called with this signature:
+    @code
+        template<class Body>
+        void transform(message<
+            isRequest, Body, Fields>&,  // The message to transform
+            error_code&);               // Set to the error, if any
+    @endcode
+
+    @param ec Set to the error if any occurred.
+
+    @tparam isRequest `true` to relay a request.
+
+    @tparam Fields The type of fields to use for the message.
+*/
+template <bool isRequest, class SyncWriteStream, class SyncReadStream,
+          class DynamicBuffer, class Transform>
+void relay(SyncWriteStream& output, SyncReadStream& input,
+           DynamicBuffer& buffer, boost::system::error_code& ec,
+           Transform&& transform) {
+    static_assert(is_sync_write_stream<SyncWriteStream>::value,
+                  "SyncWriteStream requirements not met");
+
+    static_assert(is_sync_read_stream<SyncReadStream>::value,
+                  "SyncReadStream requirements not met");
+
+    // A small buffer for relaying the body piece by piece
+    constexpr std::size_t buf_size = 2048;
+    char buf[2][buf_size];
+    char* rbuf = buf[0];
+    (void)rbuf;
+    char* wbuf = buf[1];
+
+    // Create a parser with a buffer body to read from the input.
+    parser<isRequest, double_buffer_body> p;
+
+    // Create a serializer from the message contained in the parser.
+    serializer<isRequest, double_buffer_body, fields> sr{p.get()};
+
+    // Read just the header from the input
+    read_header(input, buffer, p, ec);
+    if (ec)
+        return;
+
+    // Apply the caller's header transformation
+    transform(p.get(), ec);
+    if (ec)
+        return;
+
+    // Send the transformed message to the output
+    write_header(output, sr, ec);
+    if (ec)
+        return;
+
+    // Loop over the input and transfer it to the output
+    do {
+        if (!p.is_done()) {
+            // Set up the body for writing into our small buffer
+            p.get().body().rdata = wbuf;
+            p.get().body().rsize = buf_size;
+
+            // Read as much as we can
+            read(input, buffer, p, ec);
+
+            // This error is returned when double_buffer_body uses up the buffer
+            if (ec == http::error::need_buffer)
+                ec = {};
+            if (ec)
+                return;
+
+            // Set up the body for reading.
+            // This is how much was parsed:
+            p.get().body().wsize = buf_size - p.get().body().rsize;
+            p.get().body().wdata = wbuf;
+            p.get().body().more = !p.is_done();
+        } else {
+            p.get().body().wdata = nullptr;
+            p.get().body().wsize = 0;
+        }
+
+        // Write everything in the buffer (which might be empty)
+        write(output, sr, ec);
+
+        // This error is returned when double_buffer_body uses up the buffer
+        if (ec == http::error::need_buffer)
+            ec = {};
+        if (ec)
+            return;
+    } while (!p.is_done() && !sr.is_done());
+}
+
+#include <random>
+
+BOOST_AUTO_TEST_CASE(supports_buffer_body_with_socket) {
+    using namespace boost::asio;
+    using namespace boost::beast::http;
+
+    io_context ioc;
+    ip::tcp::acceptor acceptor(ioc, ip::tcp::endpoint(ip::tcp::v4(), 0));
+    ip::tcp::endpoint endpoint = acceptor.local_endpoint();
+
+    ip::tcp::socket server_socket(ioc);
+    ip::tcp::socket client_socket(ioc);
+
+    std::thread server_thread([&] { acceptor.accept(server_socket); });
+
+    client_socket.connect(endpoint);
+    server_thread.join();
+
+    std::vector<char> body(8 * 1024);
+    std::mt19937 rng{std::random_device{}()};
+    std::uniform_int_distribution<int> dist(0, 255);
+    for (auto& c : body)
+        c = static_cast<char>(dist(rng));
+
+    std::string request = "POST /upload HTTP/1.1\r\n"
+                          "Host: example.com\r\n"
+                          "User-Agent: test\r\n"
+                          "Content-Length: " +
+                          std::to_string(body.size()) + "\r\n\r\n";
+
+    write(client_socket, buffer(request));
+    write(client_socket, buffer(body));
+
+    flat_buffer b;
+    boost::system::error_code ec;
+    auto transform = [](auto&, boost::system::error_code&) {};
+
+    relay<true>(server_socket, server_socket, b, ec, transform);
+
+    BOOST_TEST(!ec);
+
+    std::vector<char> recv_buf(16 * 1024);
+    size_t n = client_socket.read_some(buffer(recv_buf), ec);
+    std::string output_str(recv_buf.data(), n);
+
+    BOOST_CHECK_NE(output_str.find("POST /upload HTTP/1.1"), std::string::npos);
+    BOOST_CHECK_NE(output_str.find("Host: example.com"), std::string::npos);
+    BOOST_CHECK_NE(output_str.find("User-Agent: test"), std::string::npos);
+
+    // body 검증
+    auto body_pos = output_str.find("\r\n\r\n");
+    BOOST_REQUIRE(body_pos != std::string::npos);
+    body_pos += 4;
+    std::string_view received_body(&recv_buf[body_pos], n - body_pos);
+    BOOST_TEST(received_body == std::string_view(body.data(), body.size()));
+}
