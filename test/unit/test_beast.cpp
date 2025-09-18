@@ -398,9 +398,6 @@ coro<void> relay(AsyncWriteStream& output, AsyncReadStream& input,
     char* wbuf = _buf[1];
 
     auto read = [&](char* buf) -> coro<std::size_t> {
-        if (p.is_done())
-            co_return 0;
-
         p.get().body().rdata = buf;
         p.get().body().rsize = buf_size;
         co_await ignore_need_buffer(
