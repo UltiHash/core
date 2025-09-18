@@ -1,10 +1,12 @@
 #pragma once
 
+#include <boost/beast/http.hpp>
 #include <common/types/common_types.h>
 #include <concepts>
 #include <entrypoint/http/body.h>
 #include <entrypoint/http/stream.h>
 #include <proxy/cache/awaitable_operators.h>
+#include <proxy/cache/double_buffer_body.h>
 
 using namespace boost::asio::experimental::awaitable_operators;
 
@@ -96,6 +98,52 @@ template <typename T> coro<void> async_write(ep::http::stream& s, T& t) {
                 break;
             co_await s.write(data);
         }
+    }
+}
+
+template <typename Awaitable> coro<void> ignore_need_buffer(Awaitable&& op) {
+    boost::system::error_code ec;
+    co_await op(boost::asio::redirect_error(boost::asio::use_awaitable, ec));
+    if (ec && ec != boost::beast::http::error::need_buffer) {
+        throw boost::system::system_error(ec);
+    }
+}
+
+template <bool isRequest, class AsyncWriteStream, class AsyncReadStream,
+          class DynamicBuffer, class Parser, class Serializer>
+coro<void> relay(AsyncWriteStream& output, AsyncReadStream& input,
+                 DynamicBuffer& buffer, Parser& p, Serializer& sr) {
+    static_assert(boost::beast::is_async_write_stream<AsyncWriteStream>::value,
+                  "AsyncWriteStream requirements not met");
+    static_assert(boost::beast::is_async_read_stream<AsyncReadStream>::value,
+                  "AsyncReadStream requirements not met");
+
+    constexpr std::size_t buf_size = 2_KiB;
+    char _buf[2][buf_size];
+    char* rbuf = _buf[0];
+    char* wbuf = _buf[1];
+
+    auto read = [&](char* buf) -> coro<std::size_t> {
+        p.get().body().rdata = buf;
+        p.get().body().rsize = buf_size;
+        co_await ignore_need_buffer(
+            [&](auto token) { return async_read(input, buffer, p, token); });
+
+        co_return buf_size - p.get().body().rsize;
+    };
+
+    auto write = [&](char* buf, std::size_t size) -> coro<void> {
+        p.get().body().more = size != 0;
+        p.get().body().wdata = buf;
+        p.get().body().wsize = size;
+        co_await ignore_need_buffer(
+            [&](auto token) { return async_write(output, sr, token); });
+    };
+
+    for (auto bytes_read = co_await read(rbuf);
+         !p.is_done() || !sr.is_done();) {
+        std::swap(rbuf, wbuf);
+        bytes_read = co_await (read(rbuf) && write(wbuf, bytes_read));
     }
 }
 

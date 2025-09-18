@@ -335,96 +335,11 @@ BOOST_AUTO_TEST_SUITE_END()
 } // namespace uh::cluster
 
 using namespace boost::beast::http;
-#include "double_buffer_body.h"
-#include <boost/beast/http/error.hpp>
-#include <common/types/common_types.h>
-#include <common/utils/common.h>
-#include <proxy/cache/awaitable_operators.h>
-
-using namespace boost::asio::experimental::awaitable_operators;
-
-namespace uh::cluster {
-
-template <typename Awaitable> coro<void> ignore_need_buffer(Awaitable&& op) {
-    boost::system::error_code ec;
-    co_await op(boost::asio::redirect_error(boost::asio::use_awaitable, ec));
-    if (ec && ec != boost::beast::http::error::need_buffer) {
-        throw boost::system::system_error(ec);
-    }
-}
-
-/** Relay an HTTP message.
-
-    This function efficiently relays an HTTP message from a downstream
-    client to an upstream server, or from an upstream server to a
-    downstream client. After the message header is read from the input,
-    a user provided transformation function is invoked which may change
-    the contents of the header before forwarding to the output. This may
-    be used to adjust fields such as Server, or proxy fields.
-
-    @param output The stream to write to.
-
-    @param input The stream to read from.
-
-    @param buffer The buffer to use for the input.
-
-    @param transform The header transformation to apply. The function will
-    be called with this signature:
-    @code
-        template<class Body>
-        void transform(message<
-            isRequest, Body, Fields>&,  // The message to transform
-            error_code&);               // Set to the error, if any
-    @endcode
-
-    @param ec Set to the error if any occurred.
-
-    @tparam isRequest `true` to relay a request.
-
-    @tparam Fields The type of fields to use for the message.
-*/
-template <bool isRequest, class AsyncWriteStream, class AsyncReadStream,
-          class DynamicBuffer, class Parser, class Serializer>
-coro<void> relay(AsyncWriteStream& output, AsyncReadStream& input,
-                 DynamicBuffer& buffer, Parser& p, Serializer& sr) {
-    static_assert(boost::beast::is_async_write_stream<AsyncWriteStream>::value,
-                  "AsyncWriteStream requirements not met");
-    static_assert(boost::beast::is_async_read_stream<AsyncReadStream>::value,
-                  "AsyncReadStream requirements not met");
-
-    constexpr std::size_t buf_size = 2_KiB;
-    char _buf[2][buf_size];
-    char* rbuf = _buf[0];
-    char* wbuf = _buf[1];
-
-    auto read = [&](char* buf) -> coro<std::size_t> {
-        p.get().body().rdata = buf;
-        p.get().body().rsize = buf_size;
-        co_await ignore_need_buffer(
-            [&](auto token) { return async_read(input, buffer, p, token); });
-
-        co_return buf_size - p.get().body().rsize;
-    };
-
-    auto write = [&](char* buf, std::size_t size) -> coro<void> {
-        p.get().body().more = size != 0;
-        p.get().body().wdata = buf;
-        p.get().body().wsize = size;
-        co_await ignore_need_buffer(
-            [&](auto token) { return async_write(output, sr, token); });
-    };
-
-    for (auto bytes_read = co_await read(rbuf);
-         !p.is_done() || !sr.is_done();) {
-        std::swap(rbuf, wbuf);
-        bytes_read = co_await (read(rbuf) && write(wbuf, bytes_read));
-    }
-}
-} // namespace uh::cluster
+#include <proxy/cache/asio.h>
 
 #include <random>
 
-namespace uh::cluster {
+namespace uh::cluster::proxy::cache {
 BOOST_AUTO_TEST_CASE(supports_buffer_body_with_socket) {
     using namespace boost::asio;
     using namespace boost::beast::http;
@@ -441,7 +356,7 @@ BOOST_AUTO_TEST_CASE(supports_buffer_body_with_socket) {
     client_socket.connect(endpoint);
     server_thread.join();
 
-    std::vector<char> body(8 * 1024);
+    std::vector<char> body(8_KiB + 17);
     std::mt19937 rng{std::random_device{}()};
     std::uniform_int_distribution<int> dist(0, 255);
     for (auto& c : body)
@@ -497,4 +412,4 @@ BOOST_AUTO_TEST_CASE(supports_buffer_body_with_socket) {
     std::string_view received_body(&recv_buf[body_pos], n - body_pos);
     BOOST_TEST(received_body == std::string_view(body.data(), body.size()));
 }
-} // namespace uh::cluster
+} // namespace uh::cluster::proxy::cache
