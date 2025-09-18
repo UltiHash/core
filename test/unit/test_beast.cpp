@@ -379,15 +379,14 @@ template <typename Awaitable> coro<void> ignore_need_buffer(Awaitable&& op) {
 
     @tparam Fields The type of fields to use for the message.
 */
-template <bool isRequest, class SyncWriteStream, class SyncReadStream,
+template <bool isRequest, class AsyncWriteStream, class AsyncReadStream,
           class DynamicBuffer, class Transform>
-coro<void> relay(SyncWriteStream& output, SyncReadStream& input,
+coro<void> relay(AsyncWriteStream& output, AsyncReadStream& input,
                  DynamicBuffer& buffer, Transform&& transform) {
-    static_assert(is_sync_write_stream<SyncWriteStream>::value,
-                  "SyncWriteStream requirements not met");
-
-    static_assert(is_sync_read_stream<SyncReadStream>::value,
-                  "SyncReadStream requirements not met");
+    static_assert(boost::beast::is_async_write_stream<AsyncWriteStream>::value,
+                  "AsyncWriteStream requirements not met");
+    static_assert(boost::beast::is_async_read_stream<AsyncReadStream>::value,
+                  "AsyncReadStream requirements not met");
 
     // A small buffer for relaying the body piece by piece
     constexpr std::size_t buf_size = 2048;
