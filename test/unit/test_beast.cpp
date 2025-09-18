@@ -384,9 +384,9 @@ template <typename Awaitable> coro<void> ignore_need_buffer(Awaitable&& op) {
     @tparam Fields The type of fields to use for the message.
 */
 template <bool isRequest, class AsyncWriteStream, class AsyncReadStream,
-          class DynamicBuffer, class Transform>
+          class DynamicBuffer, class Parser, class Serializer>
 coro<void> relay(AsyncWriteStream& output, AsyncReadStream& input,
-                 DynamicBuffer& buffer, Transform&& transform) {
+                 DynamicBuffer& buffer, Parser& p, Serializer& sr) {
     static_assert(boost::beast::is_async_write_stream<AsyncWriteStream>::value,
                   "AsyncWriteStream requirements not met");
     static_assert(boost::beast::is_async_read_stream<AsyncReadStream>::value,
@@ -396,13 +396,6 @@ coro<void> relay(AsyncWriteStream& output, AsyncReadStream& input,
     char _buf[2][buf_size];
     char* rbuf = _buf[0];
     char* wbuf = _buf[1];
-
-    parser<isRequest, double_buffer_body> p;
-    serializer<isRequest, double_buffer_body, fields> sr{p.get()};
-
-    co_await async_read_header(input, buffer, p);
-    transform(p.get());
-    co_await async_write_header(output, sr);
 
     auto read = [&](char* buf) -> coro<std::size_t> {
         if (p.is_done())
@@ -471,7 +464,21 @@ BOOST_AUTO_TEST_CASE(supports_buffer_body_with_socket) {
 
     auto work_guard = boost::asio::make_work_guard(ioc.get_executor());
     auto thread = std::thread([&ioc] { ioc.run(); });
-    co_spawn(ioc, relay<true>(server_socket, server_socket, b, transform),
+
+    parser<true, double_buffer_body> p;
+    serializer<true, double_buffer_body, fields> sr{p.get()};
+
+    co_spawn(
+        ioc,
+        [&]() -> coro<void> {
+            co_await async_read_header(server_socket, b, p);
+            transform(p.get());
+            co_await async_write_header(server_socket, sr);
+        },
+        boost::asio::use_future)
+        .get();
+
+    co_spawn(ioc, relay<true>(server_socket, server_socket, b, p, sr),
              boost::asio::use_future)
         .get();
 
