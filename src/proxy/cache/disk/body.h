@@ -53,8 +53,7 @@ public:
     using support_double_buffer = std::false_type;
 
     writer_body(storage::data_view& storage,
-                std::shared_ptr<object_handle> objh,
-                std::size_t buffer_size = 32 * MEBI_BYTE)
+                std::shared_ptr<object_handle> objh, std::size_t buffer_size)
         : m_storage(storage),
           m_objh{std::move(objh)},
           m_buffer(buffer_size) {}
@@ -116,7 +115,7 @@ public:
 
     double_buffered_writer_body(storage::data_view& storage,
                                 std::shared_ptr<object_handle> objh,
-                                std::size_t buffer_size = 32 * MEBI_BYTE)
+                                std::size_t buffer_size = 16_MiB)
         : writer_body(storage, objh, buffer_size),
           m_buffer2(buffer_size),
           m_active(&m_buffer),
