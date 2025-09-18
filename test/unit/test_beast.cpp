@@ -338,6 +338,7 @@ using namespace boost::beast::http;
 #include "double_buffer_body.h"
 #include <boost/beast/http/error.hpp>
 #include <common/types/common_types.h>
+#include <common/utils/common.h>
 #include <proxy/cache/awaitable_operators.h>
 
 using namespace boost::asio::experimental::awaitable_operators;
@@ -391,61 +392,43 @@ coro<void> relay(AsyncWriteStream& output, AsyncReadStream& input,
     static_assert(boost::beast::is_async_read_stream<AsyncReadStream>::value,
                   "AsyncReadStream requirements not met");
 
-    // A small buffer for relaying the body piece by piece
-    constexpr std::size_t buf_size = 2048;
+    constexpr std::size_t buf_size = 2_KiB;
     char _buf[2][buf_size];
     char* rbuf = _buf[0];
-    (void)rbuf;
     char* wbuf = _buf[1];
 
-    // Create a parser with a buffer body to read from the input.
     parser<isRequest, double_buffer_body> p;
-
-    // Create a serializer from the message contained in the parser.
     serializer<isRequest, double_buffer_body, fields> sr{p.get()};
 
-    // Read just the header from the input
     co_await async_read_header(input, buffer, p);
-
-    // Apply the caller's header transformation
     transform(p.get());
-
-    // Send the transformed message to the output
     co_await async_write_header(output, sr);
 
-    // Loop over the input and transfer it to the output
-    auto read = [&](char* buf) -> coro<bool> {
-        if (p.is_done()) {
-            co_return false;
-        }
+    auto read = [&](char* buf) -> coro<std::size_t> {
+        if (p.is_done())
+            co_return 0;
 
         p.get().body().rdata = buf;
         p.get().body().rsize = buf_size;
-
-        // Read as much as we can
         co_await ignore_need_buffer(
             [&](auto token) { return async_read(input, buffer, p, token); });
 
-        co_return true;
+        co_return buf_size - p.get().body().rsize;
     };
 
-    auto write = [&](bool more, char* buf, std::size_t size) -> coro<void> {
-        p.get().body().more = more;
-        p.get().body().wdata = more ? buf : nullptr;
-        p.get().body().wsize = more ? size : 0;
+    auto write = [&](char* buf, std::size_t size) -> coro<void> {
+        p.get().body().more = size != 0;
+        p.get().body().wdata = buf;
+        p.get().body().wsize = size;
         co_await ignore_need_buffer(
             [&](auto token) { return async_write(output, sr, token); });
     };
 
-    // for (auto more = co_await read(rbuf); !p.is_done() && !sr.is_done();) {
-    //     std::swap(rbuf, wbuf);
-    //     co_await (read(rbuf) &&
-    //               write(more, wbuf, buf_size - p.get().body().rsize));
-    // }
-    do {
-        auto more = co_await read(wbuf);
-        co_await write(more, wbuf, buf_size - p.get().body().rsize);
-    } while (!p.is_done() && !sr.is_done());
+    for (auto bytes_read = co_await read(rbuf);
+         !p.is_done() || !sr.is_done();) {
+        std::swap(rbuf, wbuf);
+        bytes_read = co_await (read(rbuf) && write(wbuf, bytes_read));
+    }
 }
 } // namespace uh::cluster
 
