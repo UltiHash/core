@@ -337,7 +337,9 @@ BOOST_AUTO_TEST_SUITE_END()
 using namespace boost::beast::http;
 #include "double_buffer_body.h"
 #include <boost/beast/http/error.hpp>
+#include <common/types/common_types.h>
 
+namespace uh::cluster {
 /** Relay an HTTP message.
 
     This function efficiently relays an HTTP message from a downstream
@@ -370,9 +372,8 @@ using namespace boost::beast::http;
 */
 template <bool isRequest, class SyncWriteStream, class SyncReadStream,
           class DynamicBuffer, class Transform>
-void relay(SyncWriteStream& output, SyncReadStream& input,
-           DynamicBuffer& buffer, boost::system::error_code& ec,
-           Transform&& transform) {
+coro<void> relay(SyncWriteStream& output, SyncReadStream& input,
+                 DynamicBuffer& buffer, Transform&& transform) {
     static_assert(is_sync_write_stream<SyncWriteStream>::value,
                   "SyncWriteStream requirements not met");
 
@@ -393,19 +394,13 @@ void relay(SyncWriteStream& output, SyncReadStream& input,
     serializer<isRequest, double_buffer_body, fields> sr{p.get()};
 
     // Read just the header from the input
-    read_header(input, buffer, p, ec);
-    if (ec)
-        return;
+    co_await async_read_header(input, buffer, p);
 
     // Apply the caller's header transformation
-    transform(p.get(), ec);
-    if (ec)
-        return;
+    transform(p.get());
 
     // Send the transformed message to the output
-    write_header(output, sr, ec);
-    if (ec)
-        return;
+    co_await async_write_header(output, sr);
 
     // Loop over the input and transfer it to the output
     do {
@@ -415,13 +410,15 @@ void relay(SyncWriteStream& output, SyncReadStream& input,
             p.get().body().rsize = buf_size;
 
             // Read as much as we can
-            read(input, buffer, p, ec);
+            try {
+                co_await async_read(input, buffer, p);
 
-            // This error is returned when double_buffer_body uses up the buffer
-            if (ec == http::error::need_buffer)
-                ec = {};
-            if (ec)
-                return;
+            } catch (const boost::system::system_error& e) {
+                if (e.code() != http::error::need_buffer) {
+                    std::cerr << "Error during read: " << e.what() << std::endl;
+                    throw;
+                }
+            }
 
             // Set up the body for reading.
             // This is how much was parsed:
@@ -434,18 +431,22 @@ void relay(SyncWriteStream& output, SyncReadStream& input,
         }
 
         // Write everything in the buffer (which might be empty)
-        write(output, sr, ec);
+        try {
+            co_await async_write(output, sr);
 
-        // This error is returned when double_buffer_body uses up the buffer
-        if (ec == http::error::need_buffer)
-            ec = {};
-        if (ec)
-            return;
+        } catch (const boost::system::system_error& e) {
+            if (e.code() != http::error::need_buffer) {
+                std::cerr << "Error during read: " << e.what() << std::endl;
+                throw;
+            }
+        }
     } while (!p.is_done() && !sr.is_done());
 }
+} // namespace uh::cluster
 
 #include <random>
 
+namespace uh::cluster {
 BOOST_AUTO_TEST_CASE(supports_buffer_body_with_socket) {
     using namespace boost::asio;
     using namespace boost::beast::http;
@@ -478,13 +479,18 @@ BOOST_AUTO_TEST_CASE(supports_buffer_body_with_socket) {
     write(client_socket, buffer(body));
 
     flat_buffer b;
+    auto transform = [](auto&) {};
+
+    auto work_guard = boost::asio::make_work_guard(ioc.get_executor());
+    auto thread = std::thread([&ioc] { ioc.run(); });
+    co_spawn(ioc, relay<true>(server_socket, server_socket, b, transform),
+             boost::asio::use_future)
+        .get();
+
+    work_guard.reset();
+    thread.join();
+
     boost::system::error_code ec;
-    auto transform = [](auto&, boost::system::error_code&) {};
-
-    relay<true>(server_socket, server_socket, b, ec, transform);
-
-    BOOST_TEST(!ec);
-
     std::vector<char> recv_buf(16 * 1024);
     size_t n = client_socket.read_some(buffer(recv_buf), ec);
     std::string output_str(recv_buf.data(), n);
@@ -493,10 +499,10 @@ BOOST_AUTO_TEST_CASE(supports_buffer_body_with_socket) {
     BOOST_CHECK_NE(output_str.find("Host: example.com"), std::string::npos);
     BOOST_CHECK_NE(output_str.find("User-Agent: test"), std::string::npos);
 
-    // body 검증
     auto body_pos = output_str.find("\r\n\r\n");
     BOOST_REQUIRE(body_pos != std::string::npos);
     body_pos += 4;
     std::string_view received_body(&recv_buf[body_pos], n - body_pos);
     BOOST_TEST(received_body == std::string_view(body.data(), body.size()));
 }
+} // namespace uh::cluster
