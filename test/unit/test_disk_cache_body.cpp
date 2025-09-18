@@ -106,7 +106,7 @@ BOOST_AUTO_TEST_CASE(supports_write) {
     auto objh = std::make_shared<object_handle>(std::move(addr));
 
     BOOST_TEST(objh->data_size() == data.size());
-    double_buffered_writer_body body(data_view, std::move(objh), 16);
+    double_buffered_writer_body body(data_view, std::move(objh));
 
     // Set up TCP sockets
     boost::asio::ip::tcp::acceptor acceptor(m_ioc,
