@@ -340,6 +340,15 @@ using namespace boost::beast::http;
 #include <common/types/common_types.h>
 
 namespace uh::cluster {
+
+template <typename Awaitable> coro<void> ignore_need_buffer(Awaitable&& op) {
+    boost::system::error_code ec;
+    co_await op(boost::asio::redirect_error(boost::asio::use_awaitable, ec));
+    if (ec && ec != boost::beast::http::error::need_buffer) {
+        throw boost::system::system_error(ec);
+    }
+}
+
 /** Relay an HTTP message.
 
     This function efficiently relays an HTTP message from a downstream
@@ -410,15 +419,9 @@ coro<void> relay(SyncWriteStream& output, SyncReadStream& input,
             p.get().body().rsize = buf_size;
 
             // Read as much as we can
-            try {
-                co_await async_read(input, buffer, p);
-
-            } catch (const boost::system::system_error& e) {
-                if (e.code() != http::error::need_buffer) {
-                    std::cerr << "Error during read: " << e.what() << std::endl;
-                    throw;
-                }
-            }
+            co_await ignore_need_buffer([&](auto token) {
+                return async_read(input, buffer, p, token);
+            });
 
             // Set up the body for reading.
             // This is how much was parsed:
@@ -431,15 +434,9 @@ coro<void> relay(SyncWriteStream& output, SyncReadStream& input,
         }
 
         // Write everything in the buffer (which might be empty)
-        try {
-            co_await async_write(output, sr);
+        co_await ignore_need_buffer(
+            [&](auto token) { return async_write(output, sr, token); });
 
-        } catch (const boost::system::system_error& e) {
-            if (e.code() != http::error::need_buffer) {
-                std::cerr << "Error during read: " << e.what() << std::endl;
-                throw;
-            }
-        }
     } while (!p.is_done() && !sr.is_done());
 }
 } // namespace uh::cluster
