@@ -22,6 +22,7 @@ namespace http {
     of @ref buffer_body::value_type to appropriate values before
     each call to read or write during a stream operation.
 */
+
 struct double_buffer_body {
     /// The type of the body member when used in a message.
     struct value_type {
