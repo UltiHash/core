@@ -1,5 +1,6 @@
 #pragma once
 
+#include <boost/beast/core/buffers_to_string.hpp>
 #include <boost/beast/http.hpp>
 #include <common/types/common_types.h>
 #include <concepts>
@@ -14,12 +15,12 @@ namespace uh::cluster::proxy::cache {
 
 template <typename T>
 concept ReaderBodyType = requires(T r, std::span<const char> sv) {
-    { r.put(sv) } -> std::same_as<coro<std::size_t>>;
+    { r.put(sv) } -> std::same_as<coro<void>>;
 };
 
 template <typename T>
-concept WriterBodyType = requires(T w) {
-    { w.get() } -> std::same_as<coro<std::span<const char>>>;
+concept WriterBodyType = requires(T w, std::span<char> sv) {
+    { w.get(sv) } -> std::same_as<coro<std::span<const char>>>;
 };
 
 template <typename T>
@@ -61,11 +62,7 @@ coro<void> async_read(S& s, T& t, std::size_t size) {
         auto sv = co_await s.read(size);
         if (sv.empty())
             break;
-        auto read = co_await reader.put(sv);
-        if (read != sv.size()) {
-            throw std::runtime_error(
-                "reader_body put() returned unexpected size");
-        }
+        co_await reader.put(sv);
         co_await s.consume();
         size -= sv.size();
     }
@@ -73,8 +70,12 @@ coro<void> async_read(S& s, T& t, std::size_t size) {
 
 /*
  * It consumes automatically
+ *
+ * TODO: use socket instead of stream
+ * TODO: Choose which namespace we will use
  */
-template <typename T> coro<void> async_write(ep::http::stream& s, T& t) {
+template <std::size_t buf_size, typename T>
+coro<void> async_write(ep::http::stream& s, T& t) {
     auto&& writer = [&]() -> auto&& {
         if constexpr (BodyType<T>) {
             return make_writer(t);
@@ -86,18 +87,14 @@ template <typename T> coro<void> async_write(ep::http::stream& s, T& t) {
         }
     }();
 
-    if constexpr (T::support_double_buffer::value) {
-        for (auto data = co_await writer.get(); !data.empty();) {
-            auto [d, _] = co_await (writer.get() && s.write(data));
-            data = d;
-        }
-    } else {
-        while (true) {
-            auto data = co_await writer.get();
-            if (data.empty())
-                break;
-            co_await s.write(data);
-        }
+    char _buf[2][buf_size];
+    char* rbuf = _buf[0];
+    char* wbuf = _buf[1];
+
+    for (auto data = co_await writer.get({rbuf, buf_size}); !data.empty();) {
+        std::swap(rbuf, wbuf);
+        auto [d, _] = co_await (writer.get({rbuf, buf_size}) && s.write(data));
+        data = d;
     }
 }
 
@@ -109,10 +106,39 @@ template <typename Awaitable> coro<void> ignore_need_buffer(Awaitable&& op) {
     }
 }
 
-template <bool isRequest, class AsyncWriteStream, class AsyncReadStream,
-          class DynamicBuffer, class Parser, class Serializer>
-coro<void> relay(AsyncWriteStream& output, AsyncReadStream& input,
-                 DynamicBuffer& buffer, Parser& p, Serializer& sr) {
+template <class Message> std::string serialize_header(Message& msg) {
+    using body_type = typename std::decay_t<Message>::body_type;
+    using fields_type = typename std::decay_t<Message>::fields_type;
+    constexpr bool is_request = std::decay_t<Message>::is_request::value;
+    boost::beast::http::serializer<is_request, body_type, fields_type> sr{msg};
+    sr.split(true);
+    std::string header_str;
+    while (!sr.is_done()) {
+        auto const buf = sr.get();
+        // buffers_to_string handles any buffer sequence or single buffer
+        header_str += boost::beast::buffers_to_string(buf);
+        sr.consume(boost::asio::buffer_size(buf));
+    }
+    return header_str;
+}
+
+template <typename ServerSocketType, typename Serializer, typename SyncType>
+coro<void> async_write_store_header(ServerSocketType& server_socket,
+                                    Serializer& sr, SyncType& sync) {
+    std::ostringstream oss;
+    boost::system::error_code ec;
+    sr.split(true);
+    write_ostream(oss, sr, ec);
+    auto header_str = oss.str();
+    co_await (sync.put(header_str) && [&]() -> coro<void> {
+        co_await async_write(server_socket, boost::asio::buffer(header_str));
+    }());
+}
+
+template <class AsyncWriteStream, class AsyncReadStream, class DynamicBuffer,
+          class Parser, class Serializer>
+coro<void> async_relay_body(AsyncWriteStream& output, AsyncReadStream& input,
+                            DynamicBuffer& buffer, Parser& p, Serializer& sr) {
     static_assert(boost::beast::is_async_write_stream<AsyncWriteStream>::value,
                   "AsyncWriteStream requirements not met");
     static_assert(boost::beast::is_async_read_stream<AsyncReadStream>::value,
@@ -123,28 +149,150 @@ coro<void> relay(AsyncWriteStream& output, AsyncReadStream& input,
     char* rbuf = _buf[0];
     char* wbuf = _buf[1];
 
-    auto read = [&](char* buf) -> coro<std::size_t> {
-        p.get().body().rdata = buf;
-        p.get().body().rsize = buf_size;
+    auto read = [&](std::span<char> sv) -> coro<std::size_t> {
+        p.get().body().rdata = sv.data();
+        p.get().body().rsize = sv.size();
         co_await ignore_need_buffer(
             [&](auto token) { return async_read(input, buffer, p, token); });
 
-        co_return buf_size - p.get().body().rsize;
+        co_return sv.size() - p.get().body().rsize;
     };
 
-    auto write = [&](char* buf, std::size_t size) -> coro<void> {
-        p.get().body().more = size != 0;
-        p.get().body().wdata = buf;
-        p.get().body().wsize = size;
+    auto write = [&](std::span<const char> sv) -> coro<void> {
+        p.get().body().more = sv.size() != 0;
+        p.get().body().wdata = sv.data();
+        p.get().body().wsize = sv.size();
         co_await ignore_need_buffer(
             [&](auto token) { return async_write(output, sr, token); });
     };
 
-    for (auto bytes_read = co_await read(rbuf);
+    for (auto bytes_read = co_await read({rbuf, buf_size});
          !p.is_done() || !sr.is_done();) {
         std::swap(rbuf, wbuf);
-        bytes_read = co_await (read(rbuf) && write(wbuf, bytes_read));
+        bytes_read =
+            co_await (read({rbuf, buf_size}) && write({wbuf, bytes_read}));
+    }
+}
+
+template <class AsyncWriteStream, class AsyncReadStream, class DynamicBuffer,
+          class Parser, class Serializer, class PayloadSync>
+coro<void> async_relay_store_body(AsyncWriteStream& output,
+                                  AsyncReadStream& input, DynamicBuffer& buffer,
+                                  Parser& p, Serializer& sr,
+                                  PayloadSync& sync) {
+    static_assert(boost::beast::is_async_write_stream<AsyncWriteStream>::value,
+                  "AsyncWriteStream requirements not met");
+    static_assert(boost::beast::is_async_read_stream<AsyncReadStream>::value,
+                  "AsyncReadStream requirements not met");
+
+    constexpr std::size_t buf_size = 2_KiB;
+    char _buf[2][buf_size];
+    char* rbuf = _buf[0];
+    char* wbuf = _buf[1];
+
+    auto read = [&](std::span<char> sv) -> coro<std::size_t> {
+        p.get().body().rdata = sv.data();
+        p.get().body().rsize = sv.size();
+        co_await ignore_need_buffer(
+            [&](auto token) { return async_read(input, buffer, p, token); });
+
+        co_return sv.size() - p.get().body().rsize;
+    };
+
+    auto write = [&](std::span<const char> sv) -> coro<void> {
+        p.get().body().more = sv.size() != 0;
+        p.get().body().wdata = sv.data();
+        p.get().body().wsize = sv.size();
+        co_await ignore_need_buffer(
+            [&](auto token) { return async_write(output, sr, token); });
+    };
+
+    for (auto bytes_read = co_await read({rbuf, buf_size});
+         !p.is_done() || !sr.is_done();) {
+        std::swap(rbuf, wbuf);
+        bytes_read =
+            co_await ((read({rbuf, buf_size}) && write({wbuf, bytes_read})) &&
+                      sync.put({wbuf, bytes_read}));
     }
 }
 
 } // namespace uh::cluster::proxy::cache
+namespace boost::beast::http {
+// The detail namespace means "not public"
+namespace detail {
+
+// This helper is needed for C++11.
+// When invoked with a buffer sequence, writes the buffers `to the
+// std::ostream`.
+template <class Serializer> class write_ostream_helper {
+    Serializer& sr_;
+    std::ostream& os_;
+
+public:
+    write_ostream_helper(Serializer& sr, std::ostream& os)
+        : sr_(sr),
+          os_(os) {}
+
+    // This function is called by the serializer
+    template <class ConstBufferSequence>
+    void operator()(error_code& ec, ConstBufferSequence const& buffers) const {
+        // Error codes must be cleared on success
+        ec = {};
+
+        // Keep a running total of how much we wrote
+        std::size_t bytes_transferred = 0;
+
+        // Loop over the buffer sequence
+        for (auto it = boost::asio::buffer_sequence_begin(buffers);
+             it != boost::asio::buffer_sequence_end(buffers); ++it) {
+            // This is the next buffer in the sequence
+            boost::asio::const_buffer const buffer = *it;
+
+            // Write it to the std::ostream
+            os_.write(reinterpret_cast<char const*>(buffer.data()),
+                      buffer.size());
+
+            // If the std::ostream fails, convert it to an error code
+            if (os_.fail()) {
+                ec = make_error_code(errc::io_error);
+                return;
+            }
+
+            // Adjust our running total
+            bytes_transferred += buffer_size(buffer);
+        }
+
+        // Inform the serializer of the amount we consumed
+        sr_.consume(bytes_transferred);
+    }
+};
+
+} // namespace detail
+
+/** Write a message to a `std::ostream`.
+
+    This function writes the serialized representation of the
+    HTTP/1 message to the sream.
+
+    @param os The `std::ostream` to write to.
+
+    @param msg The message to serialize.
+
+    @param ec Set to the error, if any occurred.
+*/
+template <typename Serializer>
+void write_ostream(std::ostream& os, Serializer& sr, error_code& ec) {
+
+    // This lambda is used as the "visit" function
+    detail::write_ostream_helper<decltype(sr)> lambda{sr, os};
+    do {
+        // In C++14 we could use a generic lambda but since we want
+        // to require only C++11, the lambda is written out by hand.
+        // This function call retrieves the next serialized buffers.
+        sr.next(ec, lambda);
+        if (ec)
+            return;
+    } while (!sr.is_done());
+}
+
+} // namespace boost::beast::http

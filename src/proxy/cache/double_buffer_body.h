@@ -67,7 +67,7 @@ struct double_buffer_body {
             by `wdata` having `wsize` octets of valid storage as the
             next buffer representing the body.
         */
-        void* wdata = nullptr;
+        const void* wdata = nullptr;
 
         /** The number of octets in the buffer pointed to by @ref wdata.
 

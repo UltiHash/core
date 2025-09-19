@@ -71,7 +71,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
                     LOG_INFO() << peer << ": done reading complete request";
 
-                    co_await cache::async_write(incoming, *wbody);
+                    co_await cache::async_write<16_MiB>(incoming, *wbody);
 
                     LOG_INFO() << peer << ": cache result served";
                     continue;
@@ -123,20 +123,19 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             if (get_object::can_handle(*req)) {
                 LOG_INFO() << peer << ": add " << buffer.size()
                            << " response header";
-                cache::disk::reader_body rbody(m_dv);
-                co_await rbody.put(buffer);
+                cache::disk::writer w(m_dv);
+                co_await w.put(buffer);
 
-                co_await cache::async_read(outgoing, rbody, len);
+                co_await cache::async_read(outgoing, w, len);
 
                 co_await m_mgr.put(
-                    cache::disk::object_metadata{req->object_key()}, rbody);
+                    cache::disk::object_metadata{req->object_key()}, w);
             } else {
                 std::size_t read = 0ull;
                 while (read < len) {
                     co_await outgoing.consume();
 
                     auto r = co_await outgoing.read(len - read);
-                    // r: rbody
                     read += r.size();
                 }
 
