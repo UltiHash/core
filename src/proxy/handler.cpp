@@ -10,7 +10,6 @@
 #include <proxy/cache/asio.h>
 
 using namespace uh::cluster::ep::http;
-
 namespace uh::cluster::proxy {
 
 handler::handler(
@@ -28,7 +27,8 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     auto peer = s.remote_endpoint();
 
     forward_stream incoming(s, *ds);
-    forward_stream outgoing(*ds, s);
+    auto& outgoing{*ds};
+    boost::beast::flat_buffer o_buffer;
     for (;;) {
 
         /*
@@ -47,19 +47,17 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                        << " " << r.target();
 
             incoming.set_mode(forward_stream::forwarding);
-            outgoing.set_mode(forward_stream::forwarding);
             std::unique_ptr<request> req =
                 co_await m_factory->create(incoming, rawreq);
 
             if (get_object::can_handle(*req)) {
-                auto wbody =
+                auto reader =
                     m_mgr.get(cache::disk::object_metadata{req->object_key()});
-                if (wbody) {
+                if (reader) {
                     LOG_INFO() << peer << ": handling from cache";
                     incoming.set_mode(forward_stream::deleting);
-                    outgoing.set_mode(forward_stream::deleting);
 
-                    // forwarding request
+                    // TODO: forwarding request
                     auto& b = req->body();
                     auto bs = b.buffer_size();
 
@@ -70,8 +68,10 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                     co_await b.consume();
 
                     LOG_INFO() << peer << ": done reading complete request";
+                    auto header = std::vector<char>(reader->get_header_size());
 
-                    co_await cache::async_write<16_MiB>(incoming, *wbody);
+                    co_await async_write(s, co_await reader->get(header));
+                    co_await cache::async_write<16_MiB>(incoming, *reader);
 
                     LOG_INFO() << peer << ": cache result served";
                     continue;
@@ -85,11 +85,19 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 expect && *expect == "100-continue") {
                 LOG_INFO() << req->peer() << ": forwarding 100 CONTINUE";
                 // TODO timeout
-                co_await outgoing.read_until("\r\n\r\n");
-                co_await outgoing.consume();
+                boost::beast::http::parser<false,
+                                           boost::beast::http::empty_body>
+                    p;
+                boost::beast::http::serializer<false,
+                                               boost::beast::http::empty_body,
+                                               boost::beast::http::fields>
+                    sr{p.get()};
+                co_await boost::beast::http::async_read_header(outgoing,
+                                                               o_buffer, p);
+                co_await async_write_header(s, sr);
             }
 
-            // forwarding request
+            // forwarding request body
             auto& b = req->body();
             auto bs = b.buffer_size();
 
@@ -100,50 +108,47 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             co_await b.consume();
 
             // forwarding response
-            beast::http::response_parser<beast::http::empty_body> parser;
-            parser.body_limit((std::numeric_limits<std::uint64_t>::max)());
+            // TODO: alias default parser and serializer for relaying
+            boost::beast::http::parser<false,
+                                       boost::beast::http::double_buffer_body>
+                p;
+            p.body_limit(std::numeric_limits<std::uint64_t>::max());
+            boost::beast::http::serializer<
+                false, boost::beast::http::double_buffer_body,
+                boost::beast::http::fields>
+                sr{p.get()};
 
-            auto buffer = co_await outgoing.read_until("\r\n\r\n");
+            LOG_INFO() << peer << ": reading header from downstream";
+            co_await boost::beast::http::async_read_header(outgoing, o_buffer,
+                                                           p);
+            // co_await async_write_header(s, sr);
 
-            beast::error_code ec;
-            parser.put(boost::asio::buffer(buffer), ec);
+            if (r.method() == boost::beast::http::verb::head) {
+                LOG_INFO() << peer << ": HEAD request, skipping body relay";
+                sr.split(true);
+                co_await boost::beast::http::async_write_header(s, sr);
 
-            auto res = parser.release();
-
-            bs = outgoing.buffer_size();
-            std::size_t len = std::stoul(res.at("Content-Length"));
-            if (r.method() == boost::beast::http::verb::head &&
-                (res.result_int() / 100 == 2)) {
-                len = 0;
-            }
-
-            LOG_INFO() << peer << ": sending response " << res.result_int()
-                       << " " << res.reason() << " -- " << len;
-
-            if (get_object::can_handle(*req)) {
-                LOG_INFO() << peer << ": add " << buffer.size()
-                           << " response header";
-                cache::disk::writer w(m_dv);
-                co_await w.put(buffer);
-
-                co_await cache::async_read(outgoing, w, len);
-
+            } else if (get_object::can_handle(*req)) {
+                cache::disk::writer writer(m_dv);
+                LOG_INFO() << peer << ": writing header to client and cache";
+                co_await cache::async_write_store_header(s, sr, writer);
+                LOG_INFO() << peer << ": writing body to client and cache";
+                co_await cache::async_relay_store_body<16_MiB>(
+                    outgoing, s, o_buffer, p, sr, writer);
+                LOG_INFO() << peer << ": storing object to cache";
                 co_await m_mgr.put(
-                    cache::disk::object_metadata{req->object_key()}, w);
+                    cache::disk::object_metadata{req->object_key()}, writer);
+
             } else {
-                std::size_t read = 0ull;
-                while (read < len) {
-                    co_await outgoing.consume();
-
-                    auto r = co_await outgoing.read(len - read);
-                    read += r.size();
-                }
-
-                co_await outgoing.consume();
+                LOG_INFO() << peer << ": relaying header to client";
+                co_await boost::beast::http::async_write_header(s, sr);
+                LOG_INFO() << peer << ": relaying body to client";
+                co_await cache::async_relay_body<4_KiB>(outgoing, s, o_buffer,
+                                                        p, sr);
             }
+            LOG_INFO() << peer << ": done";
 
             metric<success>::increase(1);
-
         } catch (const boost::system::system_error& e) {
             throw;
         } catch (const command_exception& e) {

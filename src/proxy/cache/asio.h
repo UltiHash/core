@@ -74,7 +74,7 @@ coro<void> async_read(S& s, T& t, std::size_t size) {
  * TODO: use socket instead of stream
  * TODO: Choose which namespace we will use
  */
-template <std::size_t buf_size, typename T>
+template <std::size_t buffer_size, typename T>
 coro<void> async_write(ep::http::stream& s, T& t) {
     auto&& writer = [&]() -> auto&& {
         if constexpr (BodyType<T>) {
@@ -87,13 +87,14 @@ coro<void> async_write(ep::http::stream& s, T& t) {
         }
     }();
 
-    char _buf[2][buf_size];
+    char _buf[2][buffer_size];
     char* rbuf = _buf[0];
     char* wbuf = _buf[1];
 
-    for (auto data = co_await writer.get({rbuf, buf_size}); !data.empty();) {
+    for (auto data = co_await writer.get({rbuf, buffer_size}); !data.empty();) {
         std::swap(rbuf, wbuf);
-        auto [d, _] = co_await (writer.get({rbuf, buf_size}) && s.write(data));
+        auto [d, _] =
+            co_await (writer.get({rbuf, buffer_size}) && s.write(data));
         data = d;
     }
 }
@@ -130,6 +131,9 @@ coro<std::size_t> async_write_store_header(ServerSocketType& server_socket,
     sr.split(true);
     write_ostream(oss, sr, ec);
     auto header_str = oss.str();
+    if (header_str.size() == 0) {
+        throw std::runtime_error("Could not serialize header");
+    }
     co_await (sync.put(header_str) && [&]() -> coro<void> {
         co_await async_write(server_socket, boost::asio::buffer(header_str));
     }());
@@ -137,18 +141,18 @@ coro<std::size_t> async_write_store_header(ServerSocketType& server_socket,
     co_return header_str.size();
 }
 
-template <class AsyncWriteStream, class AsyncReadStream, class DynamicBuffer,
-          class Parser, class Serializer>
+template <std::size_t buffer_size, class AsyncReadStream,
+          class AsyncWriteStream, class DynamicBuffer, class Parser,
+          class Serializer>
 coro<std::size_t>
-async_relay_body(AsyncWriteStream& output, AsyncReadStream& input,
+async_relay_body(AsyncReadStream& input, AsyncWriteStream& output,
                  DynamicBuffer& buffer, Parser& p, Serializer& sr) {
     static_assert(boost::beast::is_async_write_stream<AsyncWriteStream>::value,
                   "AsyncWriteStream requirements not met");
     static_assert(boost::beast::is_async_read_stream<AsyncReadStream>::value,
                   "AsyncReadStream requirements not met");
 
-    constexpr std::size_t buf_size = 2_KiB;
-    char _buf[2][buf_size];
+    char _buf[2][buffer_size];
     char* rbuf = _buf[0];
     char* wbuf = _buf[1];
 
@@ -170,20 +174,21 @@ async_relay_body(AsyncWriteStream& output, AsyncReadStream& input,
     };
 
     std::size_t total_bytes = 0;
-    for (auto bytes_read = co_await read({rbuf, buf_size});
+    for (auto bytes_read = co_await read({rbuf, buffer_size});
          !p.is_done() || !sr.is_done();) {
         std::swap(rbuf, wbuf);
         bytes_read =
-            co_await (read({rbuf, buf_size}) && write({wbuf, bytes_read}));
+            co_await (read({rbuf, buffer_size}) && write({wbuf, bytes_read}));
         total_bytes += bytes_read;
     }
     co_return total_bytes;
 }
 
-template <class AsyncWriteStream, class AsyncReadStream, class DynamicBuffer,
-          class Parser, class Serializer, class PayloadSync>
-coro<std::size_t> async_relay_store_body(AsyncWriteStream& output,
-                                         AsyncReadStream& input,
+template <std::size_t buffer_size, class AsyncReadStream,
+          class AsyncWriteStream, class DynamicBuffer, class Parser,
+          class Serializer, class PayloadSync>
+coro<std::size_t> async_relay_store_body(AsyncReadStream& input,
+                                         AsyncWriteStream& output,
                                          DynamicBuffer& buffer, Parser& p,
                                          Serializer& sr, PayloadSync& sync) {
     static_assert(boost::beast::is_async_write_stream<AsyncWriteStream>::value,
@@ -191,8 +196,7 @@ coro<std::size_t> async_relay_store_body(AsyncWriteStream& output,
     static_assert(boost::beast::is_async_read_stream<AsyncReadStream>::value,
                   "AsyncReadStream requirements not met");
 
-    constexpr std::size_t buf_size = 2_KiB;
-    char _buf[2][buf_size];
+    char _buf[2][buffer_size];
     char* rbuf = _buf[0];
     char* wbuf = _buf[1];
 
@@ -214,12 +218,12 @@ coro<std::size_t> async_relay_store_body(AsyncWriteStream& output,
     };
 
     std::size_t total_bytes = 0;
-    for (auto bytes_read = co_await read({rbuf, buf_size});
+    for (auto bytes_read = co_await read({rbuf, buffer_size});
          !p.is_done() || !sr.is_done();) {
         std::swap(rbuf, wbuf);
-        bytes_read =
-            co_await ((read({rbuf, buf_size}) && write({wbuf, bytes_read})) &&
-                      sync.put({wbuf, bytes_read}));
+        bytes_read = co_await (
+            (read({rbuf, buffer_size}) && write({wbuf, bytes_read})) &&
+            sync.put({wbuf, bytes_read}));
         total_bytes += bytes_read;
     }
     co_return total_bytes;

@@ -28,7 +28,9 @@ public:
     }
 
     coro<void> put(std::span<const char> sv) {
-
+        if (sv.size() == 0) {
+            co_return;
+        }
         auto addr = co_await m_storage.write(sv, {0});
         m_hash.consume(sv);
         m_addr.append(addr);
@@ -63,6 +65,8 @@ public:
     reader& operator=(const reader&) = delete;
     reader(reader&&) = delete;
     reader& operator=(reader&&) = delete;
+
+    std::size_t get_header_size() const { return m_objh->header_size(); }
 
     template <typename T> coro<std::span<const char>> get(T& s) {
         return get(std::span<char>(s.data(), s.size()));
