@@ -487,6 +487,40 @@ operator||(traced_awaitable<std::variant<T...>, Executor> t,
     }
 }
 
+template <typename T, typename Executor>
+traced_awaitable<T, Executor> group(traced_awaitable<T, Executor> t,
+                                    traced_awaitable<void, Executor> u1,
+                                    traced_awaitable<void, Executor> u2) {
+    auto ex = co_await this_coro::executor;
+    auto context = co_await this_coro::context;
+
+    auto [order, ex0, r0, ex1, ex2] =
+        co_await make_parallel_group(
+            co_spawn(
+                ex,
+                detail::awaitable_wrap(std::move(t.continue_trace(context))),
+                deferred),
+            co_spawn(ex, std::move(u1.continue_trace(context)), deferred),
+            co_spawn(ex, std::move(u2.continue_trace(context)), deferred))
+            .async_wait(wait_for_one_error(), deferred);
+
+    int exception_count = (ex0 ? 1 : 0) + (ex1 ? 1 : 0) + (ex2 ? 1 : 0);
+    if (exception_count > 1)
+        throw multiple_exceptions(ex0 ? ex0 : (ex1 ? ex1 : ex2));
+    if (ex0)
+        std::rethrow_exception(ex0);
+    if (ex1)
+        std::rethrow_exception(ex1);
+    if (ex2)
+        std::rethrow_exception(ex2);
+
+    if constexpr (std::is_void_v<T>) {
+        co_return;
+    } else {
+        co_return std::move(detail::awaitable_unwrap<T>(r0));
+    }
+}
+
 } // namespace awaitable_operators
 } // namespace experimental
 } // namespace asio
