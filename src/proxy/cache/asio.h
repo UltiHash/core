@@ -221,9 +221,9 @@ coro<std::size_t> async_relay_store_body(AsyncReadStream& input,
     for (auto bytes_read = co_await read({rbuf, buffer_size});
          !p.is_done() || !sr.is_done();) {
         std::swap(rbuf, wbuf);
-        bytes_read = co_await (
-            (read({rbuf, buffer_size}) && write({wbuf, bytes_read})) &&
-            sync.put({wbuf, bytes_read}));
+        bytes_read =
+            co_await group(read({rbuf, buffer_size}), write({wbuf, bytes_read}),
+                           sync.put({wbuf, bytes_read}));
         total_bytes += bytes_read;
     }
     co_return total_bytes;
