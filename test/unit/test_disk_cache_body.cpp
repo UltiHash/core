@@ -167,7 +167,6 @@ BOOST_AUTO_TEST_CASE(goes_with_relay_store_body) {
     write(client_socket, buffer(body));
 
     boost::beast::flat_buffer b;
-    auto transform = [](auto&) {};
 
     parser<true, double_buffer_body> p;
     serializer<true, double_buffer_body, fields> sr{p.get()};
@@ -177,9 +176,9 @@ BOOST_AUTO_TEST_CASE(goes_with_relay_store_body) {
     co_spawn(
         m_ioc,
         [&]() -> coro<void> {
-            co_await async_read_header(server_socket, b, p);
-            transform(p.get());
-            co_await async_write_store_header(server_socket, sr, w);
+            auto n = co_await async_read_header(server_socket, b, p);
+            auto m = co_await async_write_store_header(server_socket, sr, w);
+            BOOST_TEST(n == m);
             co_await async_relay_store_body(server_socket, server_socket, b, p,
                                             sr, w);
         },

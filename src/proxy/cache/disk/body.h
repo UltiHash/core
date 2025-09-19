@@ -34,6 +34,7 @@ public:
         m_addr.append(addr);
     }
 
+    void set_header_size(std::size_t size) { m_header_size = size; }
     /*
      * Moves and returns the internal resource.
      * May only be called once; further calls will return an empty or invalid
@@ -41,7 +42,7 @@ public:
      */
     object_handle get_object_handle() {
         // TODO: set etag with `to_hex(m_hash.finalize())`
-        return object_handle(std::move(m_addr));
+        return object_handle(std::move(m_addr), m_header_size);
     }
 
 private:
@@ -49,6 +50,7 @@ private:
 
     md5 m_hash;
     address m_addr;
+    std::size_t m_header_size{0};
 };
 
 class reader {

@@ -123,8 +123,8 @@ template <class Message> std::string serialize_header(Message& msg) {
 }
 
 template <typename ServerSocketType, typename Serializer, typename SyncType>
-coro<void> async_write_store_header(ServerSocketType& server_socket,
-                                    Serializer& sr, SyncType& sync) {
+coro<std::size_t> async_write_store_header(ServerSocketType& server_socket,
+                                           Serializer& sr, SyncType& sync) {
     std::ostringstream oss;
     boost::system::error_code ec;
     sr.split(true);
@@ -133,12 +133,15 @@ coro<void> async_write_store_header(ServerSocketType& server_socket,
     co_await (sync.put(header_str) && [&]() -> coro<void> {
         co_await async_write(server_socket, boost::asio::buffer(header_str));
     }());
+    sync.set_header_size(header_str.size());
+    co_return header_str.size();
 }
 
 template <class AsyncWriteStream, class AsyncReadStream, class DynamicBuffer,
           class Parser, class Serializer>
-coro<void> async_relay_body(AsyncWriteStream& output, AsyncReadStream& input,
-                            DynamicBuffer& buffer, Parser& p, Serializer& sr) {
+coro<std::size_t>
+async_relay_body(AsyncWriteStream& output, AsyncReadStream& input,
+                 DynamicBuffer& buffer, Parser& p, Serializer& sr) {
     static_assert(boost::beast::is_async_write_stream<AsyncWriteStream>::value,
                   "AsyncWriteStream requirements not met");
     static_assert(boost::beast::is_async_read_stream<AsyncReadStream>::value,
@@ -166,20 +169,23 @@ coro<void> async_relay_body(AsyncWriteStream& output, AsyncReadStream& input,
             [&](auto token) { return async_write(output, sr, token); });
     };
 
+    std::size_t total_bytes = 0;
     for (auto bytes_read = co_await read({rbuf, buf_size});
          !p.is_done() || !sr.is_done();) {
         std::swap(rbuf, wbuf);
         bytes_read =
             co_await (read({rbuf, buf_size}) && write({wbuf, bytes_read}));
+        total_bytes += bytes_read;
     }
+    co_return total_bytes;
 }
 
 template <class AsyncWriteStream, class AsyncReadStream, class DynamicBuffer,
           class Parser, class Serializer, class PayloadSync>
-coro<void> async_relay_store_body(AsyncWriteStream& output,
-                                  AsyncReadStream& input, DynamicBuffer& buffer,
-                                  Parser& p, Serializer& sr,
-                                  PayloadSync& sync) {
+coro<std::size_t> async_relay_store_body(AsyncWriteStream& output,
+                                         AsyncReadStream& input,
+                                         DynamicBuffer& buffer, Parser& p,
+                                         Serializer& sr, PayloadSync& sync) {
     static_assert(boost::beast::is_async_write_stream<AsyncWriteStream>::value,
                   "AsyncWriteStream requirements not met");
     static_assert(boost::beast::is_async_read_stream<AsyncReadStream>::value,
@@ -207,13 +213,16 @@ coro<void> async_relay_store_body(AsyncWriteStream& output,
             [&](auto token) { return async_write(output, sr, token); });
     };
 
+    std::size_t total_bytes = 0;
     for (auto bytes_read = co_await read({rbuf, buf_size});
          !p.is_done() || !sr.is_done();) {
         std::swap(rbuf, wbuf);
         bytes_read =
             co_await ((read({rbuf, buf_size}) && write({wbuf, bytes_read})) &&
                       sync.put({wbuf, bytes_read}));
+        total_bytes += bytes_read;
     }
+    co_return total_bytes;
 }
 
 } // namespace uh::cluster::proxy::cache
