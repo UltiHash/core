@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
 
-project(uh-cluster VERSION 1.6.0)
+project(uh-cluster VERSION 1.7.0)
 
 #
 # Option handling
