@@ -68,9 +68,28 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                     co_await b.consume();
 
                     LOG_INFO() << peer << ": done reading complete request";
-                    auto header = std::vector<char>(reader->get_header_size());
+                    auto header_size =
+                        std::vector<char>(reader->get_header_size());
+                    auto header = co_await reader->get(header_size);
 
-                    co_await async_write(s, co_await reader->get(header));
+                    boost::beast::http::response_parser<
+                        boost::beast::http::empty_body>
+                        parser;
+                    boost::beast::http::response_serializer<
+                        boost::beast::http::empty_body,
+                        boost::beast::http::fields>
+                        serializer{parser.get()};
+
+                    parser.body_limit(
+                        std::numeric_limits<std::uint64_t>::max());
+                    boost::system::error_code ec;
+                    parser.put(boost::asio::const_buffer(header), ec);
+                    if (ec) {
+                        throw boost::system::system_error(ec);
+                    }
+
+                    co_await async_write_header(s, serializer);
+
                     co_await cache::async_write<16_MiB>(incoming, *reader);
 
                     LOG_INFO() << peer << ": cache result served";
@@ -85,12 +104,11 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 expect && *expect == "100-continue") {
                 LOG_INFO() << req->peer() << ": forwarding 100 CONTINUE";
                 // TODO timeout
-                boost::beast::http::parser<false,
-                                           boost::beast::http::empty_body>
+                boost::beast::http::response_parser<
+                    boost::beast::http::empty_body>
                     p;
-                boost::beast::http::serializer<false,
-                                               boost::beast::http::empty_body,
-                                               boost::beast::http::fields>
+                boost::beast::http::response_serializer<
+                    boost::beast::http::empty_body, boost::beast::http::fields>
                     sr{p.get()};
                 co_await boost::beast::http::async_read_header(outgoing,
                                                                o_buffer, p);
@@ -109,13 +127,11 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
             // forwarding response
             // TODO: alias default parser and serializer for relaying
-            boost::beast::http::parser<false,
-                                       boost::beast::http::double_buffer_body>
+            boost::beast::http::response_parser<boost::beast::http::empty_body>
                 p;
             p.body_limit(std::numeric_limits<std::uint64_t>::max());
-            boost::beast::http::serializer<
-                false, boost::beast::http::double_buffer_body,
-                boost::beast::http::fields>
+            boost::beast::http::response_serializer<
+                boost::beast::http::empty_body, boost::beast::http::fields>
                 sr{p.get()};
 
             LOG_INFO() << peer << ": reading header from downstream";
