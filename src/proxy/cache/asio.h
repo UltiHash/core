@@ -1,6 +1,7 @@
 #pragma once
 
 #include <boost/beast/core/buffers_to_string.hpp>
+#include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/http.hpp>
 #include <common/types/common_types.h>
 #include <concepts>
@@ -8,6 +9,8 @@
 #include <entrypoint/http/stream.h>
 #include <proxy/cache/awaitable_operators.h>
 #include <proxy/cache/double_buffer_body.h>
+
+#include <iostream>
 
 using namespace boost::asio::experimental::awaitable_operators;
 
@@ -66,6 +69,14 @@ coro<void> async_read(S& s, T& t, std::size_t size) {
         co_await s.consume();
         size -= sv.size();
     }
+}
+
+inline std::span<const char> get_span(boost::asio::const_buffer buffer) {
+    return {static_cast<const char*>(buffer.data()), buffer.size()};
+}
+
+inline std::span<char> get_span(boost::asio::mutable_buffer buffer) {
+    return {static_cast<char*>(buffer.data()), buffer.size()};
 }
 
 /*
@@ -141,47 +152,100 @@ coro<std::size_t> async_write_store_header(ServerSocketType& server_socket,
     co_return header_str.size();
 }
 
-template <std::size_t buffer_size, class AsyncReadStream,
-          class AsyncWriteStream, class DynamicBuffer, class Parser,
-          class Serializer>
-coro<std::size_t>
-async_relay_body(AsyncReadStream& input, AsyncWriteStream& output,
-                 DynamicBuffer& buffer, Parser& p, Serializer& sr) {
-    static_assert(boost::beast::is_async_write_stream<AsyncWriteStream>::value,
-                  "AsyncWriteStream requirements not met");
-    static_assert(boost::beast::is_async_read_stream<AsyncReadStream>::value,
-                  "AsyncReadStream requirements not met");
+template <std::size_t chunk_size, typename Incomming, typename Outgoing>
+coro<void> async_relay_body(Incomming& in, Outgoing& out,
+                            boost::beast::flat_buffer& b,
+                            std::size_t payload_size) {
 
-    char _buf[2][buffer_size];
-    char* rbuf = _buf[0];
-    char* wbuf = _buf[1];
+    if (payload_size > chunk_size) {
+        boost::beast::flat_buffer b2;
+        auto* rbuf = &b;
+        auto* wbuf = &b2;
 
-    auto read = [&](std::span<char> sv) -> coro<std::size_t> {
-        p.get().body().rdata = sv.data();
-        p.get().body().rsize = sv.size();
-        co_await ignore_need_buffer(
-            [&](auto token) { return async_read(input, buffer, p, token); });
-
-        co_return sv.size() - p.get().body().rsize;
-    };
-
-    auto write = [&](std::span<const char> sv) -> coro<void> {
-        p.get().body().more = sv.size() != 0;
-        p.get().body().wdata = sv.data();
-        p.get().body().wsize = sv.size();
-        co_await ignore_need_buffer(
-            [&](auto token) { return async_write(output, sr, token); });
-    };
-
-    std::size_t total_bytes = 0;
-    for (auto bytes_read = co_await read({rbuf, buffer_size});
-         !p.is_done() || !sr.is_done();) {
-        std::swap(rbuf, wbuf);
-        bytes_read =
-            co_await (read({rbuf, buffer_size}) && write({wbuf, bytes_read}));
-        total_bytes += bytes_read;
+        for (auto n = co_await async_read(
+                 in, rbuf->prepare(std::min(payload_size, chunk_size) -
+                                   rbuf->data().size()));
+             n != 0;) {
+            std::swap(rbuf, wbuf);
+            wbuf->commit(n + wbuf->data().size());
+            payload_size -= wbuf->data().size();
+            auto new_n = co_await ( //
+                [&]() -> coro<std::size_t> {
+                    co_return co_await async_read(
+                        in, rbuf->prepare(std::min(payload_size, chunk_size)));
+                }() && [&]() -> coro<void> {
+                    co_await async_write(out, get_span(wbuf->data()));
+                }());
+            wbuf->consume(wbuf->data().size());
+            n = new_n;
+        }
+    } else {
+        auto n =
+            co_await async_read(in, b.prepare(payload_size - b.data().size()));
+        b.commit(n + b.data().size());
+        co_await async_write(out, get_span(b.data()));
+        b.consume(b.data().size());
     }
-    co_return total_bytes;
+
+    b.shrink_to_fit();
+}
+
+template <typename Message>
+std::optional<std::uint64_t> get_content_length(const Message& msg) {
+    auto it = msg.find(boost::beast::http::field::content_length);
+    if (it != msg.end()) {
+        try {
+            return std::stoull(
+                std::string(it->value().data(), it->value().size()));
+        } catch (...) {
+            return std::nullopt;
+        }
+    }
+    return std::nullopt;
+}
+
+template <std::size_t chunk_size, typename Incomming, typename Outgoing,
+          typename PayloadWriter>
+coro<void> async_relay_store_body(Incomming& in, Outgoing& out,
+                                  boost::beast::flat_buffer& b,
+                                  PayloadWriter& writer,
+                                  std::size_t payload_size) {
+
+    if (payload_size > chunk_size) {
+        boost::beast::flat_buffer b2;
+        auto* rbuf = &b;
+        auto* wbuf = &b2;
+
+        for (auto n = co_await async_read(
+                 in, rbuf->prepare(std::min(payload_size, chunk_size) -
+                                   rbuf->data().size()));
+             n != 0;) {
+            std::swap(rbuf, wbuf);
+            wbuf->commit(n + wbuf->data().size());
+            payload_size -= wbuf->data().size();
+            auto new_n = co_await ( //
+                [&]() -> coro<std::size_t> {
+                    co_return co_await async_read(
+                        in, rbuf->prepare(std::min(payload_size, chunk_size)));
+                }() && ([&]() -> coro<void> {
+                             co_await async_write(out, get_span(wbuf->data()));
+                         }() && writer.put(get_span(wbuf->data())) //
+                        )                                          //
+            );
+            wbuf->consume(wbuf->data().size());
+            n = new_n;
+        }
+    } else {
+        auto n =
+            co_await async_read(in, b.prepare(payload_size - b.data().size()));
+        b.commit(n + b.data().size());
+        co_await ([&]() -> coro<void> {
+            co_await async_write(out, get_span(b.data()));
+        }() && writer.put(get_span(b.data())));
+        b.consume(b.data().size());
+    }
+
+    b.shrink_to_fit();
 }
 
 template <std::size_t buffer_size, class AsyncReadStream,

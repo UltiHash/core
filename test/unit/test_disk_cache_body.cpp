@@ -179,8 +179,12 @@ BOOST_AUTO_TEST_CASE(goes_with_relay_store_body) {
             auto n = co_await async_read_header(server_socket, b, p);
             auto m = co_await async_write_store_header(server_socket, sr, w);
             BOOST_TEST(n == m);
-            co_await async_relay_store_body<2_KiB>(server_socket, server_socket,
-                                                   b, p, sr, w);
+            auto body_size = get_content_length(p.get());
+            if (!body_size.has_value()) {
+                throw std::runtime_error("no content length");
+            }
+            co_await async_relay_store_body<1_KiB>(server_socket, server_socket,
+                                                   b, w, *body_size);
         },
         boost::asio::use_future)
         .get();
@@ -257,13 +261,14 @@ BOOST_AUTO_TEST_CASE(test_relay_body) {
             co_await async_read_header(server_socket, b, p);
             transform(p.get());
             co_await async_write_header(server_socket, sr);
+            auto body_size = get_content_length(p.get());
+            if (!body_size.has_value()) {
+                throw std::runtime_error("no content length");
+            }
+            co_await async_relay_body<1_KiB>(server_socket, server_socket, b,
+                                             *body_size);
         },
         boost::asio::use_future)
-        .get();
-
-    co_spawn(ioc,
-             async_relay_body<2_KiB>(server_socket, server_socket, b, p, sr),
-             boost::asio::use_future)
         .get();
 
     work_guard.reset();
