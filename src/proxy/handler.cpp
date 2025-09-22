@@ -130,21 +130,24 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
             } else if (get_object::can_handle(*req)) {
                 cache::disk::writer writer(m_dv);
-                LOG_INFO() << peer << ": writing header to client and cache";
                 co_await cache::async_write_store_header(s, sr, writer);
-                LOG_INFO() << peer << ": writing body to client and cache";
-                co_await cache::async_relay_store_body<16_MiB>(
-                    outgoing, s, o_buffer, p, sr, writer);
-                LOG_INFO() << peer << ": storing object to cache";
+                auto body_size = cache::get_content_length(p.get());
+                if (!body_size.has_value()) {
+                    throw std::runtime_error("no content length");
+                }
+                co_await cache::async_relay_store_body<32_MiB>(
+                    outgoing, s, o_buffer, writer, *body_size);
                 co_await m_mgr.put(
                     cache::disk::object_metadata{req->object_key()}, writer);
 
             } else {
-                LOG_INFO() << peer << ": relaying header to client";
                 co_await boost::beast::http::async_write_header(s, sr);
-                LOG_INFO() << peer << ": relaying body to client";
+                auto body_size = cache::get_content_length(p.get());
+                if (!body_size.has_value()) {
+                    throw std::runtime_error("no content length");
+                }
                 co_await cache::async_relay_body<4_KiB>(outgoing, s, o_buffer,
-                                                        p, sr);
+                                                        *body_size);
             }
             LOG_INFO() << peer << ": done";
 
