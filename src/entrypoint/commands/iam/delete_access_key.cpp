@@ -17,7 +17,6 @@ coro<ep::http::response> delete_access_key::handle(ep::http::request& req) {
     if (username) {
         auto user = co_await m_users.find_by_key(*access_key);
         if (user.name != *username) {
-            // TODO: how?
             throw command_exception(
                 ep::http::status::conflict, "UserNameMismatch",
                 "AWS IAM implements sophisticated organizations/roles "

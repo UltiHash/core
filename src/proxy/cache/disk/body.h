@@ -1,9 +1,7 @@
 /*
- * HTTP writer/reader bodies which supports get/put API only
+ * Body writer/reader bodies which supports get/put API only
  */
 #pragma once
-
-#include <proxy/cache/asio.h>
 
 #include <proxy/cache/disk/object.h>
 #include <proxy/cache/disk/utils.h>

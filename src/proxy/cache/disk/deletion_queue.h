@@ -13,7 +13,6 @@ namespace uh::cluster::proxy::cache::disk {
 template <typename Key, EntryType Entry> class deletion_queue {
 public:
     void push(std::shared_ptr<Entry> e) {
-        // TODO: Implement this method
         std::unique_lock lock(m_mutex);
         m_queue.push(e);
         m_current_size += e->data_size();
