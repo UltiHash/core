@@ -1,3 +1,10 @@
+## [1.7.0] 2025-09-22
+- Include proxy service
+- Add missing hash calculation for large objects
+
+## [1.6.1] 2025-09-16
+- Fix an error in database migration
+
 ## [1.6.0] 2025-07-16
 - Add support for S3-compatible object versioning
 - Fixes an issue when operating erasure-coded storage groups with disabled
