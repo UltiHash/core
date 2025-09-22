@@ -88,7 +88,6 @@ private:
     std::atomic<std::size_t> m_current_size{0};
 
     deletion_queue_t m_deletion_queue;
-    // TODO: spawn a background task to remove
     scoped_task m_task;
 
     manager(boost::asio::io_context& ioc, data_view& storage,

@@ -8,27 +8,10 @@ namespace uh::cluster {
 
 struct pointer_traits {
 
-    /**
-     * TODO: Let's remove this: The storage layer will receive the storage
-     * address space pointer, so they do not need to call this function
-     * themselves
-     *
-     * The data store internal pointer is the low number of uint128_t
-     *
-     * @param global_pointer
-     * @return internal data store pointer
-     */
     constexpr static const inline std::size_t group_id_bit_offset = 32 + 64;
 
     struct rr {
         constexpr static const inline std::size_t storage_id_bit_offset = 64;
-
-        inline static std::pair<std::size_t, storage_pointer>
-        get_storage_pointer(pointer global_pointer) {
-            std::size_t storage_id = (global_pointer >> 64) & 0xFFFFFFFF;
-            std::size_t storage_ptr = static_cast<std::size_t>(global_pointer);
-            return {storage_id, storage_ptr};
-        }
 
         /**
          * @param pointer
@@ -41,6 +24,13 @@ struct pointer_traits {
             return (static_cast<pointer>(group_id) << group_id_bit_offset) |
                    (static_cast<pointer>(storage_id) << storage_id_bit_offset) |
                    storage_pointer;
+        }
+
+        inline static std::pair<std::size_t, storage_pointer>
+        get_storage_pointer(pointer global_pointer) {
+            std::size_t storage_id = (global_pointer >> 64) & 0xFFFFFFFF;
+            std::size_t storage_ptr = static_cast<std::size_t>(global_pointer);
+            return {storage_id, storage_ptr};
         }
     };
 

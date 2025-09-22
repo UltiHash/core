@@ -1,7 +1,8 @@
 #pragma once
 
-#include <boost/asio/experimental/parallel_group.hpp>
 #include <common/telemetry/trace/trace_asio.h>
+
+#include <boost/asio/experimental/parallel_group.hpp>
 
 namespace boost {
 namespace asio {
