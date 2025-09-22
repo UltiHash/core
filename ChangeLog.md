@@ -1,3 +1,7 @@
+## Unreleased;
+
+- Upgrade CPR to 1.12.0
+
 ## [1.7.0] 2025-09-22
 - Include proxy service
 - Add missing hash calculation for large objects
