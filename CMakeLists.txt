@@ -100,7 +100,7 @@ CPMAddPackage(
     GITHUB_REPOSITORY
     libcpr/cpr
     GIT_TAG
-    1.11.2
+    1.12.0
     OPTIONS
     "BUILD_SHARED_LIBS OFF;CURL_USE_LIBPSL OFF"
     CPM_ARGS
