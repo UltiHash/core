@@ -135,7 +135,7 @@ coro<void> async_relay_buffer(Incomming& in, Outgoing& out,
 
     } else {
         if (payload_size > chunk_size) {
-            boost::beast::flat_buffer b2;
+            boost::beast::flat_buffer b2(chunk_size);
             auto* rbuf = &b;
             auto* wbuf = &b2;
 
