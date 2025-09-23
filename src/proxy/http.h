@@ -141,25 +141,32 @@ coro<std::size_t> async_write_header(ServerSocketType& server_socket,
 }
 
 template <std::size_t chunk_size, typename Incomming, typename SyncType>
-coro<void> async_read(Incomming& in, boost::beast::flat_buffer& b,
-                      std::size_t payload_size, SyncType&& sync) {
+coro<void> async_read(
+    Incomming& in, boost::beast::flat_buffer& b, std::size_t payload_size,
+    SyncType&& sync,
+    std::function<coro<void>()> precursor = []() -> coro<void> { co_return; }) {
     using boost::asio::experimental::awaitable_operators::operator&&;
 
     if (b.data().size() >= payload_size) {
         auto sv = std::span<const char>(
             static_cast<const char*>(b.data().data()), payload_size);
-        co_await sync.put(sv);
+        co_await (sync.put(sv) && precursor());
         b.consume(sv.size());
 
     } else {
+        auto read = [&](auto& s, auto& buffer,
+                        std::size_t required) -> coro<std::size_t> {
+            co_return co_await async_read(s, buffer.prepare(required));
+        };
         if (payload_size > chunk_size) {
             boost::beast::flat_buffer b2(chunk_size);
             auto* rbuf = &b;
             auto* wbuf = &b2;
 
-            for (auto n = co_await async_read(
-                     in, rbuf->prepare(std::min(payload_size, chunk_size) -
-                                       rbuf->data().size()));
+            for (auto n = co_await (read(in, *rbuf,
+                                         std::min(payload_size, chunk_size) -
+                                             rbuf->data().size()) &&
+                                    precursor());
                  n != 0;) {
                 std::swap(rbuf, wbuf);
                 wbuf->commit(n);
@@ -167,17 +174,16 @@ coro<void> async_read(Incomming& in, boost::beast::flat_buffer& b,
                     throw std::runtime_error("buffer size mismatch");
                 }
                 payload_size -= wbuf->data().size();
-                auto new_n = co_await ([&]() -> coro<std::size_t> {
-                    co_return co_await async_read(
-                        in, rbuf->prepare(std::min(payload_size, chunk_size)));
-                }() && sync.put(get_span(wbuf->data())));
+                auto new_n = co_await (
+                    read(in, *rbuf, std::min(payload_size, chunk_size)) &&
+                    sync.put(get_span(wbuf->data())));
 
                 wbuf->consume(wbuf->data().size());
                 n = new_n;
             }
         } else {
-            auto n = co_await async_read(
-                in, b.prepare(payload_size - b.data().size()));
+            auto n = co_await (read(in, b, payload_size - b.data().size()) &&
+                               precursor());
             b.commit(n);
             co_await sync.put(get_span(b.data()));
             b.consume(b.data().size());
@@ -188,14 +194,17 @@ coro<void> async_read(Incomming& in, boost::beast::flat_buffer& b,
 }
 
 template <std::size_t buffer_size, typename SocketType, typename SourceType>
-coro<void> async_write(SocketType& s, SourceType& source) {
+coro<void> async_write(
+    SocketType& s, SourceType& source,
+    std::function<coro<void>()> precursor = []() -> coro<void> { co_return; }) {
     using boost::asio::experimental::awaitable_operators::operator&&;
 
     char _buf[2][buffer_size];
     char* rbuf = _buf[0];
     char* wbuf = _buf[1];
 
-    for (auto data = co_await source.get({rbuf, buffer_size}); !data.empty();) {
+    for (auto data = co_await (source.get({rbuf, buffer_size}) && precursor());
+         !data.empty();) {
         std::swap(rbuf, wbuf);
         auto d =
             co_await (source.get({rbuf, buffer_size}) && [&]() -> coro<void> {

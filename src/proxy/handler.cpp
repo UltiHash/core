@@ -92,9 +92,10 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                     const char* via_value = PROJECT_NAME " " PROJECT_VERSION;
                     parser.get().set(field::via, via_value);
 
-                    co_await async_write_header(s, serializer);
-
-                    co_await async_write<buffer_size_to_load>(s, *d_source);
+                    co_await async_write<buffer_size_to_load>(
+                        s, *d_source, [&]() -> coro<void> {
+                            co_await async_write_header(s, serializer);
+                        });
 
                     LOG_INFO() << peer << ": cache result served";
                     continue;
@@ -139,24 +140,28 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             } else if (get_object::can_handle(*req)) {
                 auto d_sync = cache::disk::disk_sync{m_dv};
                 auto s_sync = socket_sync{s};
-                co_await async_write_header(s, sr, d_sync);
                 auto body_size = get_content_length(p.get());
                 if (!body_size.has_value()) {
                     throw std::runtime_error("no content length");
                 }
                 co_await async_read<buffer_size_to_relay_and_store>(
-                    outgoing, o_buffer, *body_size, tee_sync(s_sync, d_sync));
+                    outgoing, o_buffer, *body_size, tee_sync(s_sync, d_sync),
+                    [&]() -> coro<void> {
+                        co_await async_write_header(s, sr, d_sync);
+                    });
                 co_await m_mgr.put(
                     cache::disk::object_metadata{req->object_key()}, d_sync);
 
             } else {
-                co_await async_write_header(s, sr);
                 auto body_size = get_content_length(p.get());
                 if (!body_size.has_value()) {
                     throw std::runtime_error("no content length");
                 }
                 co_await async_read<buffer_size_to_relay>(
-                    outgoing, o_buffer, *body_size, socket_sync(s));
+                    outgoing, o_buffer, *body_size, socket_sync(s),
+                    [&]() -> coro<void> {
+                        co_await async_write_header(s, sr);
+                    });
             }
             LOG_INFO() << peer << ": done";
 
