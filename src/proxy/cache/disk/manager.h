@@ -1,7 +1,7 @@
 #pragma once
 
-#include <proxy/cache/disk/body.h>
 #include <proxy/cache/disk/deletion_queue.h>
+#include <proxy/cache/disk/disk_io.h>
 
 #include <proxy/cache/lfu_cache.h>
 #include <proxy/cache/lru_cache.h>
@@ -32,7 +32,7 @@ public:
      *
      * It removed address information from the given body.
      */
-    coro<void> put(object_metadata key, writer& w) {
+    coro<void> put(object_metadata key, disk_sync& w) {
         auto objh = w.get_object_handle();
         auto obj_size = objh.data_size();
 
@@ -66,12 +66,12 @@ public:
         std::cout << "Total size after put: " << m_current_size << std::endl;
     }
 
-    std::unique_ptr<reader> get(object_metadata key) {
+    std::unique_ptr<disk_source> get(object_metadata key) {
         auto entry = m_cache->get(key);
         if (!entry) {
             return nullptr;
         }
-        return std::make_unique<reader>(m_storage, std::move(entry));
+        return std::make_unique<disk_source>(m_storage, std::move(entry));
     }
 
     static manager create(boost::asio::io_context& ioc, data_view& storage,

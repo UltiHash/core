@@ -5,8 +5,9 @@
 #include <proxy/asio.h>
 #include <proxy/http.h>
 
-#include <proxy/cache/disk/body.h>
-#include <proxy/cache/disk/http.h>
+#include <proxy/cache/disk/disk_io.h>
+#include <proxy/socket_io.h>
+#include <proxy/tee_io.h>
 
 #include <common/telemetry/metrics.h>
 #include <common/utils/random.h>
@@ -65,9 +66,9 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 co_await m_factory->create(incoming, rawreq);
 
             if (get_object::can_handle(*req)) {
-                auto reader =
+                auto d_source =
                     m_mgr.get(cache::disk::object_metadata{req->object_key()});
-                if (reader) {
+                if (d_source) {
                     LOG_INFO() << peer << ": handling from cache";
                     incoming.set_mode(forward_stream::deleting);
 
@@ -86,14 +87,14 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                     response_serializer<empty_body, fields> serializer{
                         parser.get()};
 
-                    co_await async_read_header(reader, parser);
+                    co_await async_read_header(d_source, parser);
 
                     const char* via_value = PROJECT_NAME " " PROJECT_VERSION;
                     parser.get().set(field::via, via_value);
 
                     co_await async_write_header(s, serializer);
 
-                    co_await async_write<buffer_size_to_load>(s, *reader);
+                    co_await async_write<buffer_size_to_load>(s, *d_source);
 
                     LOG_INFO() << peer << ": cache result served";
                     continue;
@@ -130,24 +131,23 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
             LOG_INFO() << peer << ": reading header from downstream";
             co_await async_read_header(outgoing, o_buffer, p);
-            // co_await async_write_header(s, sr);
 
             if (r.method() == verb::head) {
                 LOG_INFO() << peer << ": HEAD request, skipping body relay";
-                sr.split(true);
                 co_await async_write_header(s, sr);
 
             } else if (get_object::can_handle(*req)) {
-                auto writer = cache::disk::writer{m_dv};
-                co_await async_write_store_header(s, sr, writer);
+                auto d_sync = cache::disk::disk_sync{m_dv};
+                auto s_sync = socket_sync{s};
+                co_await async_write_header(s, sr, d_sync);
                 auto body_size = get_content_length(p.get());
                 if (!body_size.has_value()) {
                     throw std::runtime_error("no content length");
                 }
-                co_await async_relay_store_body<buffer_size_to_relay_and_store>(
-                    outgoing, s, o_buffer, writer, *body_size);
+                co_await async_read<buffer_size_to_relay_and_store>(
+                    outgoing, o_buffer, *body_size, tee_sync(s_sync, d_sync));
                 co_await m_mgr.put(
-                    cache::disk::object_metadata{req->object_key()}, writer);
+                    cache::disk::object_metadata{req->object_key()}, d_sync);
 
             } else {
                 co_await async_write_header(s, sr);
@@ -155,8 +155,8 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 if (!body_size.has_value()) {
                     throw std::runtime_error("no content length");
                 }
-                co_await async_relay_buffer<buffer_size_to_relay>(
-                    outgoing, s, o_buffer, *body_size);
+                co_await async_read<buffer_size_to_relay>(
+                    outgoing, o_buffer, *body_size, socket_sync(s));
             }
             LOG_INFO() << peer << ": done";
 
