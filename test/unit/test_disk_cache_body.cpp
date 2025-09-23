@@ -4,9 +4,10 @@
 
 #include <util/dedupe_fixture.h>
 
-#include <proxy/cache/disk/body.h>
-#include <proxy/cache/disk/http.h>
+#include <proxy/cache/disk/disk_io.h>
 #include <proxy/http.h>
+#include <proxy/socket_io.h>
+#include <proxy/tee_io.h>
 
 #include <common/utils/random.h>
 
@@ -37,7 +38,7 @@ BOOST_AUTO_TEST_CASE(supports_write) {
     auto objh = std::make_shared<object_handle>(std::move(addr));
 
     BOOST_TEST(objh->data_size() == data.size());
-    reader r(data_view, std::move(objh));
+    disk_source source(data_view, std::move(objh));
 
     // Set up TCP sockets
     boost::asio::ip::tcp::acceptor acceptor(m_ioc,
@@ -53,8 +54,8 @@ BOOST_AUTO_TEST_CASE(supports_write) {
         boost::asio::write(client_sock, boost::asio::buffer(header));
     BOOST_TEST(written_size == header.size());
 
-    // Client writes r using async_write and writer_body
-    boost::asio::co_spawn(m_ioc, async_write<16_KiB>(client_sock, r),
+    // Client writes source using async_write and writer_body
+    boost::asio::co_spawn(m_ioc, async_write<16_KiB>(client_sock, source),
                           boost::asio::use_future)
         .get();
 
@@ -98,20 +99,21 @@ BOOST_AUTO_TEST_CASE(goes_with_relay_store_body) {
     parser<true, empty_body> p;
     serializer<true, empty_body, fields> sr{p.get()};
 
-    writer w(data_view);
+    disk_sync dsync(data_view);
+    socket_sync ssync(server_socket);
 
     co_spawn(
         m_ioc,
         [&]() -> coro<void> {
             auto n = co_await async_read_header(server_socket, b, p);
-            auto m = co_await async_write_store_header(server_socket, sr, w);
+            auto m = co_await async_write_header(server_socket, sr, dsync);
             BOOST_TEST(n == m);
             auto body_size = get_content_length(p.get());
             if (!body_size.has_value()) {
                 throw std::runtime_error("no content length");
             }
-            co_await async_relay_store_body<1_KiB>(server_socket, server_socket,
-                                                   b, w, *body_size);
+            co_await async_read<1_KiB>(server_socket, b, *body_size,
+                                       tee_sync(dsync, ssync));
         },
         boost::asio::use_future)
         .get();
@@ -132,7 +134,7 @@ BOOST_AUTO_TEST_CASE(goes_with_relay_store_body) {
     BOOST_TEST(output_str ==
                std::string_view(raw_message.data(), raw_message.size()));
 
-    auto objh = w.get_object_handle();
+    auto objh = dsync.get_object_handle();
     BOOST_TEST(objh.data_size() == raw_message.size());
 
     std::vector<char> buf(raw_message.size());
@@ -192,8 +194,8 @@ BOOST_AUTO_TEST_CASE(test_relay_body) {
             if (!body_size.has_value()) {
                 throw std::runtime_error("no content length");
             }
-            co_await async_relay_buffer<1_KiB>(server_socket, server_socket, b,
-                                               *body_size);
+            co_await async_read<1_KiB>(server_socket, b, *body_size,
+                                       socket_sync(server_socket));
         },
         boost::asio::use_future)
         .get();

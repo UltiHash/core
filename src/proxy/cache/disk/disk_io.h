@@ -1,5 +1,5 @@
 /*
- * Body writer/reader bodies which supports get/put API only
+ * Sync/source for disk, which supports put/get API
  */
 #pragma once
 
@@ -15,15 +15,11 @@
 
 namespace uh::cluster::proxy::cache::disk {
 
-class writer {
+class disk_sync {
 public:
-    writer(storage::data_view& writer)
+    disk_sync(storage::data_view& writer)
         : m_storage{writer},
           m_addr{} {}
-
-    template <typename T> coro<void> put(const T& s) {
-        return put(std::span<const char>(s.data(), s.size()));
-    }
 
     coro<void> put(std::span<const char> sv) {
         if (sv.size() == 0) {
@@ -53,22 +49,19 @@ private:
     std::size_t m_header_size{0};
 };
 
-class reader {
+class disk_source {
 public:
-    reader(storage::data_view& storage, std::shared_ptr<object_handle> objh)
+    disk_source(storage::data_view& storage,
+                std::shared_ptr<object_handle> objh)
         : m_storage(storage),
           m_objh{std::move(objh)} {}
 
-    reader(const reader&) = delete;
-    reader& operator=(const reader&) = delete;
-    reader(reader&&) = delete;
-    reader& operator=(reader&&) = delete;
+    disk_source(const disk_source&) = delete;
+    disk_source& operator=(const disk_source&) = delete;
+    disk_source(disk_source&&) = delete;
+    disk_source& operator=(disk_source&&) = delete;
 
     std::size_t get_header_size() const { return m_objh->header_size(); }
-
-    template <typename T> coro<std::span<const char>> get(T& s) {
-        return get(std::span<char>(s.data(), s.size()));
-    }
 
     coro<std::span<const char>> get(std::span<char> buffer) {
         std::size_t read_size = 0;
