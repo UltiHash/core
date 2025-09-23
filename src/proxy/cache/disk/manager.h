@@ -27,12 +27,7 @@ public:
     using stream = ep::http::stream;
     using body = ep::http::body;
 
-    /*
-     * Store object handle in cache
-     *
-     * It removed address information from the given body.
-     */
-    coro<void> put(object_metadata key, disk_sync& w) {
+    coro<void> put(object_metadata key, disk_sink& w) {
         auto objh = w.get_object_handle();
         auto obj_size = objh.data_size();
 

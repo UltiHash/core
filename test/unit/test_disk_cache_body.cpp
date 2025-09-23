@@ -99,21 +99,22 @@ BOOST_AUTO_TEST_CASE(goes_with_relay_store_body) {
     parser<true, empty_body> p;
     serializer<true, empty_body, fields> sr{p.get()};
 
-    disk_sync dsync(data_view);
-    socket_sync ssync(server_socket);
+    disk_sink dsink(data_view);
+    socket_sink ssink(server_socket);
 
     co_spawn(
         m_ioc,
         [&]() -> coro<void> {
             auto n = co_await async_read_header(server_socket, b, p);
-            auto m = co_await async_write_header(server_socket, sr, dsync);
+            auto m = co_await async_write_header(tee(dsink, ssink), sr);
+            dsink.set_header_size(m);
             BOOST_TEST(n == m);
             auto body_size = get_content_length(p.get());
             if (!body_size.has_value()) {
                 throw std::runtime_error("no content length");
             }
             co_await async_read<1_KiB>(server_socket, b, *body_size,
-                                       tee_sync(dsync, ssync));
+                                       tee(dsink, ssink));
         },
         boost::asio::use_future)
         .get();
@@ -134,7 +135,7 @@ BOOST_AUTO_TEST_CASE(goes_with_relay_store_body) {
     BOOST_TEST(output_str ==
                std::string_view(raw_message.data(), raw_message.size()));
 
-    auto objh = dsync.get_object_handle();
+    auto objh = dsink.get_object_handle();
     BOOST_TEST(objh.data_size() == raw_message.size());
 
     std::vector<char> buf(raw_message.size());
@@ -195,7 +196,7 @@ BOOST_AUTO_TEST_CASE(test_relay_body) {
                 throw std::runtime_error("no content length");
             }
             co_await async_read<1_KiB>(server_socket, b, *body_size,
-                                       socket_sync(server_socket));
+                                       socket_sink(server_socket));
         },
         boost::asio::use_future)
         .get();

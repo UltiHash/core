@@ -15,18 +15,22 @@
 
 namespace uh::cluster::proxy::cache::disk {
 
-class disk_sync {
+class disk_sink {
 public:
-    disk_sync(storage::data_view& writer)
+    disk_sink(storage::data_view& writer)
         : m_storage{writer},
           m_addr{} {}
+
+    disk_sink(const disk_sink&) = delete;
+    disk_sink& operator=(const disk_sink&) = delete;
+    disk_sink(disk_sink&&) = default;
+    disk_sink& operator=(disk_sink&&) = default;
 
     coro<void> put(std::span<const char> sv) {
         if (sv.size() == 0) {
             co_return;
         }
-        auto addr = co_await m_storage.write(sv, {0});
-        m_hash.consume(sv);
+        auto addr = co_await m_storage.get().write(sv, {0});
         m_addr.append(addr);
     }
 
@@ -37,14 +41,12 @@ public:
      * value.
      */
     object_handle get_object_handle() {
-        // TODO: set etag with `to_hex(m_hash.finalize())`
         return object_handle(std::move(m_addr), m_header_size);
     }
 
 private:
-    storage::data_view& m_storage;
+    std::reference_wrapper<storage::data_view> m_storage;
 
-    md5 m_hash;
     address m_addr;
     std::size_t m_header_size{0};
 };
@@ -58,8 +60,8 @@ public:
 
     disk_source(const disk_source&) = delete;
     disk_source& operator=(const disk_source&) = delete;
-    disk_source(disk_source&&) = delete;
-    disk_source& operator=(disk_source&&) = delete;
+    disk_source(disk_source&&) = default;
+    disk_source& operator=(disk_source&&) = default;
 
     std::size_t get_header_size() const { return m_objh->header_size(); }
 
@@ -70,10 +72,10 @@ public:
                read_size < buffer.size()) {
 
             auto frag = m_objh->get_address().get(m_addr_index);
-            if (m_frag_offset > 0) {
-                frag.pointer += m_frag_offset;
-                frag.size -= m_frag_offset;
-            }
+
+            frag.pointer += m_frag_offset;
+            frag.size -= m_frag_offset;
+
             if (frag.size + read_size > buffer.size()) {
                 auto remains = buffer.size() - read_size;
                 m_frag_offset += remains;
@@ -89,14 +91,14 @@ public:
         }
 
         if (read_size > 0) {
-            co_await m_storage.read_address(partial_addr,
-                                            {buffer.data(), read_size});
+            co_await m_storage.get().read_address(partial_addr,
+                                                  {buffer.data(), read_size});
         }
         co_return std::span<const char>{buffer.data(), read_size};
     }
 
 private:
-    storage::data_view& m_storage;
+    std::reference_wrapper<storage::data_view> m_storage;
     std::shared_ptr<object_handle> m_objh;
 
     std::size_t m_addr_index{0};

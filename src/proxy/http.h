@@ -121,9 +121,8 @@ coro<void> async_read_header(const SourceType& source, Parser& parser) {
     }
 }
 
-template <typename ServerSocketType, typename Serializer, typename SyncType>
-coro<std::size_t> async_write_header(ServerSocketType& server_socket,
-                                     Serializer& sr, SyncType& sync) {
+template <typename SinkType, typename Serializer>
+coro<std::size_t> async_write_header(SinkType&& sink, Serializer& sr) {
     using boost::asio::experimental::awaitable_operators::operator&&;
     std::ostringstream oss;
     boost::system::error_code ec;
@@ -133,24 +132,23 @@ coro<std::size_t> async_write_header(ServerSocketType& server_socket,
     if (header_str.size() == 0) {
         throw std::runtime_error("Could not serialize header");
     }
-    co_await (sync.put(header_str) && [&]() -> coro<void> {
-        co_await async_write(server_socket, boost::asio::buffer(header_str));
-    }());
-    sync.set_header_size(header_str.size());
+    co_await sink.put(header_str);
     co_return header_str.size();
 }
 
-template <std::size_t chunk_size, typename Incomming, typename SyncType>
+template <std::size_t chunk_size, typename Incomming, typename SinkType>
 coro<void> async_read(
-    Incomming& in, boost::beast::flat_buffer& b, std::size_t payload_size,
-    SyncType&& sync,
+    Incomming& s, boost::beast::flat_buffer& b, std::size_t payload_size,
+    SinkType&& sink,
     std::function<coro<void>()> precursor = []() -> coro<void> { co_return; }) {
     using boost::asio::experimental::awaitable_operators::operator&&;
+
+    auto sink_ref = std::forward<SinkType>(sink);
 
     if (b.data().size() >= payload_size) {
         auto sv = std::span<const char>(
             static_cast<const char*>(b.data().data()), payload_size);
-        co_await (sync.put(sv) && precursor());
+        co_await (sink_ref.put(sv) && precursor());
         b.consume(sv.size());
 
     } else {
@@ -163,7 +161,7 @@ coro<void> async_read(
             auto* rbuf = &b;
             auto* wbuf = &b2;
 
-            for (auto n = co_await (read(in, *rbuf,
+            for (auto n = co_await (read(s, *rbuf,
                                          std::min(payload_size, chunk_size) -
                                              rbuf->data().size()) &&
                                     precursor());
@@ -175,17 +173,17 @@ coro<void> async_read(
                 }
                 payload_size -= wbuf->data().size();
                 auto new_n = co_await (
-                    read(in, *rbuf, std::min(payload_size, chunk_size)) &&
-                    sync.put(get_span(wbuf->data())));
+                    read(s, *rbuf, std::min(payload_size, chunk_size)) &&
+                    sink_ref.put(get_span(wbuf->data())));
 
                 wbuf->consume(wbuf->data().size());
                 n = new_n;
             }
         } else {
-            auto n = co_await (read(in, b, payload_size - b.data().size()) &&
+            auto n = co_await (read(s, b, payload_size - b.data().size()) &&
                                precursor());
             b.commit(n);
-            co_await sync.put(get_span(b.data()));
+            co_await sink_ref.put(get_span(b.data()));
             b.consume(b.data().size());
         }
     }
@@ -199,17 +197,20 @@ coro<void> async_write(
     std::function<coro<void>()> precursor = []() -> coro<void> { co_return; }) {
     using boost::asio::experimental::awaitable_operators::operator&&;
 
+    auto source_ref = std::forward<SourceType>(source);
+
     char _buf[2][buffer_size];
     char* rbuf = _buf[0];
     char* wbuf = _buf[1];
 
-    for (auto data = co_await (source.get({rbuf, buffer_size}) && precursor());
+    for (auto data =
+             co_await (source_ref.get({rbuf, buffer_size}) && precursor());
          !data.empty();) {
         std::swap(rbuf, wbuf);
-        auto d =
-            co_await (source.get({rbuf, buffer_size}) && [&]() -> coro<void> {
-                co_await async_write(s, boost::asio::const_buffer(data));
-            }());
+        auto d = co_await (source_ref.get({rbuf, buffer_size}) &&
+                               [&]() -> coro<void> {
+            co_await async_write(s, boost::asio::const_buffer(data));
+        }());
         data = d;
     }
 }
