@@ -61,22 +61,19 @@ coro<dedupe_response> local_deduplicator::deduplicate(std::string_view data) {
             auto match_low = co_await match_size(m_cache, data, f.low);
             auto match_high = co_await match_size(m_cache, data, f.high);
 
-            if (const auto size = std::max(match_low, match_high);
+            if (auto size = std::max(match_low, match_high);
                 size > m_dedupe_conf.min_fragment_size) {
                 const auto& [frag, prefix] =
                     match_low > match_high ? *f.low : *f.high;
 
-                // Add `&& size < data.size()`?
                 if (size == m_dedupe_conf.max_fragment_size) {
-                    offset += co_await pursue_pointer(
-                        data, frag.pointer + m_dedupe_conf.max_fragment_size,
-                        (offset == 0), fragments);
-                } else {
-                    fragments.push_stored(frag.pointer, size,
-                                          data.substr(0, size), (offset == 0));
-                    data = data.substr(size);
-                    offset += size;
+                    size += co_await storage_match(frag.pointer + size, data.substr(size));
                 }
+
+                fragments.push_stored(frag.pointer, size,
+                                      data.substr(0, size), (offset == 0));
+                data = data.substr(size);
+                offset += size;
             } else {
                 auto frag_size =
                     std::min(data.size(), m_dedupe_conf.max_fragment_size);
@@ -139,29 +136,21 @@ coro<dedupe_response> local_deduplicator::deduplicate(std::string_view data) {
     co_return result;
 }
 
-coro<size_t> local_deduplicator::pursue_pointer(std::string_view& data,
-                                                uint128_t pointer, bool header,
-                                                fragmentation& fragments) {
-    std::size_t common_size;
-
-    uint128_t frag_pointer = pointer - m_dedupe_conf.max_fragment_size;
-    std::size_t frag_size = m_dedupe_conf.max_fragment_size;
+coro<size_t> local_deduplicator::storage_match(uint128_t pointer,
+                                               std::string_view data)
+{
+    std::size_t size = 0ull;
+    std::size_t common = 0ull;
 
     do {
-        auto stored_data = co_await m_cache.read(pointer, pursue_size);
+        auto stored = co_await m_cache.read(pointer, pursue_size);
+        common = largest_common_prefix(stored.string_view(), data.substr(size));
 
-        common_size = largest_common_prefix(stored_data.string_view(),
-                                            data.substr(frag_size));
+        size += common;
+        pointer += common;
+    } while (common == pursue_size);
 
-        frag_size += common_size;
-        pointer += common_size;
-    } while (common_size == pursue_size);
-
-    fragments.push_stored(frag_pointer, frag_size, data.substr(0, frag_size),
-                          header);
-
-    data = data.substr(frag_size);
-    co_return frag_size;
+    co_return size;
 }
 
 } // namespace uh::cluster
