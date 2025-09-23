@@ -3,8 +3,13 @@
 #include <common/telemetry/trace/awaitable_operators.h>
 #include <common/types/common_types.h>
 
+#include <proxy/asio.h>
+
+#include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/http.hpp>
+
 #include <concepts>
+#include <span>
 
 namespace boost::beast::http {
 
@@ -122,34 +127,46 @@ coro<void> async_relay_buffer(Incomming& in, Outgoing& out,
                               std::size_t payload_size) {
     using boost::asio::experimental::awaitable_operators::operator&&;
 
-    if (payload_size > chunk_size) {
-        boost::beast::flat_buffer b2;
-        auto* rbuf = &b;
-        auto* wbuf = &b2;
+    if (b.data().size() >= payload_size) {
+        auto sv = std::span<const char>(
+            static_cast<const char*>(b.data().data()), payload_size);
+        co_await async_write(out, sv);
+        b.consume(sv.size());
 
-        for (auto n = co_await async_read(
-                 in, rbuf->prepare(std::min(payload_size, chunk_size) -
-                                   rbuf->data().size()));
-             n != 0;) {
-            std::swap(rbuf, wbuf);
-            wbuf->commit(n + wbuf->data().size());
-            payload_size -= wbuf->data().size();
-            auto new_n = co_await ( //
-                [&]() -> coro<std::size_t> {
-                    co_return co_await async_read(
-                        in, rbuf->prepare(std::min(payload_size, chunk_size)));
-                }() && [&]() -> coro<void> {
-                    co_await async_write(out, get_span(wbuf->data()));
-                }());
-            wbuf->consume(wbuf->data().size());
-            n = new_n;
-        }
     } else {
-        auto n =
-            co_await async_read(in, b.prepare(payload_size - b.data().size()));
-        b.commit(n + b.data().size());
-        co_await async_write(out, get_span(b.data()));
-        b.consume(b.data().size());
+        if (payload_size > chunk_size) {
+            boost::beast::flat_buffer b2;
+            auto* rbuf = &b;
+            auto* wbuf = &b2;
+
+            for (auto n = co_await async_read(
+                     in, rbuf->prepare(std::min(payload_size, chunk_size) -
+                                       rbuf->data().size()));
+                 n != 0;) {
+                std::swap(rbuf, wbuf);
+                wbuf->commit(n);
+                if (wbuf->data().size() != std::min(payload_size, chunk_size)) {
+                    throw std::runtime_error("buffer size mismatch");
+                }
+                payload_size -= wbuf->data().size();
+                auto new_n = co_await ( //
+                    [&]() -> coro<std::size_t> {
+                        co_return co_await async_read(
+                            in,
+                            rbuf->prepare(std::min(payload_size, chunk_size)));
+                    }() && [&]() -> coro<void> {
+                        co_await async_write(out, get_span(wbuf->data()));
+                    }());
+                wbuf->consume(wbuf->data().size());
+                n = new_n;
+            }
+        } else {
+            auto n = co_await async_read(
+                in, b.prepare(payload_size - b.data().size()));
+            b.commit(n);
+            co_await async_write(out, get_span(b.data()));
+            b.consume(b.data().size());
+        }
     }
 
     b.shrink_to_fit();
