@@ -5,9 +5,9 @@
 
 namespace uh::cluster::proxy {
 
-template <typename T, typename U> class tee_sync {
+template <typename T, typename U> class tee {
 public:
-    tee_sync(T& t, U& u)
+    tee(T& t, U& u)
         : m_t{t},
           m_u{u} {}
 

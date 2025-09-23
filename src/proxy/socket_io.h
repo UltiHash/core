@@ -7,9 +7,9 @@
 
 namespace uh::cluster::proxy {
 
-template <typename SocketType> class socket_sync {
+template <typename SocketType> class socket_sink {
 public:
-    socket_sync(SocketType& s)
+    socket_sink(SocketType& s)
         : m_s{s} {}
 
     coro<void> put(std::span<const char> sv) {

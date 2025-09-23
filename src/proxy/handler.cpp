@@ -42,7 +42,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     constexpr std::size_t buffer_size_to_relay_and_store = 32_MiB;
     constexpr std::size_t buffer_size_to_relay = 4_KiB;
 
-    flat_buffer o_buffer(
+    flat_buffer buffer(
         std::max(buffer_size_to_relay, buffer_size_to_relay_and_store));
 
     for (;;) {
@@ -111,7 +111,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 // TODO timeout
                 response_parser<empty_body> p;
                 response_serializer<empty_body, fields> sr{p.get()};
-                co_await async_read_header(outgoing, o_buffer, p);
+                co_await async_read_header(outgoing, buffer, p);
                 co_await async_write_header(s, sr);
             }
 
@@ -131,26 +131,28 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             response_serializer<empty_body, fields> sr{p.get()};
 
             LOG_INFO() << peer << ": reading header from downstream";
-            co_await async_read_header(outgoing, o_buffer, p);
+            co_await async_read_header(outgoing, buffer, p);
 
             if (r.method() == verb::head) {
                 LOG_INFO() << peer << ": HEAD request, skipping body relay";
                 co_await async_write_header(s, sr);
 
             } else if (get_object::can_handle(*req)) {
-                auto d_sync = cache::disk::disk_sync{m_dv};
-                auto s_sync = socket_sync{s};
+                auto d_sink = cache::disk::disk_sink{m_dv};
+                auto s_sink = socket_sink{s};
                 auto body_size = get_content_length(p.get());
                 if (!body_size.has_value()) {
                     throw std::runtime_error("no content length");
                 }
                 co_await async_read<buffer_size_to_relay_and_store>(
-                    outgoing, o_buffer, *body_size, tee_sync(s_sync, d_sync),
+                    outgoing, buffer, *body_size, tee(s_sink, d_sink),
                     [&]() -> coro<void> {
-                        co_await async_write_header(s, sr, d_sync);
+                        auto n = co_await async_write_header(
+                            tee(s_sink, d_sink), sr);
+                        d_sink.set_header_size(n);
                     });
                 co_await m_mgr.put(
-                    cache::disk::object_metadata{req->object_key()}, d_sync);
+                    cache::disk::object_metadata{req->object_key()}, d_sink);
 
             } else {
                 auto body_size = get_content_length(p.get());
@@ -158,7 +160,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                     throw std::runtime_error("no content length");
                 }
                 co_await async_read<buffer_size_to_relay>(
-                    outgoing, o_buffer, *body_size, socket_sync(s),
+                    outgoing, buffer, *body_size, socket_sink(s),
                     [&]() -> coro<void> {
                         co_await async_write_header(s, sr);
                     });
