@@ -146,9 +146,10 @@ coro<void> async_read(
     auto sink_ref = std::forward<SinkType>(sink);
 
     if (b.data().size() >= payload_size) {
+        co_await precursor();
         auto sv = std::span<const char>(
             static_cast<const char*>(b.data().data()), payload_size);
-        co_await (sink_ref.put(sv) && precursor());
+        co_await sink_ref.put(sv);
         b.consume(sv.size());
 
     } else {
@@ -161,24 +162,26 @@ coro<void> async_read(
             auto* rbuf = &b;
             auto* wbuf = &b2;
 
-            for (auto n = co_await (read(s, *rbuf,
-                                         std::min(payload_size, chunk_size) -
-                                             rbuf->data().size()) &&
-                                    precursor());
-                 n != 0;) {
-                std::swap(rbuf, wbuf);
-                wbuf->commit(n);
-                if (wbuf->data().size() != std::min(payload_size, chunk_size)) {
-                    throw std::runtime_error("buffer size mismatch");
-                }
-                payload_size -= wbuf->data().size();
-                auto new_n = co_await (
-                    read(s, *rbuf, std::min(payload_size, chunk_size)) &&
-                    sink_ref.put(get_span(wbuf->data())));
-
-                wbuf->consume(wbuf->data().size());
-                n = new_n;
+            auto remained = payload_size;
+            std::size_t n = 0;
+            if (chunk_size > rbuf->data().size()) {
+                n = co_await (
+                    read(s, *rbuf, chunk_size - rbuf->data().size()) &&
+                    precursor());
+                rbuf->commit(n);
+                remained -= rbuf->data().size();
+            } else {
+                co_await precursor();
             }
+
+            do {
+                std::swap(rbuf, wbuf);
+                n = co_await (read(s, *rbuf, std::min(remained, chunk_size)) &&
+                              sink_ref.put(get_span(wbuf->data())));
+                rbuf->commit(n);
+                remained -= rbuf->data().size();
+                wbuf->consume(wbuf->data().size());
+            } while (n != 0);
         } else {
             auto n = co_await (read(s, b, payload_size - b.data().size()) &&
                                precursor());
