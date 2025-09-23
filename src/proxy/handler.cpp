@@ -35,9 +35,16 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
     forward_stream incoming(s, *ds);
     auto& outgoing{*ds};
-    flat_buffer o_buffer;
-    for (;;) {
 
+    constexpr std::size_t buffer_size_to_load = 16_MiB;
+
+    constexpr std::size_t buffer_size_to_relay_and_store = 32_MiB;
+    constexpr std::size_t buffer_size_to_relay = 4_KiB;
+
+    flat_buffer o_buffer(
+        std::max(buffer_size_to_relay, buffer_size_to_relay_and_store));
+
+    for (;;) {
         /*
          * Note: lifetime of response must not exceed lifetime of request.
          */
@@ -86,7 +93,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
                     co_await async_write_header(s, serializer);
 
-                    co_await async_write<16_MiB>(s, *reader);
+                    co_await async_write<buffer_size_to_load>(s, *reader);
 
                     LOG_INFO() << peer << ": cache result served";
                     continue;
@@ -137,8 +144,8 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 if (!body_size.has_value()) {
                     throw std::runtime_error("no content length");
                 }
-                co_await async_relay_store_body<32_MiB>(outgoing, s, o_buffer,
-                                                        writer, *body_size);
+                co_await async_relay_store_body<buffer_size_to_relay_and_store>(
+                    outgoing, s, o_buffer, writer, *body_size);
                 co_await m_mgr.put(
                     cache::disk::object_metadata{req->object_key()}, writer);
 
@@ -148,8 +155,8 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 if (!body_size.has_value()) {
                     throw std::runtime_error("no content length");
                 }
-                co_await async_relay_buffer<4_KiB>(outgoing, s, o_buffer,
-                                                   *body_size);
+                co_await async_relay_buffer<buffer_size_to_relay>(
+                    outgoing, s, o_buffer, *body_size);
             }
             LOG_INFO() << peer << ": done";
 
