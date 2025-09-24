@@ -18,13 +18,10 @@ struct local_deduplicator : public deduplicator_interface {
     coro<dedupe_response> deduplicate(std::string_view data) override;
 
 private:
-    coro<size_t> storage_match(uint128_t pointer, std::string_view data);
-
     deduplicator_config m_dedupe_conf;
     storage::data_view& m_storage;
     storage::global::cache& m_cache;
     fragment_set m_fragment_set;
     worker_pool m_dedupe_workers;
-    constexpr static std::size_t pursue_size = 64 * KIBI_BYTE;
 };
 } // namespace uh::cluster
