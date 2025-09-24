@@ -114,9 +114,12 @@ uh::cluster::coro<void> object_info(directory& dir, const std::string& bucket,
     if (object->addr) {
         std::cout << "\naddress data (size: " << object->addr->size()
                   << ", datasize: " << object->addr->data_size() << ")\n";
+
+        std::size_t offset = 0ull;
         for (std::size_t i = 0; i < object->addr->size(); ++i) {
-            auto fragment = object->addr->get(i);
-            std::cout << fragment;
+            auto f = object->addr->get(i);
+            std::cout << std::format("{:016x}", offset) << "  " << f << "\n";
+            offset += f.size;
         }
     }
 }
