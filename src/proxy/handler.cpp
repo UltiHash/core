@@ -93,9 +93,9 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                     parser.get().set(field::via, via_value);
 
                     co_await async_write<buffer_size_to_load>(
-                        s, *d_source, [&]() -> coro<void> {
-                            co_await async_write_header(s, serializer);
-                        });
+                        async_write_header(s, serializer,
+                                           boost::asio::use_awaitable),
+                        s, *d_source);
 
                     LOG_INFO() << peer << ": cache result served";
                     continue;
@@ -144,13 +144,15 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 if (!body_size.has_value()) {
                     throw std::runtime_error("no content length");
                 }
+                LOG_INFO() << peer << ": relaying and storing body of size "
+                           << *body_size;
                 co_await async_read<buffer_size_to_relay_and_store>(
-                    outgoing, buffer, *body_size, tee(s_sink, d_sink),
                     [&]() -> coro<void> {
                         auto n = co_await async_write_header(
                             tee(s_sink, d_sink), sr);
                         d_sink.set_header_size(n);
-                    });
+                    },
+                    outgoing, buffer, *body_size, tee(s_sink, d_sink));
                 co_await m_mgr.put(
                     cache::disk::object_metadata{req->object_key()}, d_sink);
 
@@ -159,11 +161,10 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 if (!body_size.has_value()) {
                     throw std::runtime_error("no content length");
                 }
+                LOG_INFO() << peer << ": relaying body of size " << *body_size;
                 co_await async_read<buffer_size_to_relay>(
-                    outgoing, buffer, *body_size, socket_sink(s),
-                    [&]() -> coro<void> {
-                        co_await async_write_header(s, sr);
-                    });
+                    async_write_header(s, sr, boost::asio::use_awaitable),
+                    outgoing, buffer, *body_size, socket_sink(s));
             }
             LOG_INFO() << peer << ": done";
 

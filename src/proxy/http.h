@@ -137,16 +137,38 @@ coro<std::size_t> async_write_header(SinkType&& sink, Serializer& sr) {
 }
 
 template <std::size_t chunk_size, typename Incomming, typename SinkType>
-coro<void> async_read(
-    Incomming& s, boost::beast::flat_buffer& b, std::size_t payload_size,
-    SinkType&& sink,
-    std::function<coro<void>()> precursor = []() -> coro<void> { co_return; }) {
+coro<void> async_read(Incomming& s, boost::beast::flat_buffer& b,
+                      std::size_t payload_size, SinkType&& sink) {
+    co_await async_read<chunk_size>(async_noop(), s, b, payload_size,
+                                    std::forward<SinkType>(sink));
+}
+
+template <std::size_t chunk_size, typename Awaitable, typename Incomming,
+          typename SinkType>
+coro<void> async_read(Awaitable&& precursor, Incomming& s,
+                      boost::beast::flat_buffer& b, std::size_t payload_size,
+                      SinkType&& sink) {
     using boost::asio::experimental::awaitable_operators::operator&&;
 
     auto sink_ref = std::forward<SinkType>(sink);
 
+    using precursor_type = std::decay_t<Awaitable>;
+    coro<void> precursor_wrapper;
+
+    if constexpr (std::is_same_v<precursor_type, coro<void>>) {
+        precursor_wrapper = std::move(precursor);
+    } else if constexpr (is_boost_awaitable_v<precursor_type>) {
+        precursor_wrapper = async_wrap(std::move(precursor));
+    } else if constexpr (std::is_invocable_r_v<coro<void>, precursor_type>) {
+        precursor_wrapper = precursor();
+    } else {
+        throw std::runtime_error(
+            "invalid precursor type: " +
+            boost::core::demangle(typeid(precursor_type).name()));
+    }
+
     if (b.data().size() >= payload_size) {
-        co_await precursor();
+        co_await std::move(precursor_wrapper);
         auto sv = std::span<const char>(
             static_cast<const char*>(b.data().data()), payload_size);
         co_await sink_ref.put(sv);
@@ -167,11 +189,11 @@ coro<void> async_read(
             if (chunk_size > rbuf->data().size()) {
                 n = co_await (
                     read(s, *rbuf, chunk_size - rbuf->data().size()) &&
-                    precursor());
+                    std::move(precursor_wrapper));
                 rbuf->commit(n);
                 remained -= rbuf->data().size();
             } else {
-                co_await precursor();
+                co_await std::move(precursor_wrapper);
             }
 
             do {
@@ -184,7 +206,7 @@ coro<void> async_read(
             } while (n != 0);
         } else {
             auto n = co_await (read(s, b, payload_size - b.data().size()) &&
-                               precursor());
+                               std::move(precursor_wrapper));
             b.commit(n);
             co_await sink_ref.put(get_span(b.data()));
             b.consume(b.data().size());
@@ -194,23 +216,42 @@ coro<void> async_read(
     b.shrink_to_fit();
 }
 
-template <std::size_t buffer_size, typename SocketType, typename SourceType>
-coro<void> async_write(
-    SocketType& s, SourceType& source,
-    std::function<coro<void>()> precursor = []() -> coro<void> { co_return; }) {
+template <std::size_t chunk_size, typename SocketType, typename SourceType>
+coro<void> async_write(SocketType& s, SourceType& source) {
+    co_await async_write<chunk_size>(async_noop(), s, source);
+}
+template <std::size_t chunk_size, typename Awaitable, typename SocketType,
+          typename SourceType>
+coro<void> async_write(Awaitable&& precursor, SocketType& s,
+                       SourceType& source) {
     using boost::asio::experimental::awaitable_operators::operator&&;
 
     auto source_ref = std::forward<SourceType>(source);
 
-    char _buf[2][buffer_size];
+    using precursor_type = std::decay_t<Awaitable>;
+    coro<void> precursor_wrapper;
+
+    if constexpr (std::is_same_v<precursor_type, coro<void>>) {
+        precursor_wrapper = std::move(precursor);
+    } else if constexpr (is_boost_awaitable_v<precursor_type>) {
+        precursor_wrapper = async_wrap(std::move(precursor));
+    } else if constexpr (std::is_invocable_r_v<coro<void>, precursor_type>) {
+        precursor_wrapper = precursor();
+    } else {
+        throw std::runtime_error(
+            "invalid precursor type: " +
+            boost::core::demangle(typeid(precursor_type).name()));
+    }
+
+    char _buf[2][chunk_size];
     char* rbuf = _buf[0];
     char* wbuf = _buf[1];
 
-    for (auto data =
-             co_await (source_ref.get({rbuf, buffer_size}) && precursor());
+    for (auto data = co_await (source_ref.get({rbuf, chunk_size}) &&
+                               std::move(precursor_wrapper));
          !data.empty();) {
         std::swap(rbuf, wbuf);
-        auto d = co_await (source_ref.get({rbuf, buffer_size}) &&
+        auto d = co_await (source_ref.get({rbuf, chunk_size}) &&
                                [&]() -> coro<void> {
             co_await async_write(s, boost::asio::const_buffer(data));
         }());
