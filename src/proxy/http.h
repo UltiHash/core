@@ -136,13 +136,6 @@ coro<std::size_t> async_write_header(SinkType&& sink, Serializer& sr) {
     co_return header_str.size();
 }
 
-template <std::size_t chunk_size, typename Incomming, typename SinkType>
-coro<void> async_read(Incomming& s, boost::beast::flat_buffer& b,
-                      std::size_t payload_size, SinkType&& sink) {
-    co_await async_read<chunk_size>(async_noop(), s, b, payload_size,
-                                    std::forward<SinkType>(sink));
-}
-
 template <std::size_t chunk_size, typename Awaitable, typename Incomming,
           typename SinkType>
 coro<void> async_read(Awaitable&& precursor, Incomming& s,
@@ -216,10 +209,13 @@ coro<void> async_read(Awaitable&& precursor, Incomming& s,
     b.shrink_to_fit();
 }
 
-template <std::size_t chunk_size, typename SocketType, typename SourceType>
-coro<void> async_write(SocketType& s, SourceType& source) {
-    co_await async_write<chunk_size>(async_noop(), s, source);
+template <std::size_t chunk_size, typename Incomming, typename SinkType>
+coro<void> async_read(Incomming& s, boost::beast::flat_buffer& b,
+                      std::size_t payload_size, SinkType&& sink) {
+    co_await async_read<chunk_size>(async_noop(), s, b, payload_size,
+                                    std::forward<SinkType>(sink));
 }
+
 template <std::size_t chunk_size, typename Awaitable, typename SocketType,
           typename SourceType>
 coro<void> async_write(Awaitable&& precursor, SocketType& s,
@@ -257,6 +253,11 @@ coro<void> async_write(Awaitable&& precursor, SocketType& s,
         }());
         data = d;
     }
+}
+
+template <std::size_t chunk_size, typename SocketType, typename SourceType>
+coro<void> async_write(SocketType& s, SourceType& source) {
+    co_await async_write<chunk_size>(async_noop(), s, source);
 }
 
 } // namespace uh::cluster::proxy
