@@ -97,7 +97,6 @@ jobs:
   cleanup:
     runs-on: lightweight-generic-jobs
     needs: deploy-and-test
-    if: ${{ always() }}
     steps:
 
       - name: Install AWS CLI
