@@ -10,6 +10,7 @@ on:
         description: Choose the test to execute
         options: 
           - feature-test
+          - proxy-stability-test
           - pyspark-test
           - s3a-test
           - stability-test
@@ -101,6 +102,28 @@ jobs:
       aws_secret_access_key: ${{ secrets.AWS_SECRET_KEY}}
       uh_license: ${{ secrets.UH_LICENSE_JSON }}
       monitoring_token: ${{ secrets.MONITORING_TOKEN_AWS }}
+
+  proxy-stability-test:
+    needs:
+      - build-core
+      - build-database-init
+    if: |
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'proxy-stability-test')
+    uses: ./.github/workflows/proxy_stability_testing.yml
+    with:
+      env_name: proxy-stability-testing
+      docker_image_tag: nightly-build
+      docker_registry: ${{ vars.DOCKER_REGISTRY }}
+      helm_values: testing/proxy-stability/helm-values.yaml
+    secrets:
+      ghcr_token: ${{ secrets.PAT }}
+      docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
+      docker_registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+      registry_token: ${{ secrets.REGISTRY_USER }}
+      aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY}}
+      aws_secret_access_key: ${{ secrets.AWS_SECRET_KEY}}
+      uh_license: ${{ secrets.UH_LICENSE_JSON }}
+      monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
 
   pyspark-test-rr:
     needs: 
@@ -347,4 +370,3 @@ jobs:
     secrets:
       registry_token: ${{ secrets.REGISTRY_USER }}
       ghcr_token: ${{ secrets.PAT }}
-  
