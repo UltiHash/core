@@ -42,7 +42,6 @@ BOOST_AUTO_TEST_CASE(is_watched_well) {
     std::promise<void> p;
     std::future<void> f = p.get_future();
 
-    // TODO: Change lambda input type to void.
     auto subscriber = externals_subscriber(
         m_etcd, group_id, num_storages,
         service_factory<storage_interface>(m_ioc, 2), [&]() { p.set_value(); });

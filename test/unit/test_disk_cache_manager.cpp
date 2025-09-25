@@ -15,10 +15,10 @@ BOOST_AUTO_TEST_CASE(put_and_get_with_metadata) {
     manager mgr{manager::create(m_ioc, data_view, 256)};
 
     std::string data = random_string(64);
-    reader_body rbody(data_view);
+    disk_sink sink(data_view);
 
     boost::asio::co_spawn(
-        m_ioc, rbody.put(std::span<const char>(data.data(), data.size())),
+        m_ioc, sink.put(std::span<const char>(data.data(), data.size())),
         boost::asio::use_future)
         .get();
 
@@ -26,19 +26,19 @@ BOOST_AUTO_TEST_CASE(put_and_get_with_metadata) {
     key.path = "/foo/bar";
     key.version = "v1";
 
-    boost::asio::co_spawn(m_ioc, mgr.put(key, rbody), boost::asio::use_future)
+    boost::asio::co_spawn(m_ioc, mgr.put(key, sink), boost::asio::use_future)
         .get();
 
-    auto wbody_opt = mgr.get(key);
-    BOOST_TEST(wbody_opt.has_value());
+    auto source = mgr.get(key);
+    BOOST_TEST(source != nullptr);
 
-    auto& wbody = wbody_opt.value();
-    auto buf =
-        boost::asio::co_spawn(m_ioc, wbody.get(), boost::asio::use_future)
+    auto buf = std::string(128, '\0');
+    auto sv =
+        boost::asio::co_spawn(m_ioc, source->get(buf), boost::asio::use_future)
             .get();
 
-    BOOST_TEST(buf.size() == data.size());
-    BOOST_TEST(std::string(buf.data(), buf.size()) == data);
+    BOOST_TEST(sv.size() == data.size());
+    BOOST_TEST(std::string(sv.data(), sv.size()) == data);
 }
 
 BOOST_AUTO_TEST_CASE(eviction_test) {
@@ -51,9 +51,9 @@ BOOST_AUTO_TEST_CASE(eviction_test) {
         std::string data = random_string(32);
         datas.push_back(data);
 
-        reader_body rbody(data_view);
+        disk_sink sink(data_view);
         boost::asio::co_spawn(
-            m_ioc, rbody.put(std::span<const char>(data.data(), data.size())),
+            m_ioc, sink.put(std::span<const char>(data.data(), data.size())),
             boost::asio::use_future)
             .get();
 
@@ -62,13 +62,13 @@ BOOST_AUTO_TEST_CASE(eviction_test) {
         key.version = "v" + std::to_string(i);
         keys.push_back(key);
 
-        boost::asio::co_spawn(m_ioc, mgr.put(key, rbody),
+        boost::asio::co_spawn(m_ioc, mgr.put(key, sink),
                               boost::asio::use_future)
             .get();
     }
 
-    auto wbody_opt = mgr.get(keys.front());
-    BOOST_TEST(!wbody_opt.has_value());
+    auto source = mgr.get(keys.front());
+    BOOST_TEST(source == nullptr);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

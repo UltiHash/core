@@ -1,7 +1,7 @@
 #pragma once
 
-#include <proxy/cache/disk/body.h>
 #include <proxy/cache/disk/deletion_queue.h>
+#include <proxy/cache/disk/disk_io.h>
 
 #include <proxy/cache/lfu_cache.h>
 #include <proxy/cache/lru_cache.h>
@@ -27,13 +27,8 @@ public:
     using stream = ep::http::stream;
     using body = ep::http::body;
 
-    /*
-     * Store object handle in cache
-     *
-     * It removed address information from the given body.
-     */
-    coro<void> put(object_metadata key, reader_body& body) {
-        auto objh = body.get_object_handle();
+    coro<void> put(object_metadata key, disk_sink& w) {
+        auto objh = w.get_object_handle();
         auto obj_size = objh.data_size();
 
         auto total_size =
@@ -66,12 +61,12 @@ public:
         std::cout << "Total size after put: " << m_current_size << std::endl;
     }
 
-    std::optional<writer_body> get(object_metadata key) {
+    std::unique_ptr<disk_source> get(object_metadata key) {
         auto entry = m_cache->get(key);
         if (!entry) {
-            return std::nullopt;
+            return nullptr;
         }
-        return writer_body{m_storage, std::move(entry)};
+        return std::make_unique<disk_source>(m_storage, std::move(entry));
     }
 
     static manager create(boost::asio::io_context& ioc, data_view& storage,
@@ -88,7 +83,6 @@ private:
     std::atomic<std::size_t> m_current_size{0};
 
     deletion_queue_t m_deletion_queue;
-    // TODO: spawn a background task to remove
     scoped_task m_task;
 
     manager(boost::asio::io_context& ioc, data_view& storage,

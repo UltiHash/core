@@ -37,11 +37,14 @@ namespace uh::cluster::proxy::cache::disk {
 
 struct object_handle {
     object_handle() = default;
-    object_handle(address&& a)
-        : m_addr(std::move(a)) {}
+    object_handle(address&& a, std::size_t header_size = 0)
+        : m_addr(std::move(a)),
+          m_header_size(header_size) {}
 
     object_handle(object_handle&&) = default;
     object_handle& operator=(object_handle&&) = default;
+
+    std::size_t header_size() const { return m_header_size; }
 
     std::size_t data_size() const { return m_addr.data_size(); }
 
@@ -49,6 +52,7 @@ struct object_handle {
 
 private:
     address m_addr;
+    std::size_t m_header_size;
 };
 
 } // namespace uh::cluster::proxy::cache::disk
