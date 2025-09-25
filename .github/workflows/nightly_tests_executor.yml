@@ -108,7 +108,6 @@ jobs:
       - build-core
       - build-database-init
     if: |
-      github.event_name == 'schedule' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'proxy-stability-test')
     uses: ./.github/workflows/proxy_stability_testing.yml
     with:
