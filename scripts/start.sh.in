@@ -188,7 +188,6 @@ pid_entrypoint=$!
 
 export OTEL_RESOURCE_ATTRIBUTES="service.name=proxy"
 $UH_CLUSTER --downstream-port 8080 --downstream-host localhost --downstream-insecure proxy &> $log_dir/proxy.log &
-
 pid_proxy=$!
 
 get_running_processes() {
