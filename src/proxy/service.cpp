@@ -7,7 +7,6 @@
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl/host_name_verification.hpp>
-#include <boost/beast/ssl.hpp>
 
 namespace net = boost::asio;
 namespace ssl = net::ssl;
@@ -16,28 +15,47 @@ namespace uh::cluster::proxy {
 
 using tcp = boost::asio::ip::tcp;
 
-std::unique_ptr<beast::ssl_stream<beast::tcp_stream>>
+std::unique_ptr<handler::variant_stream>
 socket_factory(boost::asio::io_context& ioc, const std::string& server,
-               uint16_t port) {
+               uint16_t port, bool insecure,
+               std::optional<std::string> cert_file) {
+    if (insecure) {
+        LOG_INFO() << "Creating insecure connection to " << server << ":"
+                   << port;
+        auto addr = uh::cluster::resolve(server, port);
+        if (addr.empty()) {
+            throw std::runtime_error("lookup failed");
+        }
 
-    ssl::context ctx(ssl::context::tls_client);
-    ctx.set_default_verify_paths();
-    ctx.load_verify_file("/home/sungsik/Projects/core/cert.pem");
+        tcp::socket s(ioc);
+        boost::asio::connect(s, addr);
 
-    ctx.set_verify_mode(ssl::verify_peer);
+        return std::make_unique<handler::variant_stream>(std::move(s));
 
-    tcp::resolver resolver(ioc);
-    beast::ssl_stream<beast::tcp_stream> stream(ioc, ctx);
+    } else {
+        LOG_INFO() << "Creating secure connection to " << server << ":" << port;
+        ssl::context ctx(ssl::context::tls_client);
+        ctx.set_default_verify_paths();
+        if (cert_file.has_value()) {
+            LOG_INFO() << "Loading cert file " << *cert_file;
+            ctx.load_verify_file(*cert_file);
+        }
 
-    auto const results = resolver.resolve(server, std::to_string(port));
+        ctx.set_verify_mode(ssl::verify_peer);
 
-    beast::get_lowest_layer(stream).connect(results);
+        tcp::resolver resolver(ioc);
+        beast::ssl_stream<beast::tcp_stream> stream(ioc, ctx);
 
-    stream.set_verify_callback(ssl::host_name_verification(server));
+        auto const results = resolver.resolve(server, std::to_string(port));
 
-    stream.handshake(ssl::stream_base::client);
+        beast::get_lowest_layer(stream).connect(results);
 
-    return std::make_unique<decltype(stream)>(std::move(stream));
+        stream.set_verify_callback(ssl::host_name_verification(server));
+
+        stream.handshake(ssl::stream_base::client);
+
+        return std::make_unique<handler::variant_stream>(std::move(stream));
+    }
 }
 
 service::service(boost::asio::io_context& ioc, const service_config& sc,
@@ -48,11 +66,12 @@ service::service(boost::asio::io_context& ioc, const service_config& sc,
                                                                c.gdv)),
       m_mgr(cache::disk::manager::create(ioc, *m_dv, 10 * GIBI_BYTE)),
       m_server(c.server,
-               std::make_unique<handler<beast::ssl_stream<beast::tcp_stream>>>(
+               std::make_unique<handler>(
                    std::make_unique<request_factory>(),
                    [this, c] {
-                       return socket_factory(m_ioc, c.downstream_host,
-                                             c.downstream_port);
+                       return socket_factory(
+                           m_ioc, c.downstream_host, c.downstream_port,
+                           c.downstream_insecure, c.downstream_cert_file);
                    },
                    *m_dv, m_mgr, c.buffer_size),
                m_ioc) {}
