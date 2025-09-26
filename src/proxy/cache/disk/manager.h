@@ -71,6 +71,8 @@ public:
     void remove(object_metadata key) {
         auto entry = m_cache->remove(key);
         if (entry) {
+            LOG_INFO() << "key: " << key.path << ", version: " << key.version
+                       << " removed from cache";
             m_deletion_queue.push(std::move(entry));
         }
     }
