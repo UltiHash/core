@@ -20,7 +20,15 @@ public:
 
     std::string action_id() const override;
 
-    static coro<std::vector<std::reference_wrapper<const pt::ptree>>>
+    struct delete_target {
+        std::string key;
+        boost::optional<std::string> version;
+        boost::optional<std::string> etag;
+        boost::optional<std::string> last_modified;
+        boost::optional<long> size;
+    };
+
+    static coro<std::vector<delete_target>>
     get_delete_object_keys(ep::http::request& req);
 
 private:

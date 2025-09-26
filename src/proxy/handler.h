@@ -115,18 +115,11 @@ coro<void> handler::_handle(boost::asio::ip::tcp::socket s, StreamType& ds) {
                     req->object_key(), req->query("versionId").value_or("")});
             }
             if (delete_objects::can_handle(*req)) {
-                auto objs =
+                auto targets =
                     co_await delete_objects::get_delete_object_keys(*req);
-                for (const auto& obj : objs) {
-                    auto key =
-                        obj.get().template get_optional<std::string>("Key");
-                    auto ver = obj.get().template get_optional<std::string>(
-                        "VersionId");
-
-                    if (key.has_value()) {
-                        m_mgr.remove(cache::disk::object_metadata{
-                            key.value(), ver.value_or("")});
-                    }
+                for (const auto& t : targets) {
+                    m_mgr.remove(cache::disk::object_metadata{
+                        t.key, t.version.value_or("")});
                 }
             }
             if (get_object::can_handle(*req)) {
