@@ -13,7 +13,10 @@
 #include <common/utils/protocol_handler.h>
 #include <common/utils/random.h>
 
+#include <entrypoint/commands/s3/delete_object.h>
+#include <entrypoint/commands/s3/delete_objects.h>
 #include <entrypoint/commands/s3/get_object.h>
+#include <entrypoint/commands/s3/put_object.h>
 #include <entrypoint/http/command_exception.h>
 #include <entrypoint/http/response.h>
 
@@ -106,9 +109,29 @@ coro<void> handler::_handle(boost::asio::ip::tcp::socket s, StreamType& ds) {
             std::unique_ptr<ep::http::request> req =
                 co_await m_factory->create(incoming, rawreq);
 
+            if (put_object::can_handle(*req) ||
+                delete_object::can_handle(*req)) {
+                m_mgr.remove(cache::disk::object_metadata{
+                    req->object_key(), req->query("versionId").value_or("")});
+            }
+            if (delete_objects::can_handle(*req)) {
+                auto objs =
+                    co_await delete_objects::get_delete_object_keys(*req);
+                for (const auto& obj : objs) {
+                    auto key =
+                        obj.get().template get_optional<std::string>("Key");
+                    auto ver = obj.get().template get_optional<std::string>(
+                        "VersionId");
+
+                    if (key.has_value()) {
+                        m_mgr.remove(cache::disk::object_metadata{
+                            key.value(), ver.value_or("")});
+                    }
+                }
+            }
             if (get_object::can_handle(*req)) {
-                auto objh =
-                    m_mgr.get(cache::disk::object_metadata{req->object_key()});
+                auto objh = m_mgr.get(cache::disk::object_metadata{
+                    req->object_key(), req->query("versionId").value_or("")});
                 if (objh) {
                     auto d_source =
                         cache::disk::disk_source{m_dv, std::move(objh)};

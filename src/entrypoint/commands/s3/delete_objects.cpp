@@ -51,18 +51,15 @@ response get_response(const std::vector<std::string>& success,
 
 } // namespace
 
-coro<response> delete_objects::handle(request& req) {
-    metric<entrypoint_delete_objects_req>::increase(1);
-
-    co_await m_dir.bucket_exists(req.bucket());
-
+coro<std::vector<std::reference_wrapper<const pt::ptree>>>
+delete_objects::get_delete_object_keys(request& req) {
     LOG_DEBUG() << req.peer() << ": delete_objects::handle(): content-length: "
                 << req.content_length();
 
     std::string buffer = co_await copy_to_buffer(req.body());
 
-    LOG_DEBUG() << req.peer() << ": delete_objects::handle(): request XML: "
-                << buffer;
+    LOG_DEBUG() << req.peer()
+                << ": delete_objects::handle(): request XML: " << buffer;
 
     xml_parser xml_parser;
     bool parsed = xml_parser.parse(buffer);
@@ -72,6 +69,15 @@ coro<response> delete_objects::handle(request& req) {
         object_nodes.size() > MAXIMUM_DELETE_KEYS)
         throw command_exception(status::bad_request, "MalformedXML",
                                 "XML is invalid.");
+    co_return object_nodes;
+}
+
+coro<response> delete_objects::handle(request& req) {
+    metric<entrypoint_delete_objects_req>::increase(1);
+
+    co_await m_dir.bucket_exists(req.bucket());
+
+    auto object_nodes = co_await get_delete_object_keys(req);
 
     auto bucket_id = req.bucket();
     std::vector<std::string> success;
