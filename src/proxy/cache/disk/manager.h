@@ -14,8 +14,6 @@
 #include <memory>
 #include <string>
 
-#include <iostream>
-
 namespace uh::cluster::proxy::cache::disk {
 
 class manager {
@@ -59,7 +57,7 @@ public:
         if (p_prev) {
             m_deletion_queue.push(std::move(p_prev));
         }
-        std::cout << "Total size after put: " << m_current_size << std::endl;
+        LOG_INFO() << "Total size after put: " << m_current_size;
     }
 
     std::shared_ptr<object_handle> get(object_metadata key) {
