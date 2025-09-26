@@ -107,9 +107,11 @@ coro<void> handler::_handle(boost::asio::ip::tcp::socket s, StreamType& ds) {
                 co_await m_factory->create(incoming, rawreq);
 
             if (get_object::can_handle(*req)) {
-                auto d_source =
+                auto objh =
                     m_mgr.get(cache::disk::object_metadata{req->object_key()});
-                if (d_source) {
+                if (objh) {
+                    auto d_source =
+                        cache::disk::disk_source{m_dv, std::move(objh)};
                     LOG_INFO() << peer << ": handling from cache";
                     incoming.set_mode(decltype(incoming)::deleting);
 
@@ -137,7 +139,7 @@ coro<void> handler::_handle(boost::asio::ip::tcp::socket s, StreamType& ds) {
                     co_await async_write<buffer_size_to_load>(
                         async_write_header(s, serializer,
                                            boost::asio::use_awaitable),
-                        s, *d_source);
+                        s, d_source);
 
                     LOG_INFO() << peer << ": cache result served";
                     continue;
@@ -197,7 +199,8 @@ coro<void> handler::_handle(boost::asio::ip::tcp::socket s, StreamType& ds) {
                     },
                     outgoing, buffer, *body_size, tee(s_sink, d_sink));
                 co_await m_mgr.put(
-                    cache::disk::object_metadata{req->object_key()}, d_sink);
+                    cache::disk::object_metadata{req->object_key()},
+                    d_sink.get_object_handle());
 
             } else {
                 auto body_size = get_content_length(p.get());
