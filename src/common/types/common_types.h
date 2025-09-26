@@ -40,12 +40,14 @@ template <typename T> using coro = boost::asio::traced_awaitable<T>;
 inline coro<void> async_noop() { co_return; };
 
 template <typename T> struct is_boost_awaitable : std::false_type {};
-
 template <typename T>
 struct is_boost_awaitable<boost::asio::awaitable<T>> : std::true_type {};
-
 template <typename T>
 constexpr bool is_boost_awaitable_v = is_boost_awaitable<T>::value;
+
+template <typename T> struct is_coro : std::false_type {};
+template <typename T> struct is_coro<coro<T>> : std::true_type {};
+template <typename T> inline constexpr bool is_coro_v = is_coro<T>::value;
 
 template <typename Awaitable>
 requires is_boost_awaitable_v<std::decay_t<Awaitable>>

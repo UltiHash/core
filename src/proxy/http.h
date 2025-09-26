@@ -109,9 +109,9 @@ std::optional<std::uint64_t> get_content_length(const Message& msg) {
 namespace uh::cluster::proxy {
 
 template <typename SourceType, typename Parser>
-coro<void> async_read_header(const SourceType& source, Parser& parser) {
-    auto header_size = std::vector<char>(source->get_header_size());
-    auto header = co_await source->get(header_size);
+coro<void> async_read_header(SourceType& source, Parser& parser) {
+    auto header_size = std::vector<char>(source.get_header_size());
+    auto header = co_await source.get(header_size);
 
     parser.body_limit(std::numeric_limits<std::uint64_t>::max());
     boost::system::error_code ec;
