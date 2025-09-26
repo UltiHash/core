@@ -70,6 +70,13 @@ public:
         return entry;
     }
 
+    void remove(object_metadata key) {
+        auto entry = m_cache->remove(key);
+        if (entry) {
+            m_deletion_queue.push(std::move(entry));
+        }
+    }
+
     static manager create(boost::asio::io_context& ioc, data_view& storage,
                           std::size_t capacity,
                           std::size_t eviction_margin = 0) {
