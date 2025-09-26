@@ -57,6 +57,7 @@ private:
     cache::disk::manager& m_mgr;
     std::size_t m_buffer_size;
 
+    friend struct handle_visitor;
     coro<http::response> handle_request(boost::asio::ip::tcp::socket& s,
                                         http::raw_request& rawreq,
                                         const std::string& id,
@@ -115,11 +116,12 @@ coro<void> handler::_handle(boost::asio::ip::tcp::socket s, StreamType& ds) {
                     auto& b = req->body();
                     auto bs = b.buffer_size();
 
-                    while (!(co_await b.read(bs)).empty()) {
+                    while (true) {
+                        auto result = co_await b.read(bs);
                         co_await b.consume();
+                        if (result.empty())
+                            break;
                     }
-
-                    co_await b.consume();
 
                     LOG_INFO() << peer << ": done reading complete request";
 
@@ -159,11 +161,12 @@ coro<void> handler::_handle(boost::asio::ip::tcp::socket s, StreamType& ds) {
             auto& b = req->body();
             auto bs = b.buffer_size();
 
-            while (!(co_await b.read(bs)).empty()) {
+            while (true) {
+                auto result = co_await b.read(bs);
                 co_await b.consume();
+                if (result.empty())
+                    break;
             }
-
-            co_await b.consume();
 
             // forwarding response
             response_parser<empty_body> p;
@@ -229,13 +232,18 @@ coro<void> handler::_handle(boost::asio::ip::tcp::socket s, StreamType& ds) {
     s.close();
 }
 
+struct handle_visitor {
+    handler* h;
+    boost::asio::ip::tcp::socket s;
+
+    template <typename Downstream> coro<void> operator()(Downstream& ds) {
+        co_await h->_handle(std::move(s), ds);
+    }
+};
+
 coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     auto downstream = m_sf();
-    co_await std::visit(
-        [this, &s](auto& ds) -> coro<void> {
-            co_await _handle(std::move(s), ds);
-        },
-        *downstream);
+    co_await std::visit(handle_visitor{this, std::move(s)}, *downstream);
 }
 
 } // namespace uh::cluster::proxy
