@@ -247,6 +247,12 @@ CLI::App* sub_coordinator(CLI::App& app, coordinator_config& cfg) {
 
 CLI::App* sub_proxy(CLI::App& app, proxy::config& cfg) {
     auto* rv = app.add_subcommand("proxy", "S3 proxy server");
+    app.add_flag("--downstream-insecure", cfg.downstream_insecure,
+                 "downstream uses http, instead of https")
+        ->envname(ENV_CFG_DOWNSTREAM_INSECURE);
+    app.add_option("--downstream-cert-file", cfg.downstream_cert_file,
+                   "downstream certification file path")
+        ->envname(ENV_CFG_DOWNSTREAM_CERT_FILE);
     app.add_option("--downstream-host", cfg.downstream_host, "downstream host")
         ->envname(ENV_CFG_DOWNSTREAM_HOST);
     app.add_option("--downstream-port", cfg.downstream_port, "downstream port")
