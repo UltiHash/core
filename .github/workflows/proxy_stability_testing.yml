@@ -1,0 +1,142 @@
+name: Proxy Stability Testing AWS
+
+on:
+  workflow_call:
+    inputs:
+      env_name:
+        required: true
+        type: string
+      docker_image_tag:
+        required: true
+        type: string
+      docker_registry:
+        required: true
+        type: string
+      helm_values:
+        required: true
+        type: string
+    secrets:
+      ghcr_token:
+        required: true
+      docker_registry_username:
+        required: true
+      docker_registry_password:
+        required: true
+      registry_token:
+        required: true
+      aws_access_key_id:
+        required: true
+      aws_secret_access_key:
+        required: true
+      uh_license:
+        required: true
+      monitoring_token:
+        required: true
+
+jobs:
+  deploy-and-test:
+    runs-on: lightweight-generic-jobs
+    steps:
+
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.ghcr_token }}
+
+      - name: Install AWS CLI
+        uses: unfor19/install-aws-cli-action@v1
+        with:
+          version: 2
+          arch: arm64
+
+      - name: Setup the AWS credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.aws_access_key_id}}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.aws_secret_access_key}}" >> $GITHUB_ENV
+          echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
+
+      - uses: azure/setup-kubectl@v4
+
+      - name: Download Kubeconfig
+        run: |
+          mkdir ~/.kube
+          aws eks update-kubeconfig --name aws-core
+
+      - uses: azure/setup-helm@v4.3.0
+
+      - name: Generate Helm values
+        uses: danielr1996/envsubst-action@1.1.0
+        env:
+          CORE_IMAGE: registry.ultihash.io/dev/core:${{ inputs.docker_image_tag }}
+          DATABASE_INIT_IMAGE: registry.ultihash.io/dev/database-init:${{ inputs.docker_image_tag }}
+        with:
+          input: ${{ inputs.helm_values }}
+          output: helm-values.yaml
+
+      - name: Delete the testing environment if exists
+        run: |
+          helm uninstall ${{ inputs.env_name }} -n ${{ inputs.env_name }} --wait --ignore-not-found
+          kubectl delete pods -n ${{ inputs.env_name }} --all --force
+          kubectl delete pvc -n ${{ inputs.env_name }} --all
+          kubectl delete pv stability-test-input --force
+          kubectl delete secrets -n ${{ inputs.env_name }} --all --force
+          kubectl delete ns ${{ inputs.env_name }}
+        continue-on-error: true
+
+      - name: Configure S3 bucket for testing
+        run: |
+          aws s3api create-bucket --region eu-central-1 --bucket ulticache-test-${{ inputs.env_name }} --create-bucket-configuration 'LocationConstraint=eu-central-1'
+
+      - name: Install the Helm chart
+        run: |
+          kubectl create ns ${{ inputs.env_name }}
+          kubectl create secret docker-registry registry-credentials -n ${{ inputs.env_name }} --docker-server='${{ inputs.docker_registry }}' --docker-username='${{ secrets.docker_registry_username }}' --docker-password='${{ secrets.docker_registry_password }}'
+          kubectl create secret generic ultihash  -n ${{ inputs.env_name }} --from-literal=license='${{ secrets.uh_license }}' --from-literal=token='${{ secrets.monitoring_token }}'
+          helm install ${{ inputs.env_name }} oci://registry.ultihash.io/stable/ulticache -n ${{ inputs.env_name }} --values helm-values.yaml --wait --timeout 60m
+
+      - name: Provision persistent volumes for testing
+        run: |
+          kubectl apply -f testing/stability/persistent-volumes.yaml -n ${{ inputs.env_name }}
+
+      - name: Run stability test
+        run: |
+          helm test ${{ inputs.env_name }} -n ${{ inputs.env_name }} --filter name=${{ inputs.env_name }}-stability-test --logs --timeout 3h
+
+      - name: Delete S3 bucket
+        run: |
+          aws s3 rb --region eu-central-1 --bucket ulticache-test-${{ inputs.env_name }} --force
+
+  cleanup:
+    runs-on: lightweight-generic-jobs
+    needs: deploy-and-test
+    steps:
+
+      - name: Install AWS CLI
+        uses: unfor19/install-aws-cli-action@v1
+        with:
+          version: 2
+          arch: arm64
+
+      - name: Setup the AWS credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.aws_access_key_id}}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.aws_secret_access_key}}" >> $GITHUB_ENV
+          echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
+
+      - uses: azure/setup-kubectl@v4
+
+      - name: Download Kubeconfig
+        run: |
+          mkdir ~/.kube
+          aws eks update-kubeconfig --name aws-core
+
+      - uses: azure/setup-helm@v4.3.0
+
+      - name: Environment cleanup
+        run: |
+          helm uninstall ${{ inputs.env_name }} -n ${{ inputs.env_name }} --wait
+          kubectl delete pods -n ${{ inputs.env_name }} --all --force
+          kubectl delete pvc -n ${{ inputs.env_name }} --all
+          kubectl delete pv stability-test-input --force
+          kubectl delete secrets -n ${{ inputs.env_name }} --all --force
+          kubectl delete ns ${{ inputs.env_name }}
+        continue-on-error: true

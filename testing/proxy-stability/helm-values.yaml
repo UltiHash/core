@@ -1,0 +1,197 @@
+global:
+  image: $CORE_IMAGE
+  imagePullPolicy: Always
+  imagePullSecrets:
+    - registry-credentials
+  ultihashSecret:
+    name: ultihash
+    key: license
+  logLevel: DEBUG
+  telemetryExportInterval: 30000
+  securityContext:
+    capabilities:
+      add:
+      - SYS_PTRACE
+  policies: |
+    {
+      "Version": "2012-10-17",
+      "Statement": {
+         "Sid":  "AllowAllForAnybody",
+         "Effect": "Allow",
+         "Action": "*",
+         "Principal": "*",
+         "Resource": "*"
+       }
+    }
+
+stabilityTest:
+  readTimeout: 600
+  concurentJobs: 2
+  extraEnv:
+    - name: AWS_DEFAULT_REGION
+      value: "eu-central-1"
+  nodeSelector:
+    workload-type: tester
+    purpose: performance-and-stability-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+  inputVolume:
+    type: S3
+    mountPath: /data
+    pvcName: stability-test-input
+  outputVolume:
+    pvcName: stability-test-output
+    mountPath: /testing/test
+
+coordinator:
+  nodeSelector:
+    workload-type: directory
+    purpose: performance-and-stability-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+
+etcd:
+  replicaCount: 1
+  nodeSelector:
+    workload-type: directory
+    purpose: performance-and-stability-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+  persistence:
+    size: 5Gi
+    storageClass: local-path
+
+storage:
+  groups:
+    - id: 0
+      type: ROUND_ROBIN
+      storages: 2
+      storageClass: local-path
+      size: 50Gi
+      nodeSelector:
+        workload-type: storage
+        purpose: performance-and-stability-testing
+      mountPath: /var/lib/uh/storage
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: role
+                operator: In
+                values:
+                - storage
+            topologyKey: kubernetes.io/hostname
+      tolerations:
+        - key: "purpose"
+          operator: "Equal"
+          value: "testing"
+          effect: "NoSchedule"
+
+database:
+  primary:
+    nodeSelector:
+      workload-type: directory
+      purpose: performance-and-stability-testing
+    tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+
+    persistence:
+      storageClass: local-path
+      size: 4Gi
+
+databaseInit:
+  image: $DATABASE_INIT_IMAGE
+  nodeSelector:
+    workload-type: directory
+    purpose: performance-and-stability-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+
+proxy:
+  replicas: 1
+  nodeSelector:
+    workload-type: storage
+    purpose: performance-and-stability-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+  resources: {}
+  affinity: {}
+  nodeSelector: {}
+  tolerations: []
+  securityContext: {}
+  extraEnv: []
+  extraVolumeMounts: []
+  extraVolumes: []
+
+  backend:
+    host: s3.eu-central-1.amazonaws.com
+    port: 443
+
+  service:
+    type: ClusterIP                   # Could be set to ClusterIP or NodePort depending on the environment
+    port: 8088
+
+  ingress:
+    enabled: false
+
+collector:
+  nodeSelector:
+    purpose: performance-and-stability-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+  extraEnvs:
+  - name: UH_POD_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.podIP
+  - name: UH_NODE_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.hostIP
+  - name: UH_EXPORTER_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: ultihash
+        key: token
+  presets:
+    kubeletMetrics:
+      enabled: false
+  config:
+    exporters:
+      otlphttp/uptrace:
+        endpoint: http://uptrace-backend.uptrace.svc.cluster.local:14318
+        headers:
+          uptrace-dsn: http://${env:UH_EXPORTER_TOKEN}@uptrace-backend.uptrace.svc.cluster.local:14318
+    receivers:
+      prometheus: null
+      kubeletstats: null
+    service:
+      pipelines:
+        metrics:
+          receivers:
+            - otlp
+
+exporter:
+  enabled: false
