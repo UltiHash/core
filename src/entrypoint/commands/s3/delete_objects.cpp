@@ -51,18 +51,15 @@ response get_response(const std::vector<std::string>& success,
 
 } // namespace
 
-coro<response> delete_objects::handle(request& req) {
-    metric<entrypoint_delete_objects_req>::increase(1);
-
-    co_await m_dir.bucket_exists(req.bucket());
-
+coro<std::vector<delete_objects::delete_target>>
+delete_objects::get_delete_object_keys(request& req) {
     LOG_DEBUG() << req.peer() << ": delete_objects::handle(): content-length: "
                 << req.content_length();
 
     std::string buffer = co_await copy_to_buffer(req.body());
 
-    LOG_DEBUG() << req.peer() << ": delete_objects::handle(): request XML: "
-                << buffer;
+    LOG_DEBUG() << req.peer()
+                << ": delete_objects::handle(): request XML: " << buffer;
 
     xml_parser xml_parser;
     bool parsed = xml_parser.parse(buffer);
@@ -73,30 +70,50 @@ coro<response> delete_objects::handle(request& req) {
         throw command_exception(status::bad_request, "MalformedXML",
                                 "XML is invalid.");
 
-    auto bucket_id = req.bucket();
-    std::vector<std::string> success;
-    std::vector<fail> failure;
+    std::vector<delete_target> targets;
     for (const auto& obj : object_nodes) {
-        auto key = obj.get().get_optional<std::string>("Key");
-        if (!key) {
+        const auto& pt = obj.get();
+        auto key = pt.get_optional<std::string>("Key");
+        if (!key.has_value()) {
             throw command_exception(status::bad_request, "MalformedXML",
                                     "XML is invalid.");
         }
+        targets.emplace_back(*key, //
+                             pt.get_optional<std::string>("VersionId"),
+                             pt.get_optional<std::string>("ETag"),
+                             pt.get_optional<std::string>("LastModifiedTime"),
+                             pt.get_optional<long>("Size"));
+    }
+    co_return targets;
+}
+
+coro<response> delete_objects::handle(request& req) {
+    metric<entrypoint_delete_objects_req>::increase(1);
+
+    co_await m_dir.bucket_exists(req.bucket());
+
+    auto targets = co_await get_delete_object_keys(req);
+
+    auto bucket_id = req.bucket();
+    std::vector<std::string> success;
+    std::vector<fail> failure;
+    for (const auto& t : targets) {
+        auto& key = t.key;
 
         try {
             LOG_DEBUG() << req.peer() << ": delete_objects::handle(): deleting "
-                        << *key;
+                        << key;
 
             std::optional<std::string> ver;
-            auto boostver = obj.get().get_optional<std::string>("VersionId");
+            auto boostver = t.version;
             if (boostver) {
                 ver = *boostver;
             }
-            co_await m_dir.delete_object(req.bucket(), *key, ver);
-            success.emplace_back(*key);
+            co_await m_dir.delete_object(req.bucket(), key, ver);
+            success.emplace_back(key);
 
         } catch (const std::exception& e) {
-            failure.emplace_back(*key, e.what());
+            failure.emplace_back(key, e.what());
         }
     }
 

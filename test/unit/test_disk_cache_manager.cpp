@@ -3,6 +3,7 @@
 #include <boost/test/unit_test.hpp>
 #include <chrono>
 #include <common/utils/random.h>
+#include <proxy/cache/disk/disk_io.h>
 #include <proxy/cache/disk/manager.h>
 #include <thread>
 #include <util/dedupe_fixture.h>
@@ -26,15 +27,17 @@ BOOST_AUTO_TEST_CASE(put_and_get_with_metadata) {
     key.path = "/foo/bar";
     key.version = "v1";
 
-    boost::asio::co_spawn(m_ioc, mgr.put(key, sink), boost::asio::use_future)
+    boost::asio::co_spawn(m_ioc, mgr.put(key, sink.get_object_handle()),
+                          boost::asio::use_future)
         .get();
 
-    auto source = mgr.get(key);
-    BOOST_TEST(source != nullptr);
+    auto objh = mgr.get(key);
+    BOOST_TEST(objh != nullptr);
+    auto source = disk_source{data_view, objh};
 
     auto buf = std::string(128, '\0');
     auto sv =
-        boost::asio::co_spawn(m_ioc, source->get(buf), boost::asio::use_future)
+        boost::asio::co_spawn(m_ioc, source.get(buf), boost::asio::use_future)
             .get();
 
     BOOST_TEST(sv.size() == data.size());
@@ -62,13 +65,13 @@ BOOST_AUTO_TEST_CASE(eviction_test) {
         key.version = "v" + std::to_string(i);
         keys.push_back(key);
 
-        boost::asio::co_spawn(m_ioc, mgr.put(key, sink),
+        boost::asio::co_spawn(m_ioc, mgr.put(key, sink.get_object_handle()),
                               boost::asio::use_future)
             .get();
     }
 
-    auto source = mgr.get(keys.front());
-    BOOST_TEST(source == nullptr);
+    auto objh = mgr.get(keys.front());
+    BOOST_TEST(objh == nullptr);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -4,13 +4,8 @@
 #pragma once
 
 #include <proxy/cache/disk/object.h>
-#include <proxy/cache/disk/utils.h>
 
-#include <common/crypto/hash.h>
 #include <common/types/common_types.h>
-#include <common/utils/strings.h>
-#include <entrypoint/http/body.h>
-#include <entrypoint/http/stream.h>
 #include <storage/interfaces/data_view.h>
 
 namespace uh::cluster::proxy::cache::disk {

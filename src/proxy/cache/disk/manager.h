@@ -1,18 +1,18 @@
 #pragma once
 
 #include <proxy/cache/disk/deletion_queue.h>
-#include <proxy/cache/disk/disk_io.h>
+#include <proxy/cache/disk/object.h>
 
 #include <proxy/cache/lfu_cache.h>
 #include <proxy/cache/lru_cache.h>
 
 #include <common/coroutines/coro_util.h>
+#include <entrypoint/http/body.h>
+#include <entrypoint/http/stream.h>
 #include <storage/global/data_view.h>
 
 #include <memory>
 #include <string>
-
-#include <iostream>
 
 namespace uh::cluster::proxy::cache::disk {
 
@@ -27,8 +27,7 @@ public:
     using stream = ep::http::stream;
     using body = ep::http::body;
 
-    coro<void> put(object_metadata key, disk_sink& w) {
-        auto objh = w.get_object_handle();
+    coro<void> put(object_metadata key, object_handle objh) {
         auto obj_size = objh.data_size();
 
         auto total_size =
@@ -58,15 +57,24 @@ public:
         if (p_prev) {
             m_deletion_queue.push(std::move(p_prev));
         }
-        std::cout << "Total size after put: " << m_current_size << std::endl;
+        LOG_INFO() << "Total size after put: " << m_current_size;
     }
 
-    std::unique_ptr<disk_source> get(object_metadata key) {
+    std::shared_ptr<object_handle> get(object_metadata key) {
         auto entry = m_cache->get(key);
         if (!entry) {
             return nullptr;
         }
-        return std::make_unique<disk_source>(m_storage, std::move(entry));
+        return entry;
+    }
+
+    void remove(object_metadata key) {
+        auto entry = m_cache->remove(key);
+        if (entry) {
+            LOG_INFO() << "key: " << key.path << ", version: " << key.version
+                       << " removed from cache";
+            m_deletion_queue.push(std::move(entry));
+        }
     }
 
     static manager create(boost::asio::io_context& ioc, data_view& storage,
