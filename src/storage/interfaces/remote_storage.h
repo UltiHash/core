@@ -14,12 +14,9 @@ struct remote_storage : public storage_interface {
         : m_storage_service(std::move(storage_service)) {}
 
     coro<void> write(allocation_t allocation,
-                     const std::vector<std::span<const char>>& buffers,
-                     const std::vector<refcount_t>& refcounts) override {
+                     const std::vector<std::span<const char>>& buffers) override {
         auto m = co_await m_storage_service.acquire_messenger();
-        write_request_view req = {.allocation = allocation,
-                                  .buffers = buffers,
-                                  .refcounts = refcounts};
+        write_request_view req = {.allocation = allocation, .buffers = buffers };
 
         co_await m->send_write(req);
         co_await m->recv_header(time_settings::instance().storage_timeout);

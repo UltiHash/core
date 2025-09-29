@@ -32,7 +32,7 @@ BOOST_AUTO_TEST_CASE(supports_write) {
     auto addr = boost::asio::co_spawn(
                     m_ioc,
                     data_view.write(
-                        std::span<const char>{data.data(), data.size()}, {0}),
+                        std::span<const char>{data.data(), data.size()}),
                     boost::asio::use_future)
                     .get();
     auto objh = std::make_shared<object_handle>(std::move(addr));

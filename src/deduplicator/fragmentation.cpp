@@ -89,7 +89,7 @@ coro<void> fragmentation::flush_storage(storage::data_view& gdv) {
 
     auto buffer = unstored_to_buffer();
     m_buffer_address =
-        co_await gdv.write({&buffer[0], buffer.size()}, m_offsets);
+        co_await gdv.write({&buffer[0], buffer.size()});
 
     compute_unstored_addresses();
 }

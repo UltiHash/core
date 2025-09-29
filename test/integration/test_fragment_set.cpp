@@ -39,7 +39,7 @@ struct fragment_set_fixture : public global_data_view_fixture {
         shared_buffer<char> fragment(size);
         memset(fragment.data(), fill_char, size);
         auto addr = boost::asio::co_spawn(
-                        get_executor(), gdv->write(fragment.string_view(), {0}),
+                        get_executor(), gdv->write(fragment.string_view()),
                         boost::asio::use_future)
                         .get();
         return {std::move(fragment), addr};
@@ -172,7 +172,7 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     shared_buffer<char> fragment_a(block_size * 4);
     memset(fragment_a.data(), 'a', block_size * 4);
     auto addr_a = boost::asio::co_spawn(
-                      get_executor(), gdv->write(fragment_a.string_view(), {0}),
+                      get_executor(), gdv->write(fragment_a.string_view()),
                       boost::asio::use_future)
                       .get();
 
@@ -183,7 +183,7 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     memset(fragment_b.data() + block_size * 3, 'b', block_size);
 
     auto addr_b = boost::asio::co_spawn(
-                      get_executor(), gdv->write(fragment_b.string_view(), {0}),
+                      get_executor(), gdv->write(fragment_b.string_view()),
                       boost::asio::use_future)
                       .get();
 
@@ -193,9 +193,12 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     memset(fragment_c.data() + block_size * 2, 'a', block_size);
     memset(fragment_c.data() + block_size * 3, 'c', block_size);
     auto addr_c = boost::asio::co_spawn(
-                      get_executor(), gdv->write(fragment_c.string_view(), {0}),
+                      get_executor(), gdv->write(fragment_c.string_view()),
                       boost::asio::use_future)
                       .get();
+
+    LOG_DEBUG() << "addr a: " << addr_a.to_string() << ", addr b: " << addr_b.to_string()
+        << ", addr c: " << addr_c.to_string();
 
     // This will create fragment_elements which ONLY contain the prefix
     auto prefix_a = fragment_a.string_view().substr(

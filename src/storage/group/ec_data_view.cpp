@@ -25,8 +25,7 @@ ec_data_view::ec_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
     LOG_DEBUG() << "[ec_data_view] group state is ready for group " << group_id;
 }
 
-coro<address> ec_data_view::write(std::span<const char> data,
-                                  const std::vector<std::size_t>& offsets) {
+coro<address> ec_data_view::write(std::span<const char> data) {
 
     if (*m_externals.get_group_state() != group_state::HEALTHY)
         throw std::runtime_error("group state should be healthy: " +
@@ -114,16 +113,16 @@ coro<address> ec_data_view::write(std::span<const char> data,
         m_rs.encode(data_view, parity_view);
     }
 
-    address addr = compute_address(offsets, data.size_bytes(), allocation);
+    address addr;
+    addr.emplace_back(m_config.data_shards * allocation.offset, data.size());
     // WARNING: this is a group address and won't work with multiple storage
     // groups
-    auto refcounts = extract_refcounts(addr);
+    //auto refcounts = extract_refcounts(addr);
 
     co_await run_for_all<void, std::shared_ptr<storage_interface>>(
         m_ioc,
         [&](size_t i, auto storage) -> coro<void> {
-            co_await storage->write(allocation, storage_buffers_view[i],
-                                    refcounts);
+            co_await storage->write(allocation, storage_buffers_view[i]);
         },
         storages);
 

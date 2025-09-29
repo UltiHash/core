@@ -106,7 +106,7 @@ coro<void> handler::handle_iteration(const messenger::header& hdr,
 coro<void> handler::handle_write(messenger& m, const messenger::header& h) {
     auto req = co_await m.recv_write(h);
 
-    co_await m_storage.write(req.allocation, req.buffers, req.refcounts);
+    co_await m_storage.write(req.allocation, req.buffers);
     co_await m.send(SUCCESS, {});
 }
 

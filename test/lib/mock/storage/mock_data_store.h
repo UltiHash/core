@@ -19,8 +19,7 @@ public:
 
     allocation_t allocate(std::size_t size, std::size_t alignment = 1);
     void write(const allocation_t allocation,
-               const std::vector<std::span<const char>>& buffers,
-               const std::vector<refcount_t>& refcounts = {});
+               const std::vector<std::span<const char>>& buffers);
     std::size_t read(const std::size_t pointer, std::span<char> buffer);
     std::vector<refcount_t> link(const std::vector<refcount_t>& refcounts);
     std::size_t unlink(const std::vector<refcount_t>& refcounts);

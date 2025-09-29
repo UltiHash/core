@@ -46,7 +46,7 @@ BENCHMARK_DEFINE_F(deduplicator_benchmark, profile_dedup_with_same_data)
     auto& ioc = get_executor();
 
     for (auto _ : state) {
-        boost::asio::co_spawn(ioc, gdv->write(buffer.string_view(), {0}),
+        boost::asio::co_spawn(ioc, gdv->write(buffer.string_view()),
                               boost::asio::use_future)
             .get();
     }

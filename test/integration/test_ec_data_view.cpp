@@ -39,7 +39,7 @@ BOOST_AUTO_TEST_CASE(writes_and_reads_small_data) {
     address addr;
     BOOST_REQUIRE_NO_THROW({
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });
@@ -71,7 +71,7 @@ BOOST_AUTO_TEST_CASE(writes_and_reads_single_stripe) {
     address addr;
     BOOST_REQUIRE_NO_THROW({
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });
@@ -103,7 +103,7 @@ BOOST_AUTO_TEST_CASE(writes_and_reads_two_stripes) {
     address addr;
     BOOST_REQUIRE_NO_THROW({
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });
@@ -135,7 +135,7 @@ BOOST_AUTO_TEST_CASE(writes_and_reads_more_than_single_stripe) {
     address addr;
     BOOST_REQUIRE_NO_THROW({
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });
@@ -167,7 +167,7 @@ BOOST_AUTO_TEST_CASE(writes_multiple_times_and_still_can_read) {
     BOOST_REQUIRE_NO_THROW({
         auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });
@@ -177,7 +177,7 @@ BOOST_AUTO_TEST_CASE(writes_multiple_times_and_still_can_read) {
     LOG_DEBUG() << "start writing...";
     BOOST_REQUIRE_NO_THROW({
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });
@@ -207,7 +207,7 @@ BOOST_AUTO_TEST_CASE(reads_small_data_on_degraded_state) {
     address addr;
     BOOST_REQUIRE_NO_THROW({
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });
@@ -249,7 +249,7 @@ BOOST_AUTO_TEST_CASE(writes_returns_correct_address) {
     address addr;
     BOOST_REQUIRE_NO_THROW({
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });
@@ -273,7 +273,7 @@ BOOST_AUTO_TEST_CASE(reads_one_stripe_and_more_data_on_degraded_state) {
     address addr;
     BOOST_REQUIRE_NO_THROW({
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });
@@ -313,7 +313,7 @@ BOOST_AUTO_TEST_CASE(reads_two_stripes_on_degraded_state) {
     address addr;
     BOOST_REQUIRE_NO_THROW({
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });
@@ -362,7 +362,7 @@ BOOST_AUTO_TEST_CASE(fails_to_write_on_degraded_state) {
     LOG_DEBUG() << "start writing...";
     BOOST_REQUIRE_THROW(
         boost::asio::co_spawn(get_executor(),
-                              gdv->write(buffer.string_view(), {0}),
+                              gdv->write(buffer.string_view()),
                               boost::asio::use_future)
             .get(),
         std::runtime_error);
@@ -377,7 +377,7 @@ BOOST_AUTO_TEST_CASE(reads_after_transition_from_degraded_to_healthy_state) {
     address addr;
     BOOST_REQUIRE_NO_THROW({
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });
@@ -427,7 +427,7 @@ BOOST_AUTO_TEST_CASE(writes_after_transition_from_degraded_to_healthy_state) {
     BOOST_REQUIRE_NO_THROW({
         auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });
@@ -457,7 +457,7 @@ BOOST_AUTO_TEST_CASE(writes_after_transition_from_degraded_to_healthy_state) {
     LOG_DEBUG() << "start writing...";
     BOOST_REQUIRE_NO_THROW({
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });
@@ -488,7 +488,7 @@ BOOST_AUTO_TEST_CASE(fails_to_read_on_failed_state) {
     address addr;
     BOOST_REQUIRE_NO_THROW({
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });
@@ -528,7 +528,7 @@ BOOST_AUTO_TEST_CASE(reads_after_transition_from_failed_to_degraded_state) {
     address addr;
     BOOST_REQUIRE_NO_THROW({
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });
@@ -579,7 +579,7 @@ BOOST_AUTO_TEST_CASE(writes_after_transition_from_failed_to_healthy_state) {
         address addr;
         BOOST_REQUIRE_NO_THROW({
             addr = boost::asio::co_spawn(get_executor(),
-                                         gdv->write(buffer.string_view(), {0}),
+                                         gdv->write(buffer.string_view()),
                                          boost::asio::use_future)
                        .get();
         });
@@ -616,7 +616,7 @@ BOOST_AUTO_TEST_CASE(writes_after_transition_from_failed_to_healthy_state) {
     address addr;
     BOOST_REQUIRE_NO_THROW({
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });
@@ -646,7 +646,7 @@ BOOST_AUTO_TEST_CASE(gets_healthy_state_after_repairing) {
     address addr;
     BOOST_REQUIRE_NO_THROW({
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });
@@ -685,7 +685,7 @@ BOOST_AUTO_TEST_CASE(reads_after_transition_from_degraded_to_repairing_state) {
     address addr;
     BOOST_REQUIRE_NO_THROW({
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });
@@ -739,7 +739,7 @@ BOOST_AUTO_TEST_CASE(repairs_when_new_storage_is_introduced) {
     address addr;
     BOOST_REQUIRE_NO_THROW({
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });
@@ -785,7 +785,7 @@ BOOST_AUTO_TEST_CASE(repairs_when_new_storage_is_introduced) {
 
     BOOST_REQUIRE_NO_THROW({
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });
@@ -799,7 +799,7 @@ BOOST_AUTO_TEST_CASE(repairs_refcount) {
     address addr;
     BOOST_REQUIRE_NO_THROW({
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });
@@ -864,7 +864,7 @@ BOOST_AUTO_TEST_CASE(
     address addr_1;
     BOOST_REQUIRE_NO_THROW({
         addr_1 = boost::asio::co_spawn(get_executor(),
-                                       gdv->write(buffer_1.string_view(), {0}),
+                                       gdv->write(buffer_1.string_view()),
                                        boost::asio::use_future)
                      .get();
     });
@@ -894,7 +894,7 @@ BOOST_AUTO_TEST_CASE(
     address addr_2;
     try {
         addr_2 = boost::asio::co_spawn(get_executor(),
-                                       gdv->write(buffer_2.string_view(), {0}),
+                                       gdv->write(buffer_2.string_view()),
                                        boost::asio::use_future)
                      .get();
     } catch (const std::exception& e) {
@@ -949,7 +949,7 @@ BOOST_AUTO_TEST_CASE(write_chunk_fragmentation_full) {
     address addr;
     BOOST_REQUIRE_NO_THROW({
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });
@@ -982,7 +982,7 @@ BOOST_AUTO_TEST_CASE(write_chunk_fragmentation_padded) {
     address addr;
     BOOST_REQUIRE_NO_THROW({
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });

@@ -52,9 +52,8 @@ global_data_view::global_data_view(boost::asio::io_context& ioc,
                                  config.storage_service_connection_count);
 }
 
-coro<address> global_data_view::write(std::span<const char> data,
-                                      const std::vector<std::size_t>& offsets) {
-    co_return co_await m_group_view->write(data, offsets);
+coro<address> global_data_view::write(std::span<const char> data) {
+    co_return co_await m_group_view->write(data);
 }
 
 coro<shared_buffer<>> global_data_view::read(const uint128_t& pointer,

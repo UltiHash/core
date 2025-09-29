@@ -17,8 +17,7 @@ struct data_store {
     virtual allocation_t allocate(size_t size, std::size_t alignment = 1) = 0;
 
     virtual void write(const allocation_t allocation,
-                       const std::vector<std::span<const char>>& buffers,
-                       const std::vector<refcount_t>& refcounts = {}) = 0;
+                       const std::vector<std::span<const char>>& buffers) = 0;
 
     virtual std::size_t read(const storage_pointer local_pointer,
                              std::span<char> buffer) = 0;

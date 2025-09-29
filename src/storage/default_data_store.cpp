@@ -123,8 +123,10 @@ std::size_t default_data_store::fetch_used_space() const {
 }
 
 void default_data_store::write(
-    allocation_t allocation, const std::vector<std::span<const char>>& buffers,
-    const std::vector<refcount_t>& refcounts) {
+    allocation_t allocation, const std::vector<std::span<const char>>& buffers) {
+
+    LOG_DEBUG() << "default_data_store::write(" << allocation.offset << ", " << allocation.size << ")";
+
     std::size_t local_pointer = allocation.offset;
     allocate_files(local_pointer, allocation.size);
 
@@ -152,6 +154,7 @@ void default_data_store::write(
             local_pointer += count;
             written += count;
         }
+
         if (written != data.size()) {
             throw std::runtime_error("could not complete buffer write");
         }
@@ -165,6 +168,15 @@ void default_data_store::write(
         desired = std::max(desired, expected);
     }
     sync(dirty_files);
+
+    LOG_DEBUG() << "new write offset: " << m_write_offset << ", alloc.ofs: " << allocation.offset
+        << ", alloc.size: " << allocation.size;
+
+    std::vector<refcount_t> refcounts;
+    for (std::size_t page = allocation.offset / m_conf.page_size;
+                page <= (allocation.offset + allocation.size - 1) / m_conf.page_size; ++page) {
+        refcounts.emplace_back(page, 1);
+    }
 
     m_refcounter.increment(refcounts, false);
 }
@@ -258,6 +270,8 @@ allocation_t default_data_store::allocate(size_t size, std::size_t alignment) {
     std::size_t new_offset;
     std::size_t allocation_start;
 
+    LOG_DEBUG() << "current: " << current_offset;
+
     do {
         allocation_start = current_offset;
 
@@ -272,7 +286,11 @@ allocation_t default_data_store::allocate(size_t size, std::size_t alignment) {
 
         new_offset = allocation_start + size;
 
+        LOG_DEBUG() << "current: " << current_offset << ", start: " << allocation_start << ", new: " << new_offset;
+
     } while (!m_write_offset.compare_exchange_weak(current_offset, new_offset));
+
+    LOG_DEBUG() << "default_data_store::allocate(" << size << ", " << alignment << "): " << allocation_start;
 
     return {.offset = allocation_start, .size = size};
 }

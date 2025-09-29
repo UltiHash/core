@@ -10,8 +10,7 @@ class mock_data_view : public storage::data_view {
 public:
     explicit mock_data_view(mock_data_store& storage);
 
-    coro<address> write(std::span<const char> data,
-                        const std::vector<std::size_t>& offsets) override;
+    coro<address> write(std::span<const char> data) override;
     coro<shared_buffer<>> read(const uint128_t& pointer, size_t size) override;
     coro<std::size_t> read_address(const address& addr,
                                    std::span<char> buffer) override;

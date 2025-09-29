@@ -185,14 +185,6 @@ private:
                         },
                         m_storages);
 
-                refcount_t max_stripe_refcount = {
-                    .stripe_id = i,
-                    .count = std::accumulate(
-                        stripe_refcounts.begin(), stripe_refcounts.end(), 0ull,
-                        [](std::size_t acc, std::size_t count) {
-                            return std::max(acc, count);
-                        })};
-
                 {
                     auto alloc = allocation_t{i * m_chunk_size, m_chunk_size};
                     auto v_succeeded = co_await run_for_all<
@@ -209,8 +201,7 @@ private:
                                     co_return true;
                                 }
                                 LOG_DEBUG() << "write to storage " << id;
-                                co_await storage->write(alloc, {shards[id]},
-                                                        {max_stripe_refcount});
+                                co_await storage->write(alloc, {shards[id]});
                                 LOG_DEBUG()
                                     << "write to storage " << id << " done";
                                 co_return true;

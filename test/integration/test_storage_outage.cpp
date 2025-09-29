@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_CASE(
     address addr;
     BOOST_REQUIRE_NO_THROW({
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });
@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_CASE(supports_read_during_killing_reactivating_storages) {
     address addr;
     BOOST_REQUIRE_NO_THROW({
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });
@@ -156,7 +156,7 @@ BOOST_AUTO_TEST_CASE(supports_read_during_slow_killing_reactivating_storages) {
     address addr;
     BOOST_REQUIRE_NO_THROW({
         addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
+                                     gdv->write(buffer.string_view()),
                                      boost::asio::use_future)
                    .get();
     });

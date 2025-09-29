@@ -122,18 +122,8 @@ uh::cluster::coro<void> partial_write(uh::cluster::storage_interface& svc,
 {
     auto alloc = co_await svc.allocate(buffer.size());
 
-    std::size_t first_stripe = alloc.offset / DEFAULT_PAGE_SIZE;
-    std::size_t last_stripe =
-        (alloc.offset + alloc.size - 1) / DEFAULT_PAGE_SIZE;
-    std::vector<refcount_t> refcounts;
-    refcounts.reserve(last_stripe - first_stripe);
-    for (size_t stripe_id = first_stripe; stripe_id <= last_stripe;
-         stripe_id++) {
-        refcounts.emplace_back(stripe_id, 1);
-    }
-
     std::cout << "uploading " << buffer.size() << " to " << alloc.offset << "\n";
-    co_await svc.write(alloc, {buffer}, refcounts);
+    co_await svc.write(alloc, {buffer});
 }
 
 uh::cluster::coro<void> write_file(

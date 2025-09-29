@@ -60,24 +60,21 @@ mock_data_store::mock_data_store(data_store_config conf,
 }
 
 void mock_data_store::write(const allocation_t allocation,
-                            const std::vector<std::span<const char>>& buffers,
-                            const std::vector<refcount_t>& refcounts) {
+                            const std::vector<std::span<const char>>& buffers) {
     auto offset = allocation.offset;
     for (const auto& data : buffers) {
         std::copy(data.begin(), data.end(), m_data.begin() + offset);
-        if (refcounts.empty()) {
-            std::vector<refcount_t> derived_refcounts;
-            std::size_t first_stripe = allocation.offset / m_conf.page_size;
-            std::size_t last_stripe =
-                (allocation.offset + allocation.size - 1) / m_conf.page_size;
-            for (size_t stripe_id = first_stripe; stripe_id <= last_stripe;
-                 stripe_id++) {
-                derived_refcounts.emplace_back(stripe_id, 1);
-            }
-            link(derived_refcounts);
-        } else {
-            link(refcounts);
+
+        std::vector<refcount_t> derived_refcounts;
+        std::size_t first_stripe = allocation.offset / m_conf.page_size;
+        std::size_t last_stripe =
+            (allocation.offset + allocation.size - 1) / m_conf.page_size;
+        for (size_t stripe_id = first_stripe; stripe_id <= last_stripe;
+                stripe_id++) {
+            derived_refcounts.emplace_back(stripe_id, 1);
         }
+        link(derived_refcounts);
+
         offset += data.size();
     }
 }

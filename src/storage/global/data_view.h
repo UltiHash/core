@@ -44,8 +44,7 @@ public:
      * to be written.
      * @return An #address the data has been written to.
      */
-    coro<address> write(std::span<const char> data,
-                        const std::vector<std::size_t>& offsets);
+    coro<address> write(std::span<const char> data);
 
     /**
      * @brief reads the data starting from pointer, up to the given size.

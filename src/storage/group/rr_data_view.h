@@ -18,8 +18,7 @@ public:
                           std::size_t group_id, group_config group_config,
                           std::size_t service_connections);
 
-    coro<address> write(std::span<const char> data,
-                        const std::vector<std::size_t>& offsets);
+    coro<address> write(std::span<const char> data);
 
     coro<shared_buffer<>> read(const uint128_t& pointer, size_t size);
 

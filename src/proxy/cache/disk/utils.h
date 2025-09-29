@@ -18,7 +18,7 @@ inline coro<void> erase(storage::data_view& storage, const address& addr) {
 inline coro<address> store(storage::data_view& storage,
                            std::span<const char> sv) {
     auto addr =
-        co_await storage.write(std::string_view{sv.data(), sv.size()}, {0});
+        co_await storage.write(std::string_view{sv.data(), sv.size()});
     co_return std::move(addr);
 }
 

@@ -30,7 +30,7 @@ public:
         if (sv.size() == 0) {
             co_return;
         }
-        auto addr = co_await m_storage.get().write(sv, {0});
+        auto addr = co_await m_storage.get().write(sv);
         m_addr.append(addr);
     }
 

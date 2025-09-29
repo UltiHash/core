@@ -20,15 +20,18 @@ rr_data_view::rr_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
           service_factory<storage_interface>(ioc, service_connections),
           {m_load_balancer, m_storage_index}) {}
 
-coro<address> rr_data_view::write(std::span<const char> data,
-                                  const std::vector<std::size_t>& offsets) {
+coro<address> rr_data_view::write(std::span<const char> data) {
     const auto [storage_id, client] = m_load_balancer.get();
-    auto allocation = co_await client->allocate(data.size());
-    address rv = compute_address(offsets, data.size_bytes(), storage_id,
-                                 allocation.offset);
-    auto refcounts = extract_refcounts(rv);
-    co_await client->write(allocation, {data}, refcounts[storage_id]);
 
+    auto allocation = co_await client->allocate(data.size());
+
+    LOG_DEBUG() << "rr_data_view::write(): allocated " << allocation.offset << " (" << allocation.size << ")";
+
+    co_await client->write(allocation, {data});
+
+    address rv;
+    rv.emplace_back(
+        pointer_traits::rr::get_global_pointer(allocation.offset, m_group_config.id, storage_id), allocation.size);
     co_return rv;
 }
 address rr_data_view::compute_address(const std::vector<std::size_t>& offsets,

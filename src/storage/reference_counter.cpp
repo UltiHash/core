@@ -77,6 +77,7 @@ reference_counter::get_refcounts(const std::vector<std::size_t>& stripe_ids) {
 bool reference_counter::increment(const std::size_t stripe_id,
                                   const std::size_t count, bool upstream,
                                   lmdb::txn& txn, lmdb::dbi& dbi) {
+    LOG_DEBUG() << "increment ref count #" << stripe_id << " += " << count;
     auto key = lmdb::to_sv<std::size_t>(stripe_id);
     std::string_view view;
 
@@ -101,6 +102,8 @@ bool reference_counter::increment(const std::size_t stripe_id,
 bool reference_counter::decrement(const std::size_t stripe_id,
                                   const std::size_t count, lmdb::txn& txn,
                                   lmdb::dbi& dbi) {
+
+    LOG_DEBUG() << "decrement ref count #" << stripe_id << " -= " << count;
 
     auto key = lmdb::to_sv<std::size_t>(stripe_id);
     std::string_view view;

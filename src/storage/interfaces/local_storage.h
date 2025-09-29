@@ -19,9 +19,8 @@ struct local_storage : public storage_interface {
               std::make_unique<default_data_store>(config, path, index)) {}
 
     coro<void> write(allocation_t allocation,
-                     const std::vector<std::span<const char>>& buffers,
-                     const std::vector<refcount_t>& refcounts) override {
-        m_data_store->write(allocation, buffers, refcounts);
+                     const std::vector<std::span<const char>>& buffers) override {
+        m_data_store->write(allocation, buffers);
         co_return;
     }
 
