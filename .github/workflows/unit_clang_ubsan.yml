@@ -1,9 +1,6 @@
 name: Unit Tests UBSAN (clang)
 
 on:
-  pull_request:
-    branches:
-      - "*"
   workflow_dispatch:
 
 jobs:

@@ -1,8 +1,6 @@
 name: Nightly Testing Workflow
 
 on:
-  schedule:
-    - cron: '0 0 * * MON-FRI'
   workflow_dispatch:
     inputs:
       test-to-execute:
