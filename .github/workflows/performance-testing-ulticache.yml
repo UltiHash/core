@@ -1,8 +1,6 @@
 name: UltiCache Performance Testing
 
 on:
-  schedule:
-    - cron: '0 0 * * MON-FRI'
   workflow_dispatch:
 
 jobs:

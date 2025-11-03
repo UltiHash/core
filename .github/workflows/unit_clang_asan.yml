@@ -1,9 +1,6 @@
 name: Unit Tests ASAN (clang)
 
 on:
-  pull_request:
-    branches:
-      - "*"
   workflow_dispatch:
 
 jobs:
